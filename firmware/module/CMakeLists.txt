@@ -24,7 +24,7 @@ set_property(SOURCE ${PROJECT_SOURCE_DIR}/Core/Src/Soundengine/DSPAudio/Resonant
     APPEND PROPERTY COMPILE_OPTIONS -fno-thread-jumps)
 
 # 0.<phase>.<build>: bump on every image handed over for flashing (docs/RELEASES.md).
-set(LXR0_VERSION 0.2.3)
+set(LXR0_VERSION 0.2.4)
 
 add_executable(lxr0_module
     module_main.c

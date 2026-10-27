@@ -4,7 +4,8 @@
  *
  * Mirrors the stock module (LXRE_V2_V1.5): the trigger ISRs (vec_56 at 0x800dd2c for
  * EXTI15_10, vec_39 at 0x800de14 for EXTI9_5) read the voice's accent jack and queue a
- * note-on with FUN_080133dc(voice, 60, accent ? 127 : 63). FUN_08013214, called at the
+ * note-on with FUN_080133dc(voice, 60, accent ? 127 : 63). The accent polarity is flipped
+ * here (see trigger_isr). FUN_08013214, called at the
  * start of each audio block, plays the queued notes and pulses the voice button's LED.
  */
 #include "main.h"
@@ -22,7 +23,7 @@
 typedef struct
 {
 	uint16_t trigPin;	//GPIOD
-	uint16_t accentPin;	//GPIOD, active low at the MCU
+	uint16_t accentPin;	//GPIOD, high while the accent jack is high (measured, v0.2.3)
 } TriggerPins;
 
 //docs/HARDWARE_MAP_MODULE.md "Trigger inputs"; CH and OP HH share one accent jack
@@ -86,7 +87,10 @@ void triggers_dispatch(void)
 
 static void trigger_isr(uint8_t voice)
 {
-	const uint8_t accent = (GPIOD->IDR & pins[voice].accentPin) == 0;
+	//lxr-0 deviation from the stock module: the stock ISR treats a low pin as accented, but the
+	//accent inputs don't invert (pin 0 unpatched, 1 with a gate; measured with v0.2.3), so on this
+	//module the stock firmware plays every hit at 127 and accents drop it to 63.
+	const uint8_t accent = (GPIOD->IDR & pins[voice].accentPin) != 0;
 	trigger_lastVel = accent ? VEL_ACCENT : VEL_NORMAL;
 	trigger_noteOn(voice, TRIGGER_NOTE, trigger_lastVel);
 }

@@ -65,6 +65,13 @@ clicks or dropouts while playing (not while loading), the `cpu`/`pk` numbers whi
 - Level: the stock output path (globals, mixer tail, I2S format) matches; no saturation or master gain in
   either. Remaining difference is the mod matrix (2c).
 
+### Accents (v0.2.3 measurement, 2026-10-27)
+The accent inputs don't invert: SHIFT view shows pin 0 unpatched, 1 with a gate, jack order correct.
+The stock ISR treats a low pin as accented, so on this module stock plays every hit at 127 and an accent
+drops it to 63 (half amplitude when the voice's `vol` is on). v0.2.4 flips the read: gate = 127,
+no gate = 63. This is a deliberate deviation from the stock module firmware (the desktop has no accent
+jacks). The mod matrix accent sources (2c) use the same corrected sense.
+
 ### Next
 - 2b: pots, CVs (ADC with the module ranks, its own MSP without PA5), and the module's menu and edit flow
   from the manual; kit save; `glo.cfg`.
