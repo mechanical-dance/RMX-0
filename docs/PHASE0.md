@@ -50,23 +50,24 @@ in `recon/`; the Erica image and everything decompiled from it stay out of git (
 - **Still open:** the main-loop rate (how many audio blocks per mod-matrix pass; measure in Phase 1) and the menu pages
   from the manual.
 
-## Step 5: photos (needed from the user)
-Both sides of each board, sharp enough to read markings. In particular:
-1. MCU marking: VG = 1 MB, VI = 2 MB. Also LQFP100 vs BGA.
-2. DAC chips: expect two CS4344 or similar.
-3. The trigger input stage (one jack through to PD9–PD15): transistor and RC values.
-4. The CV input stage (op-amp, resistors).
-5. Any SWD pads or header, test points, and the traces from PA11/PA12 (MCU pins 70/71 on LQFP100) to the buttons.
+## Step 5: photos (done, front panel left on)
+In `~/Documents/Gear/lxr-02/photos/`; details in `HARDWARE_MAP_MODULE.md`.
+1. **MCU:** STM32F765, line 2 most likely `VIH6` (TFBGA100, 2 MB), not certain. Phase 1 reads FLASHSIZE to settle it.
+2. **DACs:** DA7/DA8, 10-pin, markings unreadable; the footprint fits CS4344.
+3. **Trigger stage:** transistor + 2 × ~100 kΩ + ferrite + diode per jack, no visible capacitor; open-collector into the
+   MCU pull-up.
+4. **CV stage:** op-amps DA1/DA3/DA4 on the jack board (values not read).
+5. **Debug:** 6-pin XP2 (`RST` … `GND`) on the MCU board, likely SWD; 5 pads on the back. Not probed (photos-only rule).
 
 ## MIDI verdict (provisional)
 | Route | Verdict |
 |-------|---------|
 | USB MIDI | **No.** PA11/PA12 are panel buttons 12 and 13. USB would mean cutting two button traces and moving those buttons elsewhere, plus a jack and isolation. Not worth it. |
-| Firmware-only (TS jack) | **Most promising.** The OP HH trigger is on **PD9** = USART3_RX (AF7). This is corroborated by the original LXR STM32F4 bootloader's `uart_init` ("UART3 (PD8 TX, PD9 RX)", `LXR02Open/knowledge_files/LXR-master/mainboard/LxrStm32_bootloader/src/uart.c:151`), but not yet checked in the F765 datasheet. The jack is TS: a TRS **Type A** cable puts the MIDI data line (pin 5) on the tip, which works with push-pull MIDI outputs (most current gear), not with outputs that only sink current. The stage already inverts, which the USART's RXINV handles. The cost is the OP HH trigger while MIDI mode is on. It depends on the trigger stage passing 31.25 kbaud (32 µs bits) cleanly: photo 3. |
+| Firmware-only (TS jack) | **Most promising.** The OP HH trigger is on **PD9** = USART3_RX (AF7). This is corroborated by the original LXR STM32F4 bootloader's `uart_init` ("UART3 (PD8 TX, PD9 RX)", `LXR02Open/knowledge_files/LXR-master/mainboard/LxrStm32_bootloader/src/uart.c:151`), but not yet checked in the F765 datasheet. The jack is TS: a TRS **Type A** cable puts the MIDI data line (pin 5) on the tip, which works with push-pull MIDI outputs (most current gear), not with outputs that only sink current. The stage already inverts, which the USART's RXINV handles. The cost is the OP HH trigger while MIDI mode is on. Photos: open-collector transistor, ~100 kΩ base resistors, no filter cap. Edges into the internal pull-up should be well under 1 µs against 32 µs bits, so it should pass. **Final check: a hardware test** (switch PD9 to USART3 RX with RXINV and send MIDI). |
 | Small mod (optocoupler to spare RX) | Fallback if the trigger stage is too slow. Spare RX candidates depend on the photos (PB11 = USART3_RX is an LED here). |
 
 ## Headroom estimate
-- **Flash:** 768 KB free in sectors 5–7 on a 1 MB part. LXR02Open's sample area starts at sector 6 (`0x08080000`, 512 KB
+- **Flash:** if the part is VIH6 (likely), 2 MB: sectors 5–11 free, about 1.75 MB, enough for LXR02Open's 1.5 MB sample area unchanged. If VGH6: 768 KB free in sectors 5–7. LXR02Open's sample area starts at sector 6 (`0x08080000`, 512 KB
   on 1 MB), and 1.5 MB needs a 2 MB part. Moving it to sector 5 would give 768 KB.
 - **RAM:** about 330 KB of SRAM1 free; DTCM about 23 KB free.
 - **Reverb:** its buffers are fp16 allpass delays of `MAX_ALLPASS_SIZE` 0x800 each (`FxRamBuffer.h`, `Reverb.c`), on

@@ -4,13 +4,20 @@ Recovered from `LXRE_V2_V1.5_09_11_2023.img` (Ghidra 12.2, raw Cortex-M import a
 addresses in the image. Function names are Ghidra's (`FUN_<addr>`); `main` is `FUN_0800b940`. Desktop column:
 `LXR02Open/knowledge_files/hardware_archive/HARDWARE_MAP.md` and `lxr-desktop-app/Core/Src/main.c`.
 
-Status: from the image only. Nothing here is confirmed on the board yet (photos pending).
+Status: from the image, plus photos in `~/Documents/Gear/lxr-02/photos/` (IMG_1374–1389, taken 2026-10-27; front
+panel left on).
+
+## Boards (photos)
+| Board | Marking | Contents | Photos |
+|-------|---------|----------|--------|
+| Jack/panel board | `DRLXR2C`, "LXR Drum Voice v2.0 May 2022" | jacks, input stages, Winstar WEH001602 OLED (16×2 per its label; the manual says 2×20), Eurorack power header, headers XP8–XP12 to the MCU board | IMG_1374–1383 |
+| MCU board | `DRLXR1M`, "v1.0 March 2022" | MCU DD1, 16 MHz-class crystal ZQ1, DACs DA7/DA8, microSD slot XS23, regulators DA5/DA6, **6-pin header XP2 (`RST` … `GND`, likely SWD)**, 5 unlabelled pads on the back (pin 1 square) | IMG_1384–1389 |
 
 ## MCU and memory
 | Item | Module | Source | Desktop |
 |------|--------|--------|---------|
 | Core | STM32F76x, SP `0x20080000` (512 KB RAM) | vector 0 | STM32F765 |
-| Package | Uses PD8–PD15, so not the desktop's TFBGA100 (PD8–15 not bonded). LQFP100 likely, matching `STM32F765VGTX` in Erica's linker script | GPIO init, `0x800bc58`/`0x800bc60` | TFBGA100 (VIH6) |
+| Part | **STM32F765V?H6**: line 2 reads most like `VIH6` (2 MB flash), but `VGH6` (1 MB) isn't ruled out. `H` = TFBGA100 (leadless, matches the photo). Confirm by reading FLASHSIZE (`0x1FF0F442`) in the Phase 1 image. PD8–PD15 are used on this package, so LXR02Open's 'TFBGA100: PD8–15 not bonded' note is wrong | IMG_1388 (angled), IMG_1385 | STM32F765VIH6 |
 | App | `0x08008000`–`0x0803F954` (222 KB), sectors 1–4 | image header | same base |
 | Flash writes | None: no FLASH_KEYR unlock keys in the image. Kits live on SD only | byte search | — |
 | ITCM | 0x2DF8 bytes copied from `0x0803cb5c` to `0x00000000` at start of `main`; the audio render runs there (`0x000020c4`) | `0x800bc78`–`0x800bc80`, `FUN_0800dc68` | — |
@@ -22,12 +29,17 @@ Status: from the image only. Nothing here is confirmed on the board yet (photos 
 |--------|------|--------|---------|
 | I2S2 | PB12, PB13, PB15 AF5; MCK PC6 AF5; DMA1 Stream4 | `FUN_0800c41c` | same |
 | I2S3 | PA15, PB5, PC10 AF6; MCK PC7 AF6; DMA1 Stream5 | `FUN_0800c41c` | same |
+| DACs | DA7, DA8: 10-pin TSSOP-size, markings unreadable; the package fits CS4344 (desktop part) | IMG_1386/1387 | CS4344 ×2 |
 | Rate | 44.1 kHz master TX, MCLK on | `main`, handles `0x20020468`/`0x200204a8` | same |
 
 The audio block is rendered from the main loop: `FUN_0800dc68` polls a half-buffer flag between every task and renders
 into `0x200090c8` (L) / `0x200092c8` (R), 0x100 bytes per half. It isn't rendered in an ISR.
 
 ## Trigger inputs (7) and accents (6)
+Input stage per trigger jack (jack board top row, VT1–VT7): SOT-23 transistor, two resistors (codes look like `104` =
+100 kΩ), ferrite FB, diode VD; no per-channel capacitor visible (IMG_1378, IMG_1383). With the MCU's internal pull-up,
+that is an open-collector inverter, consistent with the falling-edge EXTI below.
+
 Triggers are falling-edge EXTI with pull-ups on PD9–PD15 (`0x800bc60`: pins `0xfe00`, mode `0x210000`), so the input
 stage inverts. EXTI15_10 is at NVIC priority 0, EXTI9_5 at 3. Each ISR reads the voice's accent pin at that moment and
 calls `FUN_080133dc(voice, 60, accent_low ? 127 : 63)`.
