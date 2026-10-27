@@ -72,6 +72,7 @@ target_compile_options(lxr_board_config INTERFACE
 add_subdirectory(Drivers)
 add_subdirectory(Middlewares)
 add_subdirectory(Core)
+add_subdirectory(bringup)  # lxr-0: module bring-up image
 
 add_executable(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} PRIVATE
