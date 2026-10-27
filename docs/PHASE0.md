@@ -22,11 +22,29 @@ in `recon/`; the Erica image and everything decompiled from it stay out of git (
   parameter-message path (`0xb0` for params < 128, `0xd6` for 128–255). Morph (`0x12e`) is handled separately.
 - **Target table:** `0x08030380` (payload offset `0x28380`), 4-byte entries (name index, param id). Each voice block
   starts with name `0x71` = `v/o`.
-- **`v/o`:** param ids 221–226, the desktop's `PAR_UNUSED_1..6`, repurposed per voice. They go through the `0xd6`
-  path of the parameter handler `FUN_08011728` (switch at about decompile line 9252, cases `0x5d`–`0x62`, likely the
-  `0xd6` switch). The handlers store the mod float in voice structs at `+0x8c` (`0x20009750`, `0x2000a0f0`) or call
-  ITCM `0x564(n)` for three voices. **Still open:** the pitch maths that reads those values (audio code, part of it in
-  ITCM). Next session: decompile the readers of `voice+0x8c` and ITCM `0x4e4`–`0x578`.
+- **`v/o`** (fully traced):
+  - **Ids:** param ids 221–226 (`0xdd`–`0xe2`), the desktop's `PAR_UNUSED_1..6`, one per voice. Mod-target entries
+    are type 2 (float) at drum `+0x2ac`, snare `+0x158`, cymbal `+0x16c`, hi-hat `+0x178`. Those fields are appended
+    after each voice's `pwm` (`FUN_08013404`).
+  - **Path:** `FUN_0800f5c4` → `FUN_08011728` `0xd6` switch, cases `0x5d`–`0x62` (decompile about line 9676). From
+    the mod matrix (`param_5 = 1`): `freq = FUN_080115c0(value)`, then the per-voice setter writes `freq` to osc,
+    mod-osc and transient (`FUN_0800e40c(freq, n)` for drums 1–3, `FUN_0800ee88` snare, `FUN_0800df70` cymbal,
+    `FUN_0800e664` hi-hat; offsets `+0x20`/`+0x4c`/…). From an ordinary edit it writes −1.0, meaning `v/o` off.
+  - **Oscillator:** the module's `OscInfo` has a new float, −1.0 = off. In `osc_setFreq` (`0x0800eb64`), when it is
+    set it replaces `freq`: `phaseInc ∝ vofreq · 2^((coarse−60)/12) · fine · pitchMod · modNodeValue`. So coarse 60
+    plays the CV pitch unchanged and coarse/fine still transpose.
+  - **Conversion** (`FUN_080115c0`): `v = (src·2 − 1)·amt + param/127`, which is `V/5` at amt 100% and base 0.
+    1. If `|v − last| < 0.001`, return the cached frequency.
+    2. `v += 0.005556` (rounds the truncation).
+    3. Piecewise-linear lookup in a 6-point calibration table `cal` at `0x20020134` (in `.data`; defaults at flash
+       `0x08033a44`): `[0.0039, 0.2031, 0.4033, 0.6011, 0.7983, 0.9824]`, one point per volt from 0 to 5 V.
+    4. `semi = trunc(12k + (v − cal[k]) / ((cal[k+1] − cal[k]) / 12))`.
+    5. `freq = 440 · 2^((semi − 57)/12)` if `semi < 120`, else 0.
+    So `v/o` is **quantised to semitones**, 0 V = C0 (16.35 Hz) and +5 V = C5. Negative input clamps to C0.
+  - **Calibration:** the table is never written anywhere. It's a fixed, apparently measured (uneven steps) factory
+    constant, with no user calibration.
+  - **To mirror:** these constants and the semitone quantisation. Possible superset ideas (each needs the user's
+    sign-off): unquantised `v/o`, and a per-unit calibration menu.
 - **ITCM:** `recon/ghidra/MapItcm.java` maps the 0x2DF8-byte ITCM image at `0x00000000` and decompiles it
   (32 functions; audio render `itcm_20c4`).
 - **Still open:** the main-loop rate (how many audio blocks per mod-matrix pass; measure in Phase 1) and the menu pages
