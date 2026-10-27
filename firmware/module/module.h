@@ -10,6 +10,7 @@
 
 #define MODULE_NUM_BUTTONS 14
 #define MODULE_BUTTON_DRUM 4
+#define MODULE_BUTTON_SHIFT 12
 #define MODULE_BUTTON_VOICE1 5	//the 7 voice buttons (OSC/DRUM1 .. MIX/OP HH) = buttons 5..11, voice i-5
 
 void SystemClock_Config(void);
@@ -25,6 +26,8 @@ void MX_TIM14_Init(void);
 void trigger_noteOn(uint8_t voice, uint8_t note, uint8_t vel);
 void triggers_init(void);
 void triggers_dispatch(void);
+extern volatile uint8_t trigger_lastVel;
+void triggers_accentPins(char out[7]);
 
 void panel_ledSet(uint8_t i, uint8_t on);
 void panel_ledPulse(uint8_t i);

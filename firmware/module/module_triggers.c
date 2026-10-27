@@ -41,6 +41,7 @@ static volatile uint8_t ready = 0;
 static volatile uint8_t pending[NUM_VOICES];
 static volatile uint8_t notes[NUM_VOICES];
 static volatile uint8_t vels[NUM_VOICES];
+volatile uint8_t trigger_lastVel = 0;	//diagnostics: velocity of the last trigger
 
 //FUN_080133dc
 void trigger_noteOn(uint8_t voice, uint8_t note, uint8_t vel)
@@ -86,7 +87,8 @@ void triggers_dispatch(void)
 static void trigger_isr(uint8_t voice)
 {
 	const uint8_t accent = (GPIOD->IDR & pins[voice].accentPin) == 0;
-	trigger_noteOn(voice, TRIGGER_NOTE, accent ? VEL_ACCENT : VEL_NORMAL);
+	trigger_lastVel = accent ? VEL_ACCENT : VEL_NORMAL;
+	trigger_noteOn(voice, TRIGGER_NOTE, trigger_lastVel);
 }
 
 void EXTI9_5_IRQHandler(void)
@@ -108,4 +110,14 @@ void EXTI15_10_IRQHandler(void)
 			trigger_isr(v);
 		}
 	}
+}
+
+//diagnostics: raw MCU level of the accent pins in jack order ACC1..ACC6 (1 = pin high)
+void triggers_accentPins(char out[7])
+{
+	static const uint16_t accentJacks[6] = {GPIO_PIN_8, GPIO_PIN_6, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_3, GPIO_PIN_7};
+	const uint32_t idr = GPIOD->IDR;
+	for(uint8_t i = 0; i < 6; i++)
+		out[i] = (idr & accentJacks[i]) ? '1' : '0';
+	out[6] = 0;
 }

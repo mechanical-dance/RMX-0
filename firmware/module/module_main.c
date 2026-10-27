@@ -12,7 +12,7 @@
  * the engine, and the worst single engine call in microseconds, over the last 250 ms).
  * DRUM held + a voice button plays that voice (stock behaviour, FUN_08008b00). Turning the
  * encoder browses kits; the kit loads when the encoder rests (test-image shortcut, not
- * the stock UI).
+ * the stock UI). SHIFT held shows the accent pins and the last trigger's velocity.
  */
 #include "main.h"
 #include "fatfs.h"
@@ -96,6 +96,18 @@ static void showStatus(int16_t browse)
 	char line[21];
 	const uint8_t cpu = cpuMeter_percent();
 	const uint32_t peakUs = cpuMeter_peakCycles() / (SystemCoreClock / 1000000);
+
+	//SHIFT held: accent diagnostics. Raw MCU pin level per accent jack (ACC1..6, 1 = high) and the
+	//velocity of the last trigger (127 = read as accented)
+	if(panel_buttonHeld(MODULE_BUTTON_SHIFT))
+	{
+		char acc[7];
+		triggers_accentPins(acc);
+		display_print(0, "acc 123456  vel");
+		snprintf(line, sizeof line, "pin %s  %3u", acc, trigger_lastVel);
+		display_print(1, line);
+		return;
+	}
 
 	char name[9];
 	memcpy(name, savefileNames[0][KIT_NAMES], 8);
