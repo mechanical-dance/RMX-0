@@ -1,6 +1,6 @@
 # Phase 1: build, bring-up image, debug access
 
-Status 2026-10-27: flashed by the user. LED chase, button indices (SHIFT 12, SAVE/LOAD 13) and all 7 trigger pins confirmed on hardware; the trigger order matches the image's map, and OP HH is on PD9 (the MIDI candidate pin).
+Status 2026-10-27: flashed by the user. LED chase, button indices (SHIFT 12, SAVE/LOAD 13) and all 7 trigger pins confirmed on hardware; the trigger order matches the image's map, and OP HH is on PD9 (the MIDI candidate pin). Line 1 `F2048`, uptime counts, encoder switch works; CPU meter reads 9 % for the display refresh (the LCD driver busy-waits per character, so this is plausible). **Bring-up passed.**
 
 ## 1. Desktop firmware builds unchanged
 `firmware/` is an identical copy of `lxr-desktop-app` (vendor a43cd4f). Build (Ninja isn't installed, so use Make):
