@@ -1,0 +1,6 @@
+# Erica Synths closed module image and everything derived from it stays local
+recon/*.bin
+recon/*.c
+recon/*.log
+recon/ghidra/*.gpr
+recon/ghidra/*.rep/
