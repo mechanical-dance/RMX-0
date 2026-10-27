@@ -73,6 +73,7 @@ add_subdirectory(Drivers)
 add_subdirectory(Middlewares)
 add_subdirectory(Core)
 add_subdirectory(bringup)  # lxr-0: module bring-up image
+add_subdirectory(module)  # lxr-0: module firmware
 
 add_executable(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} PRIVATE
