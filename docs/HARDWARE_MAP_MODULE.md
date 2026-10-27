@@ -63,26 +63,28 @@ Pot ranks sample at 3 cycles, CV ranks at 28. The desktop's CH5/PA5 is gone (PA5
 - CVs: `FUN_0800cbd0`, one CV per call, round-robin. ±5 LSB (12-bit) deadband, `cv = 1.0 − adc12/4096` stored as
   float at `0x20020618[n]` (getter `FUN_0800cc44`). So the input stage inverts: −5 V → ~0.0, +5 V → ~1.0 (to confirm).
 
-## Buttons (14) and encoder
-All are direct GPIO, scanned by `FUN_0800c920` from the main loop (no shift registers, no SPI1).
+## Buttons (14), LEDs (14) and encoder
+All buttons are direct GPIO, active high, scanned by `FUN_0800c920` from the main loop (no shift registers, no SPI1).
+A change to 1 calls the press handler `FUN_08008b00(i)`; a change to 0 calls `FUN_08008be8(i)`. Each button's LED is
+bit `i` of the bitmap at `0x20020614` (set by `FUN_0800aa58(on, i)`), written out by BSRR at the end of
+`FUN_0800c920`.
 
-| Index | Pin | Index | Pin |
-|-------|-----|-------|-----|
-| 0 | PC13 | 7 | PE1 |
-| 1 | PB14 | 8 | PE0 |
-| 2 | PB8 | 9 | PE6 |
-| 3 | PB2 | 10 | PE5 |
-| 4 | PB6 | 11 | PB3 |
-| 5 | PE2 | 12 | **PA11** |
-| 6 | PB9 | 13 | **PA12** |
+| i | Button pin | Panel (manual p.5) | LED pin | Evidence |
+|---|------------|--------------------|---------|----------|
+| 0 | PC13 | EDIT | PE4 | menu mode 0 |
+| 1 | PB14 | PERFORM | PB10 | menu mode 1 |
+| 2 | PB8 | MOD | PE3 | menu mode 2 |
+| 3 | PB2 | FX | PB11 | menu mode 5 |
+| 4 | PB6 | DRUM | PC15 | held + SELECT plays a voice |
+| 5–11 | PE2, PB9, PE1, PE0, PE6, PE5, PB3 | SELECT: OSC/DRUM1 … MIX/OP HH (voice `i−5`) | PA5, PA6, PA7, PC14, PB7, PB4, PC11 | `FUN_08008b00` cases 5–11 |
+| 12 | **PA11** | SHIFT | PA8 | read as a modifier in cases 0/2; own case lights its LED only |
+| 13 | **PA12** | SAVE/LOAD | PA9 | mode 3, cycling 3 → 4 → 7 (load → save → …) |
 
-Button → panel label is still unmapped (needs the menu handlers `FUN_08008b00`/`FUN_08008be8`).
+The mode → EDIT/PERFORM/MOD/FX names follow the panel order matching the scan order. Not yet checked against each
+mode's page strings. The LED for bit 7 (PA7) may have inverted polarity in the decompile; check on hardware.
+
 - Encoder: A PE13, B PE14 (no pull), polled in SysTick (`vec_15`) at 1 kHz. The desktop uses TIM1 input capture instead.
 - Encoder switch: PE15 (pull-up), debounced 3×10 ms in SysTick. Same pins as the desktop and Erica's bootloader.
-
-## LEDs (14)
-Outputs written by BSRR from two state bytes at the end of `FUN_0800c920`: PE3, PE4, PB4, PB7, PB10, PB11, PC11, PC14,
-PC15, PA5–PA9. Bit → LED order is in the decompile; the panel mapping is still open.
 
 ## LCD and SD
 | Item | Pins | Source | Desktop |

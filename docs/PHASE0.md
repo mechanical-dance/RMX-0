@@ -20,9 +20,17 @@ in `recon/`; the Erica image and everything decompiled from it stay out of git (
 - **Mod matrix** (`FUN_0800da88`): 18 slots, runs once per main-loop pass, not on a timer. Sources 0–4 CV, 5–10 the LFO
   outputs, 11–16 accents. Apply (`FUN_0800f5c4`): `(src·2 − 1)·amt/100 + param/127`, sent through the desktop's
   parameter-message path (`0xb0` for params < 128, `0xd6` for 128–255). Morph (`0x12e`) is handled separately.
-- **Still open:** the `v/o` target scaling (the float maths sits behind coprocessor ops in the decompile, so it needs
-  disassembly). Also the main-loop rate, meaning how many audio blocks run per mod-matrix pass; measure it in Phase 1.
-  And the menu pages from the manual.
+- **Target table:** `0x08030380` (payload offset `0x28380`), 4-byte entries (name index, param id). Each voice block
+  starts with name `0x71` = `v/o`.
+- **`v/o`:** param ids 221–226, the desktop's `PAR_UNUSED_1..6`, repurposed per voice. They go through the `0xd6`
+  path of the parameter handler `FUN_08011728` (switch at about decompile line 9252, cases `0x5d`–`0x62`, likely the
+  `0xd6` switch). The handlers store the mod float in voice structs at `+0x8c` (`0x20009750`, `0x2000a0f0`) or call
+  ITCM `0x564(n)` for three voices. **Still open:** the pitch maths that reads those values (audio code, part of it in
+  ITCM). Next session: decompile the readers of `voice+0x8c` and ITCM `0x4e4`–`0x578`.
+- **ITCM:** `recon/ghidra/MapItcm.java` maps the 0x2DF8-byte ITCM image at `0x00000000` and decompiles it
+  (32 functions; audio render `itcm_20c4`).
+- **Still open:** the main-loop rate (how many audio blocks per mod-matrix pass; measure in Phase 1) and the menu pages
+  from the manual.
 
 ## Step 5: photos (needed from the user)
 Both sides of each board, sharp enough to read markings. In particular:
@@ -36,7 +44,7 @@ Both sides of each board, sharp enough to read markings. In particular:
 | Route | Verdict |
 |-------|---------|
 | USB MIDI | **No.** PA11/PA12 are panel buttons 12 and 13. USB would mean cutting two button traces and moving those buttons elsewhere, plus a jack and isolation. Not worth it. |
-| Firmware-only TRS/DIN | **Most promising.** The OP HH trigger is on **PD9**. To check against the datasheet's AF table: PD9 = USART3_RX (AF7). The stage already inverts, which the USART's RXINV handles. The cost is the OP HH trigger while MIDI mode is on. It depends on the trigger stage passing 31.25 kbaud (32 µs bits) cleanly: photo 3. |
+| Firmware-only (TS jack) | **Most promising.** The OP HH trigger is on **PD9** = USART3_RX (AF7). This is corroborated by the original LXR STM32F4 bootloader's `uart_init` ("UART3 (PD8 TX, PD9 RX)", `LXR02Open/knowledge_files/LXR-master/mainboard/LxrStm32_bootloader/src/uart.c:151`), but not yet checked in the F765 datasheet. The jack is TS: a TRS **Type A** cable puts the MIDI data line (pin 5) on the tip, which works with push-pull MIDI outputs (most current gear), not with outputs that only sink current. The stage already inverts, which the USART's RXINV handles. The cost is the OP HH trigger while MIDI mode is on. It depends on the trigger stage passing 31.25 kbaud (32 µs bits) cleanly: photo 3. |
 | Small mod (optocoupler to spare RX) | Fallback if the trigger stage is too slow. Spare RX candidates depend on the photos (PB11 = USART3_RX is an LED here). |
 
 ## Headroom estimate
