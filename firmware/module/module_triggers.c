@@ -5,7 +5,7 @@
  * Mirrors the stock module (LXRE_V2_V1.5): the trigger ISRs (vec_56 at 0x800dd2c for
  * EXTI15_10, vec_39 at 0x800de14 for EXTI9_5) read the voice's accent jack and queue a
  * note-on with FUN_080133dc(voice, 60, accent ? 127 : 63). FUN_08013214, called at the
- * start of each audio block, plays the queued notes and pulses the voice's SELECT LED.
+ * start of each audio block, plays the queued notes and pulses the voice button's LED.
  */
 #include "main.h"
 #include "module.h"
@@ -79,7 +79,7 @@ void triggers_dispatch(void)
 			Cymbal_trigger(vels[v], notes[v]);
 		else
 			HiHat_trigger(vels[v], v == 6, notes[v]);
-		panel_ledPulse(MODULE_BUTTON_SELECT1 + v);
+		panel_ledPulse(MODULE_BUTTON_VOICE1 + v);
 	}
 }
 

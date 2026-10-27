@@ -13,6 +13,16 @@ add_library(lxr0_engine OBJECT
 )
 target_link_libraries(lxr0_engine PUBLIC lxr_app_common)
 
+# lxr_dsp compiled with LXR_MODULE=1 (mixer.c: no output jack switches on the module). The
+# source list and ResonantFilter's option come from Core/CMakeLists.txt.
+get_target_property(lxr0_dsp_sources lxr_dsp SOURCES)
+list(TRANSFORM lxr0_dsp_sources PREPEND ${PROJECT_SOURCE_DIR}/Core/)
+add_library(lxr0_dsp OBJECT ${lxr0_dsp_sources})
+target_link_libraries(lxr0_dsp PUBLIC lxr_app_common)
+target_compile_definitions(lxr0_dsp PRIVATE LXR_MODULE=1)
+set_property(SOURCE ${PROJECT_SOURCE_DIR}/Core/Src/Soundengine/DSPAudio/ResonantFilter.c
+    APPEND PROPERTY COMPILE_OPTIONS -fno-thread-jumps)
+
 add_executable(lxr0_module
     module_main.c
     module_hw.c
@@ -37,7 +47,7 @@ add_executable(lxr0_module
 )
 target_link_libraries(lxr0_module PRIVATE
     stm32f7_hal fatfs usb_midi
-    lxr_preset lxr_dsp lxr0_engine lxr_midi lxr_sequencer lxr_usb_app
+    lxr_preset lxr0_dsp lxr0_engine lxr_midi lxr_sequencer lxr_usb_app
     lxr_app_common
 )
 target_compile_options(lxr0_module PRIVATE -Wall)

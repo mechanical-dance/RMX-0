@@ -42,7 +42,7 @@ void DMA1_Stream4_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_spi2_tx); }
 void DMA1_Stream5_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_spi3_tx); }
 
 //render while a save blocks the main loop; the desktop's handler without its debug pin
-//(PE2 is the SELECT 1 button here)
+//(PE2 is the OSC/DRUM1 button here)
 void TIM2_IRQHandler(void)
 {
 #if CALC_SAMPLES_IN_INTERRUPT

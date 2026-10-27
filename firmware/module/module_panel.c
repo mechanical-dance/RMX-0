@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  *
  * All direct GPIO (docs/HARDWARE_MAP_MODULE.md "Buttons"). Index order is the stock scan order
- * of FUN_0800c920: EDIT PERFORM MOD FX DRUM, SELECT 1..7, SHIFT, SAVE/LOAD. LED i belongs to
+ * of FUN_0800c920: EDIT PERFORM MOD FX DRUM, the 7 voice buttons (OSC .. MIX), SHIFT, SAVE/LOAD. LED i belongs to
  * button i (bitmap 0x20020614). Checked on hardware with the bring-up image.
  */
 #include "main.h"
@@ -60,12 +60,18 @@ void panel_tick(void)
 }
 
 //buttons are active high (FUN_0800c920)
-int8_t panel_buttonPressed(void)
+uint8_t panel_buttonHeld(uint8_t i)
 {
-	for(int8_t i = 0; i < MODULE_NUM_BUTTONS; i++)
+	return (buttons[i].port->IDR & buttons[i].pin) != 0;
+}
+
+//the lowest pressed button in [first, last], or -1
+int8_t panel_buttonPressed(uint8_t first, uint8_t last)
+{
+	for(uint8_t i = first; i <= last; i++)
 	{
-		if(buttons[i].port->IDR & buttons[i].pin)
-			return i;
+		if(panel_buttonHeld(i))
+			return (int8_t)i;
 	}
 	return -1;
 }

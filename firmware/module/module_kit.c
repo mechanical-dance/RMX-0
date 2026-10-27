@@ -17,6 +17,7 @@
 #include "menu/menu.h"
 #include "menu/CcNr2Text.h"
 #include "module.h"
+#include "Soundengine/cs4344_cs5343.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -25,6 +26,8 @@ _Static_assert(8 + END_OF_SOUND_PARAMETERS == 255, "desktop kit size");
 uint8_t moduleKit_matrix[MODULE_MATRIX_BYTES];
 uint8_t moduleKit_hasMatrix = 0;
 uint8_t moduleKit_current = 0;
+
+static uint8_t isKitSize(FSIZE_t size);
 
 static FRESULT openKit(uint8_t kitNr)
 {
@@ -47,6 +50,18 @@ FRESULT moduleKit_load(uint8_t kitNr)
 	FRESULT res = openKit(kitNr);
 	if(res != FR_OK)
 		return res;
+	//only 255- and 309-byte kits; the stock firmware also writes 302-byte scratch files
+	//(TMP.SND, 100-TMP.SND) whose layout isn't decoded
+	if(!isKitSize(f_size((FIL *)&SDFile)))
+	{
+		f_close((FIL *)&SDFile);
+		return FR_NO_FILE;
+	}
+
+	//the main loop doesn't render while the card is read: silence the DMA buffers so the
+	//codec doesn't loop the last block (they're in DTCM, not cached)
+	memset(dma_buffer, 0, sizeof dma_buffer);
+	memset(dma_buffer2, 0, sizeof dma_buffer2);
 
 	res = f_read((FIL *)&SDFile, (void *)savefileNames[0][KIT_NAMES], 8, &bytesRead);
 	if(res == FR_OK && bytesRead != 8)
@@ -81,17 +96,63 @@ FRESULT moduleKit_load(uint8_t kitNr)
 	return res;
 }
 
-//kit n+dir, skipping missing numbers, wrapping over 0..127
-FRESULT moduleKit_step(int8_t dir)
+//which kit numbers exist, from one directory scan at boot, so browsing doesn't read the card
+static uint8_t kitIndex[MODULE_NUM_KITS / 8];
+static char kitFileName[MODULE_NUM_KITS][9];
+
+static uint8_t isKitSize(FSIZE_t size)
 {
-	uint8_t n = moduleKit_current;
+	return size == 8 + END_OF_SOUND_PARAMETERS || size == 8 + END_OF_SOUND_PARAMETERS + MODULE_MATRIX_BYTES;
+}
+
+void moduleKit_scan(void)
+{
+	DIR dj;
+	FILINFO fno;
+	memset(kitIndex, 0, sizeof kitIndex);
+	if(f_findfirst(&dj, &fno, "", "*.snd") != FR_OK)
+		return;
+	while(fno.fname[0])
+	{
+		unsigned n = 0;
+		const char *p = fno.fname;
+		while(*p >= '0' && *p <= '9')
+			n = n * 10 + (unsigned)(*p++ - '0');
+		if(p != fno.fname && *p == '-' && n < MODULE_NUM_KITS && isKitSize(fno.fsize))
+		{
+			kitIndex[n / 8] |= (uint8_t)(1 << (n % 8));
+			uint8_t j = 0;
+			for(p++; *p && *p != '.' && j < 8; p++)
+				kitFileName[n][j++] = *p;
+			kitFileName[n][j] = 0;
+		}
+		if(f_findnext(&dj, &fno) != FR_OK)
+			break;
+	}
+	f_closedir(&dj);
+}
+
+uint8_t moduleKit_exists(uint8_t kitNr)
+{
+	return kitNr < MODULE_NUM_KITS && (kitIndex[kitNr / 8] >> (kitNr % 8)) & 1;
+}
+
+//the name part of the file name (the card's 8.3 name), for browsing
+const char *moduleKit_fileName(uint8_t kitNr)
+{
+	return moduleKit_exists(kitNr) ? kitFileName[kitNr] : "";
+}
+
+//the next existing kit from kitNr in direction dir, wrapping over 0..127
+int16_t moduleKit_next(int16_t kitNr, int8_t dir)
+{
 	for(uint8_t tries = 0; tries < MODULE_NUM_KITS; tries++)
 	{
-		n = (uint8_t)((n + MODULE_NUM_KITS + dir) % MODULE_NUM_KITS);
-		if(moduleKit_load(n) == FR_OK)
-			return FR_OK;
+		kitNr = (int16_t)((kitNr + MODULE_NUM_KITS + dir) % MODULE_NUM_KITS);
+		if(moduleKit_exists((uint8_t)kitNr))
+			return kitNr;
 	}
-	return FR_NO_FILE;
+	return moduleKit_current;
 }
 
 //the last kit, stored by the stock firmware as one byte in /state.idx

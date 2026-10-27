@@ -10,8 +10,9 @@
  *
  * Display: line 1 the kit number and name, line 2 "cpu NN% pk NNNN" (share of time in
  * the engine, and the worst single engine call in microseconds, over the last 250 ms).
- * DRUM held + SELECT n plays voice n (stock behaviour, FUN_08008b00). Turning the
- * encoder loads the next or previous kit (test-image shortcut, not the stock UI).
+ * DRUM held + a voice button plays that voice (stock behaviour, FUN_08008b00). Turning the
+ * encoder browses kits; the kit loads when the encoder rests (test-image shortcut, not
+ * the stock UI).
  */
 #include "main.h"
 #include "fatfs.h"
@@ -27,7 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BUTTON_DRUM 4
+#define KIT_LOAD_DELAY_MS 400
 
 extern TIM_HandleTypeDef htim14;
 
@@ -79,18 +80,18 @@ static uint8_t mountSd(void)
 	return 0;
 }
 
-//DRUM held + SELECT n plays voice n, on the press edge
+//DRUM held + voice button n plays voice n, on the press edge
 static void auditionButtons(void)
 {
 	static int8_t last = -1;
-	const int8_t b = panel_buttonPressed();
-	const uint8_t drumHeld = (GPIOB->IDR & GPIO_PIN_6) != 0;
-	if(b != last && drumHeld && b > MODULE_BUTTON_SELECT1 - 1 && b < MODULE_BUTTON_SELECT1 + 7)
-		trigger_noteOn(b - MODULE_BUTTON_SELECT1, 60, 127);
+	const int8_t b = panel_buttonPressed(MODULE_BUTTON_VOICE1, MODULE_BUTTON_VOICE1 + 6);
+	if(b != last && b >= 0 && panel_buttonHeld(MODULE_BUTTON_DRUM))
+		trigger_noteOn(b - MODULE_BUTTON_VOICE1, 60, 127);
 	last = b;
 }
 
-static void showStatus(void)
+//browse >= 0: the kit the encoder points at, not loaded yet
+static void showStatus(int16_t browse)
 {
 	char line[21];
 	const uint8_t cpu = cpuMeter_percent();
@@ -99,7 +100,10 @@ static void showStatus(void)
 	char name[9];
 	memcpy(name, savefileNames[0][KIT_NAMES], 8);
 	name[8] = 0;
-	snprintf(line, sizeof line, "%03u %s%s", moduleKit_current, name, moduleKit_hasMatrix ? " m" : "");
+	if(browse >= 0)
+		snprintf(line, sizeof line, "> %03d %s", browse, moduleKit_fileName((uint8_t)browse));
+	else
+		snprintf(line, sizeof line, "%03u %s%s", moduleKit_current, name, moduleKit_hasMatrix ? " m" : "");
 	display_print(0, line);
 	snprintf(line, sizeof line, "cpu %2u%% pk %4lu", cpu, peakUs);
 	display_print(1, line);
@@ -159,7 +163,10 @@ int main(void)
 	}
 
 	morphParameters = mainParameters[0];
-	if(!sdOk || (moduleKit_load(moduleKit_lastUsed()) != FR_OK && moduleKit_step(1) != FR_OK))
+	if(sdOk)
+		moduleKit_scan();
+	if(!sdOk || (moduleKit_load(moduleKit_lastUsed()) != FR_OK
+	             && moduleKit_load((uint8_t)moduleKit_next(0, 1)) != FR_OK))
 	{
 		show("Kit read error", "/proj00");
 		HAL_Delay(1000);
@@ -174,6 +181,8 @@ int main(void)
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 	uint32_t nextDisplay = 0;
+	int16_t browseKit = -1;
+	uint32_t browseUntil = 0;
 	while(1)
 	{
 		triggers_dispatch();
@@ -184,15 +193,27 @@ int main(void)
 		panel_tick();
 		auditionButtons();
 
+		//load once the encoder has rested for KIT_LOAD_DELAY_MS, so scrolling past kits doesn't
+		//load each one (the main loop can't render during a load)
 		const int8_t turn = encode_read4();
 		if(turn && sdOk)
-			moduleKit_step(turn);
+		{
+			browseKit = moduleKit_next(browseKit < 0 ? moduleKit_current : browseKit, turn);
+			browseUntil = HAL_GetTick() + KIT_LOAD_DELAY_MS;
+			nextDisplay = HAL_GetTick();
+		}
+		if(browseKit >= 0 && (int32_t)(HAL_GetTick() - browseUntil) >= 0)
+		{
+			moduleKit_load((uint8_t)browseKit);
+			browseKit = -1;
+			nextDisplay = HAL_GetTick();
+		}
 
 		const uint32_t now = HAL_GetTick();
 		if((int32_t)(now - nextDisplay) >= 0)
 		{
 			nextDisplay = now + 250;
-			showStatus();
+			showStatus(browseKit);
 		}
 	}
 }

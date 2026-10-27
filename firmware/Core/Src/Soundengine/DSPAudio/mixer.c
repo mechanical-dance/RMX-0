@@ -548,10 +548,17 @@ IN_ITCM_RAM static inline void mixer_addDataToOutput(uint8_t dest, const float p
 IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 {
 
+#if LXR_MODULE
+	//lxr-0: the module has no output jack switches. These pins are accent inputs (PD6, PD7), an
+	//LED (PB4) and the DRUM button (PB6) there; the stock module's mixer (itcm_20c4) doesn't
+	//read them.
+	r2_Available = l1_Available = l2_Available = r1_Available = 1;
+#else
 	r2_Available = (switch_r2_GPIO_Port->IDR & switch_r2_Pin)>0;
 	l1_Available = (switch_l1_GPIO_Port->IDR & switch_l1_Pin)>0;
 	l2_Available = (switch_l2_GPIO_Port->IDR & switch_l2_Pin)>0;
 	r1_Available = (switch_r1_GPIO_Port->IDR & switch_r1_Pin)>0;
+#endif
 
 	modNode_resetTargets();
 	//re assign velocity modulation

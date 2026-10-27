@@ -9,7 +9,8 @@
 #include "ff.h"
 
 #define MODULE_NUM_BUTTONS 14
-#define MODULE_BUTTON_SELECT1 5	//SELECT 1..7 = buttons 5..11, voice i-5
+#define MODULE_BUTTON_DRUM 4
+#define MODULE_BUTTON_VOICE1 5	//the 7 voice buttons (OSC/DRUM1 .. MIX/OP HH) = buttons 5..11, voice i-5
 
 void SystemClock_Config(void);
 void MX_GPIO_Init(void);
@@ -28,7 +29,8 @@ void triggers_dispatch(void);
 void panel_ledSet(uint8_t i, uint8_t on);
 void panel_ledPulse(uint8_t i);
 void panel_tick(void);
-int8_t panel_buttonPressed(void);
+uint8_t panel_buttonHeld(uint8_t i);
+int8_t panel_buttonPressed(uint8_t first, uint8_t last);
 
 void display_init(void);
 void display_print(uint8_t row, const char *text);
@@ -40,7 +42,10 @@ extern uint8_t moduleKit_matrix[MODULE_MATRIX_BYTES];
 extern uint8_t moduleKit_hasMatrix;
 extern uint8_t moduleKit_current;
 FRESULT moduleKit_load(uint8_t kitNr);
-FRESULT moduleKit_step(int8_t dir);
+void moduleKit_scan(void);
+uint8_t moduleKit_exists(uint8_t kitNr);
+const char *moduleKit_fileName(uint8_t kitNr);
+int16_t moduleKit_next(int16_t kitNr, int8_t dir);
 uint8_t moduleKit_lastUsed(void);
 
 #endif /* MODULE_H_ */
