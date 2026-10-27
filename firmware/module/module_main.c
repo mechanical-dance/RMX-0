@@ -140,7 +140,7 @@ int main(void)
 	lcd_clear();
 	lcd_home();
 	MX_FATFS_ReInit();
-	show("lxr-0 module", "Phase 2a");
+	show("lxr-0 module", "v" LXR0_VERSION);
 
 	const uint8_t sdOk = mountSd();
 	HAL_Delay(1000);

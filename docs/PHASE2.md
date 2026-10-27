@@ -2,7 +2,7 @@
 
 ## 2a: the desktop engine played from the module's jacks
 Status 2026-10-27: built, not yet flashed. Target `lxr0_module` (`firmware/module/`), output
-`build/module/LXRE_LXR0_MODULE.img` (209 KB; ITCM 92 %, flash 15 %).
+`releases/LXRE_LXR0_V<version>.img` (209 KB; ITCM 92 %, flash 15 %).
 
 ### What it is
 The desktop engine, preset and MIDI code, unchanged, linked with module-side files:
@@ -24,12 +24,12 @@ The kit's per-LFO and velocity targets are dropped in `frontPanel_sendData`, as 
 31-byte layout isn't decoded yet. Nothing writes to the SD card.
 
 ### Flash and test (the user does this)
-Same as the bring-up: only `LXRE_LXR0_MODULE.img` on the card, plus the card's usual `PROJ00` and
+Same as the bring-up: only one `LXRE_LXR0_V*.img` on the card, plus the card's usual `PROJ00` and
 `STATE.IDX`. Hold the encoder at power-on. Recovery: the stock image the same way.
 
 | Check | Pass |
 |------|------|
-| Boot | `lxr-0 module / Phase 2a`, then the kit screen |
+| Boot | `lxr-0 module / v0.2.x`, then the kit screen |
 | Line 1 | `120 <name>`: the kit from `STATE.IDX` (120 on the 2026-10-25 card); ` m` if it has a mod matrix |
 | Line 2 | `cpu NN% pk NNNN`: engine share and worst single engine call in µs. The block budget is 1451 µs (64 samples at 44.1 kHz) |
 | Gate into a trigger jack | That voice plays; its voice button LED blinks |

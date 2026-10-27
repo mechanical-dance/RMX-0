@@ -5,3 +5,4 @@ recon/*.log
 recon/ghidra/*.gpr
 recon/ghidra/*.rep/
 build/
+releases/
