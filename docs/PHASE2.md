@@ -57,6 +57,14 @@ clicks or dropouts while playing (not while loading), the `cpu`/`pk` numbers whi
   - Kit browsing: the kit list is indexed at boot, the encoder browses (`> NNN NAME`) and the kit loads
     400 ms after the encoder stops; the DMA buffers are silenced during the load instead of looping.
 
+### v0.2.2 test (2026-10-27, the user)
+- Outputs 3/4 carry what the kit routes there (only 5 card kits use them). Accents no longer duck.
+- Clap/cymbal: some kits are quiet by design. Offline control: PHX-D01 module mode, velocity 63,
+  outputs 1-2, matrix off vs on (the matrix changes little). On hardware, Goblin/Arcade/Autobot loud and
+  Malware/Flange/Submarin faint, as rendered: no port bug.
+- Level: the stock output path (globals, mixer tail, I2S format) matches; no saturation or master gain in
+  either. Remaining difference is the mod matrix (2c).
+
 ### Next
 - 2b: pots, CVs (ADC with the module ranks, its own MSP without PA5), and the module's menu and edit flow
   from the manual; kit save; `glo.cfg`.
