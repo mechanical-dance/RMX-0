@@ -11,13 +11,14 @@ panel left on).
 | Board | Marking | Contents | Photos |
 |-------|---------|----------|--------|
 | Jack/panel board | `DRLXR2C`, "LXR Drum Voice v2.0 May 2022" | jacks, input stages, Winstar WEH001602 OLED (16×2 per its label; the manual says 2×20), Eurorack power header, headers XP8–XP12 to the MCU board | IMG_1374–1383 |
+| Jack board ICs | DA1 **Microchip MCP6004** (quad RR op-amp, CV input scaling: 100 kΩ/33 kΩ network) + DA2 (SOT-23-5, likely the 5th CV channel); DA3/DA4 ST dual op-amps (SO-8, marking only partly legible, near the output header XP12: likely output stage); DD2 **74HCT125D** (Nexperia quad buffer); DD3 14-pin, unreadable | IMG_1390–1396 |
 | MCU board | `DRLXR1M`, "v1.0 March 2022" | MCU DD1, 16 MHz-class crystal ZQ1, DACs DA7/DA8, microSD slot XS23, regulators DA5/DA6, **6-pin header XP2 (`RST` … `GND`, likely SWD)**, 5 unlabelled pads on the back (pin 1 square) | IMG_1384–1389 |
 
 ## MCU and memory
 | Item | Module | Source | Desktop |
 |------|--------|--------|---------|
 | Core | STM32F76x, SP `0x20080000` (512 KB RAM) | vector 0 | STM32F765 |
-| Part | **STM32F765V?H6**: line 2 reads most like `VIH6` (2 MB flash), but `VGH6` (1 MB) isn't ruled out. `H` = TFBGA100 (leadless, matches the photo). Confirm by reading FLASHSIZE (`0x1FF0F442`) in the Phase 1 image. PD8–PD15 are used on this package, so LXR02Open's 'TFBGA100: PD8–15 not bonded' note is wrong | IMG_1388 (angled), IMG_1385 | STM32F765VIH6 |
+| Part | **STM32F765VIH6** (2 MB flash; read by the user on the chip 2026-10-27). `H` = TFBGA100 (leadless, matches the photo). PD8–PD15 are used on this package, so LXR02Open's 'TFBGA100: PD8–15 not bonded' note is wrong | IMG_1388 (angled), IMG_1385 | STM32F765VIH6 |
 | App | `0x08008000`–`0x0803F954` (222 KB), sectors 1–4 | image header | same base |
 | Flash writes | None: no FLASH_KEYR unlock keys in the image. Kits live on SD only | byte search | — |
 | ITCM | 0x2DF8 bytes copied from `0x0803cb5c` to `0x00000000` at start of `main`; the audio render runs there (`0x000020c4`) | `0x800bc78`–`0x800bc80`, `FUN_0800dc68` | — |

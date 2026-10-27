@@ -52,11 +52,11 @@ in `recon/`; the Erica image and everything decompiled from it stay out of git (
 
 ## Step 5: photos (done, front panel left on)
 In `~/Documents/Gear/lxr-02/photos/`; details in `HARDWARE_MAP_MODULE.md`.
-1. **MCU:** STM32F765, line 2 most likely `VIH6` (TFBGA100, 2 MB), not certain. Phase 1 reads FLASHSIZE to settle it.
+1. **MCU:** STM32F765**VIH6** (TFBGA100, 2 MB), confirmed by the user.
 2. **DACs:** DA7/DA8, 10-pin, markings unreadable; the footprint fits CS4344.
 3. **Trigger stage:** transistor + 2 × ~100 kΩ + ferrite + diode per jack, no visible capacitor; open-collector into the
    MCU pull-up.
-4. **CV stage:** op-amps DA1/DA3/DA4 on the jack board (values not read).
+4. **CV stage:** DA1 MCP6004 (single-supply quad) with 100 kΩ/33 kΩ resistors, plus DA2: an inverting scale/offset into the ADC, matching `1 − adc/4096`. DA3/DA4 (ST dual op-amps) likely drive the outputs.
 5. **Debug:** 6-pin XP2 (`RST` … `GND`) on the MCU board, likely SWD; 5 pads on the back. Not probed (photos-only rule).
 
 ## MIDI verdict (provisional)
@@ -67,7 +67,7 @@ In `~/Documents/Gear/lxr-02/photos/`; details in `HARDWARE_MAP_MODULE.md`.
 | Small mod (optocoupler to spare RX) | Fallback if the trigger stage is too slow. Spare RX candidates depend on the photos (PB11 = USART3_RX is an LED here). |
 
 ## Headroom estimate
-- **Flash:** if the part is VIH6 (likely), 2 MB: sectors 5–11 free, about 1.75 MB, enough for LXR02Open's 1.5 MB sample area unchanged. If VGH6: 768 KB free in sectors 5–7. LXR02Open's sample area starts at sector 6 (`0x08080000`, 512 KB
+- **Flash:** 2 MB (VIH6): sectors 5–11 free, about 1.75 MB, enough for LXR02Open's 1.5 MB sample area unchanged (sectors 6–11). LXR02Open's sample area starts at sector 6 (`0x08080000`, 512 KB
   on 1 MB), and 1.5 MB needs a 2 MB part. Moving it to sector 5 would give 768 KB.
 - **RAM:** about 330 KB of SRAM1 free; DTCM about 23 KB free.
 - **Reverb:** its buffers are fp16 allpass delays of `MAX_ALLPASS_SIZE` 0x800 each (`FxRamBuffer.h`, `Reverb.c`), on
