@@ -1,6 +1,6 @@
 # Phase 1: build, bring-up image, debug access
 
-Status 2026-10-27: built and checked on the host. **Nothing has been flashed yet.** The user does every flash.
+Status 2026-10-27: flashed by the user. LED chase, button indices (SHIFT 12, SAVE/LOAD 13) and all 7 trigger pins confirmed on hardware; the trigger order matches the image's map, and OP HH is on PD9 (the MIDI candidate pin).
 
 ## 1. Desktop firmware builds unchanged
 `firmware/` is an identical copy of `lxr-desktop-app` (vendor a43cd4f). Build (Ninja isn't installed, so use Make):
@@ -24,9 +24,9 @@ Target `lxr0_bringup` (`firmware/bringup/`), output `build/bringup/LXRE_LXR0_BRI
 |------|------|
 | Display, about 1 s after boot | `lxr-0 bring-up` |
 | Line 1 | `F2048 t<seconds> c<n>%`. 2048 = 2 MB part, `t` counts up, `c` is small (a few %) |
-| LEDs | All 14 chase in button-index order (EDIT, PERFORM, MOD, FX, DRUM, SELECT 1–7, SHIFT, SAVE/LOAD) |
+| LEDs | All 14 chase in button-index order (the stock scan order, not panel order): top 4, the drum row, then SHIFT (12), SAVE/LOAD (13) |
 | Hold a button | Only that button's LED lights; line 2 shows `bNN` with its index (00–13) |
-| Gate into trigger jacks 1–7 | Bit N on line 2 goes to `1` while the gate is high |
+| Gate into a trigger jack | Its digit on line 2 goes to `1`. Digits are raw pin order PD9..PD15, left to right: 1 OP HH, 2 D3, 3 D2, 4 CL HH, 5 CLP/CYM, 6 SNARE, 7 D1 (matches the trigger table in HARDWARE_MAP_MODULE.md) |
 | Press the encoder | `e` at the end of line 2 |
 | All LEDs on, display blank | `Error_Handler`: clock setup failed. Report this |
 | Nothing at all | Re-flash the stock image (below) and report it |
