@@ -19,4 +19,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.3.0 | `LXRE_LXR0_V0.3.0_ERICA1.51.img` | 31d0c32 | Erica v1.51 (e752339) unchanged; built, not flashed |
 | 0.3.1 | `LXRE_LXR0_V0.3.1.img` | f02bf00 | MIDI in on OP HH (`LXR0_MIDI`), global page sub-pages 2–3; works on hardware 2026-10-31, occasional short dropouts (cause TBD) |
 | 0.3.2 | `LXRE_LXR0_V0.3.2.img` | 946fd82 | global reverb bus (`LXR0_REVERB`); built, not flashed |
-| 0.3.3 | `LXRE_LXR0_V0.3.3.img` | (this commit) | 0.3.2 + stereo reverb bus (right-output taps); built, not flashed |
+| 0.3.3 | `LXRE_LXR0_V0.3.3.img` | aaef184 | 0.3.2 + stereo reverb bus (right-output taps); built, not flashed |
