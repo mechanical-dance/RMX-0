@@ -23,6 +23,7 @@
 
 
 #include "Preset/PresetManager.h"
+#include "bsp_driver_sd.h"
 #include "menu/menuPages.h"
 #include "menu/MenuText.h"
 //#include "../Hardware/timebase.h"
@@ -60,6 +61,10 @@ static void setNoteName(uint8_t num, char *buf);
 
 static void menu_moveToMenuItem(int8_t inc);
 static void menu_encoderChangeParameter(int8_t inc);
+#if LXR0_RESTART
+static uint8_t restartOpen = 0;
+static void restartRepaint(void);
+#endif
 
 #define ARROW_SIGN '>'
 #define ARROW_UP 0b11000101
@@ -2025,6 +2030,13 @@ void menu_repaint()
 	if(screensaver_Active) return;
 
 	visibleCursor = 0;
+#if LXR0_RESTART
+	if(restartOpen)
+	{
+		restartRepaint();
+		return;
+	}
+#endif
 	if(menu_activePage == LOAD_PAGE || menu_activePage==SAVE_PAGE)
 	{
 		//this is a special case because the load/save page differs from all the other pages
@@ -3003,9 +3015,73 @@ static void getMenuItemNameForValue(const uint8_t menuId, const uint8_t curParmV
 // called when either the encoder is rotated, or the encoder button is clicked
 // inc - the number of clicks the encoder has moved
 // button - 1 if the button is depressed, 0 if its not
+#if LXR0_RESTART
+// lxr-0: the restart menu. Nothing changes until the bar reaches the right edge; any button leaves.
+#define RESTART_CELLS 16
+#define RESTART_BLOCK ((char)0xFF) // solid block in the LCD's character ROM
+static uint8_t restartFilled = 0;
+
+void menu_lxr0RestartOpen(void)
+{
+	restartOpen = 1;
+	restartFilled = 0;
+	menu_repaintAll();
+}
+
+void menu_lxr0RestartClose(void)
+{
+	restartOpen = 0;
+	menu_repaintAll();
+}
+
+uint8_t menu_lxr0RestartIsOpen(void)
+{
+	return restartOpen;
+}
+
+static void restartRepaint(void)
+{
+	memset(&editDisplayBuffer[0][0],' ',16);
+	memset(&editDisplayBuffer[1][0],RESTART_BLOCK,restartFilled);
+	memset(&editDisplayBuffer[1][restartFilled],' ',(size_t)(16-restartFilled));
+	memcpy(&editDisplayBuffer[0][0],"Restart: turn >",15);
+	display_needs_refresh = 1;
+}
+
+// the current kit is autosaved when there's a card, so the restart brings it back as a power cycle does
+static void restartNow(void)
+{
+	restartRepaint();
+	lcd_process_display_interrupt = 0;
+	while(sendDisplayBuffer() != 0);
+	if(BSP_SD_IsDetected() == SD_PRESENT)
+		preset_saveTmpKit();
+	NVIC_SystemReset();
+}
+
+static void restartEncoder(int8_t inc)
+{
+	const int16_t filled = (int16_t)restartFilled + inc;
+	restartFilled = filled < 0 ? 0 : (filled > RESTART_CELLS ? RESTART_CELLS : (uint8_t)filled);
+	screensaver_touch();
+	if(restartFilled == RESTART_CELLS)
+		restartNow();
+	menu_repaintAll();
+}
+#endif
+//-----------------------------------------------------------------
 void menu_parseEncoder(int8_t inc, uint8_t button)
 {
 	uint8_t btnClicked=0;
+#if LXR0_RESTART
+	if(restartOpen)
+	{
+		lastEncoderButton = button; // the click does nothing here
+		if(inc != 0)
+			restartEncoder(inc);
+		return;
+	}
+#endif
 	// handle the button being clicked or released
 	if(button != lastEncoderButton) { // was the button clicked?
 		btnClicked=button;

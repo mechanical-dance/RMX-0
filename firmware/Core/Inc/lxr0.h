@@ -11,7 +11,9 @@
 #define LXR0_REVERB 1
 // user samples as oscillator waveforms: installed from the SD card (/samples, /loops) to sectors 6-11
 #define LXR0_SAMPLES 1
+// restart menu: shift + edit + perform, then fill the bar with the encoder
+#define LXR0_RESTART 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.4.1"
+#define LXR0_VERSION "0.4.2"
 
 #endif /* LXR0_H_ */

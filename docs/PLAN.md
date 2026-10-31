@@ -120,3 +120,22 @@ There is no load readout yet: if the reverb vanishes on a heavy kit, that's the 
 | FM on a sample, retrigger mid-sample | no crash, restarts from the start |
 | Power cycle | samples still there |
 | Heavy kit with several long samples | no new dropouts (flash read cost is unmeasured) |
+
+## Restart menu (`LXR0_RESTART`, 0.4.2)
+For updating without powering the rack down: the SD card can be pulled while the module plays, and the
+firmware remounts it when it comes back (stock behaviour).
+- Hold SHIFT and press EDIT and PERF in either order. The first of the two still does its normal SHIFT
+  action, so the page behind the menu may have changed.
+- Turn the encoder right to fill the 16-cell bar, left to back off. A full bar restarts the module, which
+  goes through the bootloader as at power-on: hold the encoder for firmware update mode.
+- Any button leaves without restarting. The encoder click does nothing here. Audio keeps playing.
+- If a card is in, the current kit is autosaved first. With no card it restarts anyway.
+
+| Check | Pass |
+|------|------|
+| SHIFT + EDIT + PERF, both orders | menu opens, audio keeps playing |
+| Turn right, then left | bar grows and shrinks; no parameter changes |
+| Any button | menu closes, nothing else happens |
+| Fill the bar, encoder held | bootloader update mode |
+| Fill the bar, encoder not held | normal boot, same kit and edits |
+| Pull the card, fill the bar | restarts without hanging |

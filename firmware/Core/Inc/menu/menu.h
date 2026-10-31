@@ -751,6 +751,11 @@ void menu_init();
 //-----------------------------------------------------------------
 /** takes the values received from the encoder and translates it to menu changes*/
 void menu_parseEncoder(int8_t inc, uint8_t button);
+#if LXR0_RESTART
+void menu_lxr0RestartOpen(void);
+void menu_lxr0RestartClose(void);
+uint8_t menu_lxr0RestartIsOpen(void);
+#endif
 //-----------------------------------------------------------------
 void menu_switchPage(uint8_t pageNr);
 //-----------------------------------------------------------------

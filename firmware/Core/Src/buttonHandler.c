@@ -29,6 +29,10 @@
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include <Soundengine/TriggerProcessor.h>
 
+#if LXR0_RESTART
+static uint8_t lxr0_editHeld = 0;
+static uint8_t lxr0_perfHeld = 0;
+#endif
 #if LXR0_SAMPLES
 static uint8_t lxr0_onSamplesPage = 0; // the load page shows the sample install
 #endif
@@ -1860,6 +1864,20 @@ void buttonHandler_buttonPressed(uint8_t buttonNr) {
 
 	screensaver_touch();
 
+#if LXR0_RESTART
+	if(buttonNr == BUT_EDIT) lxr0_editHeld = 1;
+	if(buttonNr == BUT_PERF) lxr0_perfHeld = 1;
+	if(menu_lxr0RestartIsOpen())
+	{
+		menu_lxr0RestartClose(); // any button leaves, and does nothing else
+		return;
+	}
+	if(buttonHandler_getShiftButton() && lxr0_editHeld && lxr0_perfHeld)
+	{
+		menu_lxr0RestartOpen();
+		return;
+	}
+#endif
 
 	//------------------------------------------------------
 	switch(buttonNr)
@@ -2382,6 +2400,10 @@ void buttonHandler_buttonPressed(uint8_t buttonNr) {
 //--------------------------------------------------------
 void buttonHandler_buttonReleased(uint8_t buttonNr)
 {
+#if LXR0_RESTART
+	if(buttonNr == BUT_EDIT) lxr0_editHeld = 0;
+	if(buttonNr == BUT_PERF) lxr0_perfHeld = 0;
+#endif
 
 	switch (buttonNr)
 	{
