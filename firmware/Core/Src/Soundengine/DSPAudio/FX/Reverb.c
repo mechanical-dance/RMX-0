@@ -33,7 +33,8 @@ void Reverb_init(Reverb *r)
 	TiltEq_init(&r->eqFb);
 
 	SineCosine_init(&r->lfo);
-	r->reverbBufferSram = (__fp16*)FX_BUFFER;
+	if(!r->reverbBufferSram) // lxr-0: the reverb bus sets its own buffer before init
+		r->reverbBufferSram = (__fp16*)FX_BUFFER;
 
 	r->earlyVolume = 1.0f;
 

@@ -39,3 +39,35 @@ Cable: TRS Type A MIDI into the OP HH jack (tip = MIDI pin 5).
 If nothing plays in MIDI mode: the input stage may not pass 31.25 kbaud, or the polarity guess is wrong
 (build with `RXINV` off to tell). Defaults from `glo.cfg` are all voices on ch 1, note 48, so one note
 48 plays every voice until the notes are set.
+
+## Global reverb (`LXR0_REVERB`, 0.3.2)
+- A second instance of Erica's `Reverb.c` (the FX bus reverb, `SPIN_SEMI 0`, mono out) with its own
+  56 KB buffer in SRAM1, so it runs alongside whatever the FX bus does. `Reverb_init` keeps a buffer
+  set before init (the only change to their file).
+- Sends are post-fader (after decimation), per voice; both hats share voice 6's send.
+- 12 kit parameters `PAR_LXR0_VERB_*` after `PAR_CV_SRC_18`: sends 1–6, amount (return level),
+  out (as FX routing), pre-delay, decay, tone, reflection (as FX P1–P4). Saved at the end of the kit
+  file: stock firmware reads only its own length; older kits load with sends 0 and bus defaults
+  (amount 100, St1, pre 10, decay 90, tone 64, reflection 40). Project files pad kits to 512 bytes,
+  so they stay compatible. Parameters above 255 aren't sent to the engine, so the bus polls them
+  every block.
+- Load guard: the render of each block is timed with the DWT cycle counter. Above 95 % of the block
+  time the bus is bypassed; it comes back (with a cleared tail) after the load plus the reverb's own
+  measured cost stays below 90 % for 0.5 s.
+- Menus: `rev` (send) is slot 6 of each voice's MIX page (2nd screen); `rev` (amount) is the 4th pot on
+  the perform page; pressing FX again after the FX type's screens opens the reverb page
+  (`rev out` / `pre dcy ton ref`), and again returns to the FX type.
+- Host check (scratchpad, 2026-10-31): impulse at decay 90 falls ~33 dB/s; feedback 1.0 stays bounded.
+
+### 0.3.2 hardware test
+| Check | Pass |
+|------|------|
+| Boot | line 1 `lxr-0 0.3.2`; kits load as before |
+| Stock kit, any send up | reverb on outs 1–2 (`out` = St1) |
+| Perform pot 4 (`rev`) | changes the reverb level |
+| FX pressed 2–3× | reverb page appears; pre/decay/tone/reflection audible |
+| FX bus delay + reverb sends together | both run |
+| Save a kit, reload, power cycle | sends and reverb settings kept |
+| Same kit on stock firmware | loads, plays without reverb |
+| Heavy kit (Penalty) + all sends up | no dropouts; if load passes 95 % the reverb cuts out, returns when load drops |
+There is no load readout yet: if the reverb vanishes on a heavy kit, that's the guard.

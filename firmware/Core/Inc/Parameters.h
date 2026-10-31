@@ -22,6 +22,7 @@
 #define NUM_KIT_SLOTS 128 //64
 
 #include "stm32f7xx_hal.h"
+#include "lxr0.h" // lxr-0: feature flags change the parameter list
 
 enum ParamEnums
 {
@@ -394,6 +395,23 @@ enum ParamEnums
 	PAR_CV_SRC_16,
 	PAR_CV_SRC_17,
 	PAR_CV_SRC_18,
+
+#if LXR0_REVERB
+	// lxr-0: global reverb bus, saved at the end of the kit file (stock firmware ignores the tail,
+	// older kits load these as 0 and get defaults). Read by the engine every block, not sent as CC.
+	PAR_LXR0_VERB_SEND1,	// post-fader sends, voices 1-6 (both hats share 6)
+	PAR_LXR0_VERB_SEND2,
+	PAR_LXR0_VERB_SEND3,
+	PAR_LXR0_VERB_SEND4,
+	PAR_LXR0_VERB_SEND5,
+	PAR_LXR0_VERB_SEND6,
+	PAR_LXR0_VERB_AMOUNT,	// return level
+	PAR_LXR0_VERB_ROUTING,	// output, as PAR_FX_ROUTING
+	PAR_LXR0_VERB_PREDELAY,	// as the FX bus reverb P1-P4
+	PAR_LXR0_VERB_DECAY,
+	PAR_LXR0_VERB_TONE,
+	PAR_LXR0_VERB_REFLECTION,
+#endif
 
 
 	//#########################################

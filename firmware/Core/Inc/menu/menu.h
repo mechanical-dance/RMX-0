@@ -295,6 +295,16 @@ enum NamesEnum
 	TEXT_LXR0_NOTE_CLHH,
 	TEXT_LXR0_NOTE_OPHH,
 #endif
+#if LXR0_REVERB
+	// lxr-0: global reverb bus
+	TEXT_LXR0_VERB_SEND,
+	TEXT_LXR0_VERB_AMOUNT,
+	TEXT_LXR0_VERB_OUT,
+	TEXT_LXR0_VERB_PREDELAY,
+	TEXT_LXR0_VERB_DECAY,
+	TEXT_LXR0_VERB_TONE,
+	TEXT_LXR0_VERB_REFLECTION,
+#endif
 
 
 	NUM_NAMES
@@ -425,6 +435,9 @@ enum shortNamesEnum
 	SHORT_LXR0_NT6,
 	SHORT_LXR0_NT7,
 #endif
+#if LXR0_REVERB
+	SHORT_LXR0_REV,
+#endif
 
 	
 };
@@ -470,6 +483,9 @@ enum catNamesEnum
 	CAT_LXR0_CLPCYM,
 	CAT_LXR0_CLHH,
 	CAT_LXR0_OPHH,
+#endif
+#if LXR0_REVERB
+	CAT_LXR0_REVERB,
 #endif
 };
 //-----------------------------------------------------------------
@@ -570,6 +586,9 @@ enum longNamesEnum
 	LONG_MORPH_TARGET,
 #if LXR0_MIDI
 	LONG_LXR0_MIDI_IN,
+#endif
+#if LXR0_REVERB
+	LONG_LXR0_SEND,
 #endif
 	
 };

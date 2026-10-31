@@ -32,10 +32,7 @@ extern TIM_HandleTypeDef htim2;
 #define USE_SD_CARD 1
 
 #define EURORACK_MODULE 1
-// lxr-0: MIDI in on the OP HH jack (PD9 = USART3_RX), switched by the PAR_MIDI_MODE global
-#define LXR0_MIDI 1
-// lxr-0: version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.3.1"
+#include "lxr0.h" // lxr-0: feature flags
 #define SEQ_DEFAULT_NOTE 60
 
 void Error_Handler(void);

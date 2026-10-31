@@ -539,6 +539,9 @@ const char shortNames[][4]  =
 	{"nt6"},
 	{"nt7"},
 #endif
+#if LXR0_REVERB
+	{"rev"},
+#endif
 
 };
 //-----------------------------------------------------------------
@@ -584,6 +587,9 @@ const char catNames[][16] =
 	{"Clp/Cym"},
 	{"Cl HH"},
 	{"Op HH"},
+#endif
+#if LXR0_REVERB
+	{"Reverb"},
 #endif
 };
 //-----------------------------------------------------------------
@@ -685,6 +691,9 @@ const char longNames[][16] =
 	{"MrphTrgt"},
 #if LXR0_MIDI
 	{"MIDI In"},
+#endif
+#if LXR0_REVERB
+	{"Send"},
 #endif
 };
 

@@ -30,6 +30,7 @@
 #include "Soundengine/MIDI/MidiParser.h"
 //#include "Soundengine/Sequencer/sequencer.h"
 #include "Soundengine/Soundengine.h"
+#include "Soundengine/DSPAudio/FX/lxr0_reverbBus.h" // lxr-0
 
 FRESULT preset_savePatternSD(uint8_t presetNr);
 //FRESULT preset_loadPatternSD(uint8_t presetNr);
@@ -223,6 +224,9 @@ FRESULT preset_LoadTmpKit()
 			// set to 0 for any that were not read from the file
 			if(END_OF_SOUND_PARAMETERS-bytesRead)
 				memset(para+bytesRead,0,END_OF_SOUND_PARAMETERS-bytesRead);
+#if LXR0_REVERB
+			lxr0Verb_kitDefaults(para, bytesRead); // lxr-0: kits saved without the reverb tail
+#endif
 
 			//special case mod targets. normalize.
 			const uint8_t nmt=getNumModTargets();
@@ -514,6 +518,9 @@ void preset_init(uint8_t presetNr)
 		else
 			para[i-8] = 0;
 	}
+#if LXR0_REVERB
+	lxr0Verb_kitDefaults(para, 0); // lxr-0: the init kit has no reverb tail
+#endif
 
 	//special case mod targets. normalize.
 	const uint8_t nmt=getNumModTargets();
@@ -615,6 +622,11 @@ void preset_loadDrumsetRam(uint8_t presetNr, uint8_t isMorph, uint8_t sendImmedi
 		{
 			//load everything but CV routing
 			memcpy(activeParameters, mainParameters[presetNr], sizeof(uint8_t) * PAR_CV_DEST_1);
+#if LXR0_REVERB
+			// lxr-0: the reverb settings follow the CV routing but belong to the kit
+			memcpy(&activeParameters[PAR_LXR0_VERB_SEND1], &mainParameters[presetNr][PAR_LXR0_VERB_SEND1],
+					END_OF_SOUND_PARAMETERS - PAR_LXR0_VERB_SEND1);
+#endif
 
 
 		}
@@ -973,6 +985,9 @@ static FRESULT preset_readDrumsetData(uint8_t presetNr)
 		// set to 0 for any that were not read from the file
 		if(END_OF_SOUND_PARAMETERS-bytesRead)
 			memset(para+bytesRead,0,END_OF_SOUND_PARAMETERS-bytesRead);
+#if LXR0_REVERB
+		lxr0Verb_kitDefaults(para, bytesRead); // lxr-0: kits saved without the reverb tail
+#endif
 		
 		//special case mod targets. normalize.
 		const uint8_t nmt=getNumModTargets();

@@ -26,6 +26,7 @@
 #include "menu/menu.h"
 #include "Soundengine/FxBus.h"
 #include "Soundengine/MIDI/MidiVoiceControl.h"
+#include "Soundengine/DSPAudio/FX/lxr0_reverbBus.h" // lxr-0
 
 	uint8_t r2_Available;
 	uint8_t l1_Available;
@@ -57,6 +58,9 @@ void mixer_init()
 #endif
 
 	FxBus_init();
+#if LXR0_REVERB
+	lxr0Verb_init(); // lxr-0: global reverb bus
+#endif
 }
 //-----------------------------------------------------------------------
 IN_ITCM_RAM void mixer_decimateBlock(const uint8_t voiceNr, int16_t* buffer)
@@ -548,6 +552,9 @@ IN_ITCM_RAM static inline void mixer_addDataToOutput(uint8_t dest, const float p
 //-----------------------------------------------------------------------
 IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 {
+#if LXR0_REVERB
+	lxr0Verb_beginBlock(); // lxr-0: load timer, reverb settings
+#endif
 	voiceControl_processQueue();
 #if !EURORACK_MODULE
 	r2_Available = (switch_r2_GPIO_Port->IDR & switch_r2_Pin)>0;
@@ -611,6 +618,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 	calcDrumVoiceSyncBlock(0, sampleData,OUTPUT_DMA_SIZE);
 	//decimate voice
 	mixer_decimateBlock(0,sampleData);
+#if LXR0_REVERB
+	lxr0Verb_addSend(0, sampleData); // lxr-0: post-fader reverb send
+#endif
 	//copy to selected dma buffer
 #if USE_SQRT_LUT
 	mixer_addDataToOutput(mixer_audioRouting[0],squareRootLut[127-voiceArray[0].pan] ,squareRootLut[voiceArray[0].pan], sampleData,&output[pos],&output[pos+1],&output2[pos],&output2[pos+1], fxBusData);
@@ -636,6 +646,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 	calcDrumVoiceSyncBlock(1, sampleData,OUTPUT_DMA_SIZE);
 	//decimate voice
 	mixer_decimateBlock(1,sampleData);
+#if LXR0_REVERB
+	lxr0Verb_addSend(1, sampleData); // lxr-0: post-fader reverb send
+#endif
 	//copy to selected dma buffer
 #if USE_SQRT_LUT
 	mixer_addDataToOutput(mixer_audioRouting[1],squareRootLut[127-voiceArray[1].pan] ,squareRootLut[voiceArray[1].pan], sampleData,&output[pos],&output[pos+1],&output2[pos],&output2[pos+1], fxBusData);
@@ -656,6 +669,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 	calcDrumVoiceSyncBlock(2, sampleData,OUTPUT_DMA_SIZE);
 	//decimate voice
 	mixer_decimateBlock(2,sampleData);
+#if LXR0_REVERB
+	lxr0Verb_addSend(2, sampleData); // lxr-0: post-fader reverb send
+#endif
 	//copy to selected dma buffer
 #if USE_SQRT_LUT
 	mixer_addDataToOutput(mixer_audioRouting[2],squareRootLut[127-voiceArray[2].pan] ,squareRootLut[voiceArray[2].pan], sampleData,&output[pos],&output[pos+1],&output2[pos],&output2[pos+1], fxBusData);
@@ -675,6 +691,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 	Snare_calcSyncBlock(sampleData,OUTPUT_DMA_SIZE);
 	//decimate voice
 	mixer_decimateBlock(3,sampleData);
+#if LXR0_REVERB
+	lxr0Verb_addSend(3, sampleData); // lxr-0: post-fader reverb send
+#endif
 	//copy to selected dma buffer
 #if USE_SQRT_LUT
 	mixer_addDataToOutput(mixer_audioRouting[3],squareRootLut[127-snareVoice.pan], squareRootLut[snareVoice.pan], sampleData,&output[pos],&output[pos+1],&output2[pos],&output2[pos+1], fxBusData);
@@ -690,6 +709,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 	Cymbal_calcSyncBlock(sampleData,OUTPUT_DMA_SIZE);
 	//decimate voice
 	mixer_decimateBlock(4,sampleData);
+#if LXR0_REVERB
+	lxr0Verb_addSend(4, sampleData); // lxr-0: post-fader reverb send
+#endif
 	//copy to selected dma buffer
 #if USE_SQRT_LUT
 	mixer_addDataToOutput(mixer_audioRouting[4],squareRootLut[127-cymbalVoice.pan],	squareRootLut[cymbalVoice.pan], sampleData,&output[pos],&output[pos+1],&output2[pos],&output2[pos+1], fxBusData);
@@ -706,6 +728,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 	HiHat_calcSyncBlock(sampleData,OUTPUT_DMA_SIZE);
 	//decimate voice
 	mixer_decimateBlock(5,sampleData);
+#if LXR0_REVERB
+	lxr0Verb_addSend(5, sampleData); // lxr-0: post-fader reverb send
+#endif
 	//copy to selected dma buffer
 #if USE_SQRT_LUT
 	mixer_addDataToOutput(mixer_audioRouting[5],squareRootLut[127-hatVoice.pan],squareRootLut[hatVoice.pan], sampleData,&output[pos],&output[pos+1],&output2[pos],&output2[pos+1], fxBusData);
@@ -719,6 +744,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 
 #endif
 	FxBus_process(fxBusData,  &output[pos],&output[pos+1],&output2[pos],&output2[pos+1], OUTPUT_DMA_SIZE);
+#if LXR0_REVERB
+	lxr0Verb_endBlock(&output[pos], &output2[pos]); // lxr-0: global reverb bus, load guard
+#endif
 /*
 	if(activeParameters[UNUSED_PAR_GLO_SAT])
 	{

@@ -16,6 +16,9 @@
 
 #include "IO/uart.h"
 #include "Soundengine/MIDI/Uart.h" // lxr-0: lxr0_setOpHhMidi
+#if LXR0_REVERB
+#define LXR0_VERB_SUBPAGE 6 // lxr-0: FX page sub-page after the FX types (menuPages.h)
+#endif
 
 
 #include "Preset/PresetManager.h"
@@ -274,6 +277,15 @@ const Name valueNames[NUM_NAMES] =
 		{SHORT_LXR0_NT5, CAT_LXR0_CLPCYM, LONG_NOTE},/*TEXT_LXR0_NOTE_CLPCYM*/
 		{SHORT_LXR0_NT6, CAT_LXR0_CLHH, LONG_NOTE},/*TEXT_LXR0_NOTE_CLHH*/
 		{SHORT_LXR0_NT7, CAT_LXR0_OPHH, LONG_NOTE},/*TEXT_LXR0_NOTE_OPHH*/
+#endif
+#if LXR0_REVERB
+		{SHORT_LXR0_REV, CAT_LXR0_REVERB, LONG_LXR0_SEND},/*TEXT_LXR0_VERB_SEND*/
+		{SHORT_LXR0_REV, CAT_LXR0_REVERB, LONG_AMOUNT},/*TEXT_LXR0_VERB_AMOUNT*/
+		{SHORT_OUT, CAT_LXR0_REVERB, LONG_AUDIO_OUT},/*TEXT_LXR0_VERB_OUT*/
+		{SHORT_PRE, CAT_LXR0_REVERB, LONG_PREDELAY},/*TEXT_LXR0_VERB_PREDELAY*/
+		{SHORT_DECAY, CAT_LXR0_REVERB, LONG_DECAY},/*TEXT_LXR0_VERB_DECAY*/
+		{SHORT_TONE, CAT_LXR0_REVERB, LONG_TONE},/*TEXT_LXR0_VERB_TONE*/
+		{SHORT_REF, CAT_LXR0_REVERB, LONG_REFLECTION},/*TEXT_LXR0_VERB_REFLECTION*/
 #endif
 
 
@@ -591,6 +603,20 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 		/*PAR_CV_SRC_16*/		DTYPE_MENU | (MENU_CV_SRC<<8),
 		/*PAR_CV_SRC_17*/		DTYPE_MENU | (MENU_CV_SRC<<8),
 		/*PAR_CV_SRC_18*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+#if LXR0_REVERB
+		/*PAR_LXR0_VERB_SEND1*/	DTYPE_0B127,
+		/*PAR_LXR0_VERB_SEND2*/	DTYPE_0B127,
+		/*PAR_LXR0_VERB_SEND3*/	DTYPE_0B127,
+		/*PAR_LXR0_VERB_SEND4*/	DTYPE_0B127,
+		/*PAR_LXR0_VERB_SEND5*/	DTYPE_0B127,
+		/*PAR_LXR0_VERB_SEND6*/	DTYPE_0B127,
+		/*PAR_LXR0_VERB_AMOUNT*/	DTYPE_0B127,
+		/*PAR_LXR0_VERB_ROUTING*/	DTYPE_MENU | (MENU_AUDIO_OUT_FX<<8),
+		/*PAR_LXR0_VERB_PREDELAY*/	DTYPE_0B127,
+		/*PAR_LXR0_VERB_DECAY*/		DTYPE_0B127,
+		/*PAR_LXR0_VERB_TONE*/		DTYPE_0B127,
+		/*PAR_LXR0_VERB_REFLECTION*/	DTYPE_0B127,
+#endif
 
 
 	    /*PAR_ROLL*/ 			DTYPE_MENU | (MENU_ROLL_RATES<<8),
@@ -3604,6 +3630,22 @@ void menu_switchPage(uint8_t pageNr)
 
 	case FX_MODE_PAGE:
 
+#if LXR0_REVERB
+		// lxr-0: FX again cycles: FX type screen 1 -> screen 2 -> reverb bus page -> FX type
+		if(menu_activePage == FX_MODE_PAGE)
+		{
+			const uint8_t subPage = menu_getSubPage();
+			const uint8_t on2ndScreen = (menuIndex & MASK_PARAMETER) >= 4;
+			if(subPage == LXR0_VERB_SUBPAGE || on2ndScreen || !has2ndPage(subPage))
+			{
+				menuIndex = (uint8_t)(menuIndex & ~MASK_PARAMETER); // land on the 1st screen
+				menu_switchSubPage(subPage == LXR0_VERB_SUBPAGE ? fxBus.fxType : LXR0_VERB_SUBPAGE, 0);
+			}
+			else
+				menu_switchSubPage(fxBus.fxType, 1 );
+		}
+		else
+#endif
 		menu_switchSubPage(fxBus.fxType, 1 );
 		editModeActive = 0;
 		menu_activePage=FX_MODE_PAGE;
