@@ -92,6 +92,11 @@ void Ringmod_resetPhase(Ringmod* rm)
 		rm->osc.phase = 1024 + ( (0x3ff<<20) - 1024);//voiceArray[voiceNr].osc.startPhase ;
 	else //if(rm->osc.waveform > SINE && rm->osc.waveform <= REC)
 		rm->osc.phase = (0xff<<22);
+#if LXR0_SAMPLES
+	if(rm->osc.waveform >= NUM_OSC_WAVEFORMS) // samples start at the start
+		rm->osc.phase = 0;
+	OSC_RESTART_SAMPLE(rm->osc);
+#endif
 
 }
 

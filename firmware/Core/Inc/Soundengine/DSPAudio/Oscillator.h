@@ -16,6 +16,7 @@
 #define OSCILLATOR_H_
 
 #include "stm32f7xx_hal.h"
+#include "lxr0.h"
 #include "Soundengine/datatypes.h"
 #include "Soundengine/DSPAudio/wavetable.h"
 #include "Soundengine/config.h"
@@ -61,7 +62,17 @@ typedef struct OscStruct
 	uint16_t	midiFreq;  //upper 8 bit coarse, lower 8 bit fine -> the sound edit freq offset
 	uint8_t baseNote;		// the last played midi note
 	uint32_t startPhase;		// the OSC is reset to this phase on retrigger
+#if LXR0_SAMPLES
+	uint32_t sampleHi;			// lxr-0: upper bits of the sample position, phase holds the lower ones
+#endif
 } OscInfo;
+
+// lxr-0: wherever a voice resets its oscillator phase
+#if LXR0_SAMPLES
+#define OSC_RESTART_SAMPLE(o) ((o).sampleHi = 0)
+#else
+#define OSC_RESTART_SAMPLE(o) ((void)0)
+#endif
 //-----------------------------------------------------------
 
 //extern OscInfo osc1;
@@ -114,6 +125,7 @@ void calcPwmBlock(OscInfo* osc, int16_t* buf, uint8_t size ,const float gain, co
 void calcUserSampleOscFmBlock(OscInfo* osc,int16_t* modBuffer, int16_t* buf, uint8_t size ,const float gain);
 //-----------------------------------------------------------
 void calcUserSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_t size ,const float gain);
+void osc_calcUserSampleFreq(OscInfo* osc);
 //-----------------------------------------------------------
 //int16_t calcSampleOsc(OscInfo* osc);
 //-----------------------------------------------------------

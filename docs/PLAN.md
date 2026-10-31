@@ -9,7 +9,8 @@ Order of work:
 1. **MIDI** (0.3.1): the engine's own MIDI code, on the OP HH trigger jack.
 2. **Global reverb:** a parallel reverb bus with per-voice sends, the amount on the perform page's
    empty pot, a settings page in the FX menu, and a cut-off above 95 % CPU load.
-3. **Samples:** our own design (not LXR02Open's). Decide on RAM vs SD streaming then.
+3. **Samples** (0.4.0): an oscillator waveform, as on the original LXR. Files live on the SD card and
+   are installed to internal flash.
 
 Images: `releases/LXRE_LXR0_V0.<n>.<build>.img`, logged in `RELEASES.md`.
 
@@ -80,3 +81,39 @@ If nothing plays in MIDI mode: the input stage may not pass 31.25 kbaud, or the 
 | Heavy kit (Penalty) + all sends up | no dropouts; if load passes 95 % the reverb cuts out, returns when load drops |
 There is no load readout yet: if the reverb vanishes on a heavy kit, that's the guard.
 0.3.3 adds: the reverb is stereo on St1/St2 (different left and right tails).
+
+## Samples (`LXR0_SAMPLES`, 0.4.0)
+- Design from the original LXR (`calcUserSampleOscBlock`, samples as waveforms from number 6 up, global,
+  in flash). LXR02Open is its F765 port and confirmed the flash layout. Its code isn't copied: the
+  installer uses this firmware's FatFs and HAL.
+- Storage: sectors 6-11 (1.5 MB, about 17 s at 44.1 kHz or 34 s at 22 kHz). The linker now stops the app
+  at sector 6. Table header written last, so an interrupted install reads as no samples. A firmware
+  update erases these sectors (the bootloader erases 2-11): reinstall from the card afterwards.
+- SD card: `/samples` (one-shot) then `/loops` (looped), each in name order, up to 120 in total. PCM WAV,
+  16 or 24 bit (24 keeps the top 16), mono or stereo (summed), any rate. Files that don't fit or don't
+  parse are skipped and counted. Names are FAT 8.3 (LFN is off), so a long file name shows as `NAME~1`.
+- Install: LOAD/SAVE button cycles Load kit, Save kit, Save morph, `Load:Samples`; click the encoder.
+  Audio stops, flash is erased and rewritten, the module resets. Unsaved kit edits are lost. With no
+  usable files, or a chip set to dual bank, flash is left alone.
+- Playback: `osc.sampleHi` extends the phase past the old 32768-frame limit. Pitch: oscillator on F1 plays
+  a file at its own rate and pitch (the stock increment would be 22 cents sharp, this corrects it).
+  One-shots stop at the end; the voice's amp envelope still applies, so long samples need a long decay.
+- The waveform page shows `s<n>` and, while editing, the sample name.
+- Not done: modulating the waveform (LFO/velocity/CV) only reaches the six built-ins. Kits store the
+  waveform number, so changing what's on the card can change which sample a kit plays.
+- Host check: `tools/samples-host-test/run.sh` runs the installer on real WAV files against a simulated
+  flash, plus playback. Not covered there: SD, flash and menu on hardware, CPU cost.
+
+### 0.4.0 hardware test
+| Check | Pass |
+|------|------|
+| Boot, no samples installed | line 1 `lxr-0 0.4.0`; kits and reverb as in 0.3.4 |
+| Card with `/samples`, press LOAD/SAVE to `Load:Samples`, click | `Erasing flash...`, file count, `Samples done`, restart |
+| Voice waveform past `Pwm` | `s0`, `s1`...; name while editing; sample plays on trigger |
+| Coarse on F1 | original pitch; a 22.05 kHz file too |
+| Stereo file, 24-bit file | plays, nothing odd in level |
+| File over 1 s, long decay | plays to the end (stock limit was 0.74 s) |
+| File in `/loops`, long decay | loops without a jump in pitch |
+| FM on a sample, retrigger mid-sample | no crash, restarts from the start |
+| Power cycle | samples still there |
+| Heavy kit with several long samples | no new dropouts (flash read cost is unmeasured) |

@@ -406,6 +406,9 @@ IN_ITCM_RAM void calcNextOscSampleBlock(OscInfo* osc, int16_t* buf, const uint8_
 		//	if( osc->waveform - OSC_SAMPLE_START > sampleMemory_getNumSamples() ) return; // return if out of range
 
 		//	calcUserSampleOscBlock(osc,buf,size, gain);
+#if LXR0_SAMPLES
+			calcUserSampleOscBlock(osc,buf,size, gain); // lxr-0: range checked there
+#endif
 			break;
 		}
 }
@@ -554,6 +557,7 @@ int16_t calcSampleOscFm(OscInfo* osc, OscInfo* modOsc)
 };
 */
 //------------------------------------------------------------------
+#if !LXR0_SAMPLES // lxr-0: lxr0_sampleOsc.c
 void calcUserSampleOscFmBlock(OscInfo* osc,int16_t* modBuffer, int16_t* buf, uint8_t size ,const float gain)
 {
 #if 0
@@ -627,6 +631,7 @@ void calcUserSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_t size ,cons
 	}
 #endif
 }
+#endif // !LXR0_SAMPLES
 //---------------------------------------------------------------
 /*
 void calcSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_t size ,const float gain)
@@ -780,11 +785,13 @@ void osc_calcSampleFreq(OscInfo* osc)
 	osc->phaseInc = freq2PhaseIncr32767(currentFreq);
 }
 //-----------------------------------------------------------
+#if !LXR0_SAMPLES // lxr-0: lxr0_sampleOsc.c
 void osc_calcUserSampleFreq(OscInfo* osc)
 {
 	const float currentFreq = osc->freq*osc->cvFreq*osc->pitchMod*osc->modNodeValue;
 	osc->phaseInc = freq2PhaseIncr32767(currentFreq);
 }
+#endif
 //-----------------------------------------------------------
  void osc_setFreq(OscInfo* osc)
  {

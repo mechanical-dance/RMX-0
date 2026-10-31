@@ -7,6 +7,7 @@
  * NOTICE.md. See LICENSE and NOTICE.md in the root of the repository.
  */
 
+#include "lxr0_samples.h"
 #include "main.h"
 #include "fatfs.h"
 
@@ -240,6 +241,9 @@ int main(void)
 lcd_clear();
 #ifdef LXR0_VERSION
 lcd_string("lxr-0 " LXR0_VERSION); // lxr-0: which image is flashed
+#if LXR0_SAMPLES
+menu_setNumSamples(lxr0Samples_init());
+#endif
 #else
 lcd_string("Sonic Potions");
 #endif

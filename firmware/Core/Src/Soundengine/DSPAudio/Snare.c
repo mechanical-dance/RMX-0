@@ -108,6 +108,7 @@ void Snare_trigger(const uint8_t vel, const uint8_t note)
 		snareVoice.osc.phase = (0xff<<22)*offset;
 	else
 		snareVoice.osc.phase = 0;
+	OSC_RESTART_SAMPLE(snareVoice.osc); // lxr-0
 
 	DecayEg_trigger(&snareVoice.oscPitchEg);
 	slopeEg2_trigger(&snareVoice.oscVolEg);

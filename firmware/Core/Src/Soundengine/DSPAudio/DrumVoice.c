@@ -174,6 +174,8 @@ void Drum_trigger(const uint8_t voiceNr, const uint8_t vol, const uint8_t note)
 		else
 			voiceArray[voiceNr].modOsc.phase = 0;
 
+		OSC_RESTART_SAMPLE(voiceArray[voiceNr].osc); // lxr-0
+		OSC_RESTART_SAMPLE(voiceArray[voiceNr].modOsc);
 	}
 
 	osc_setBaseNote(&voiceArray[voiceNr].osc,note);

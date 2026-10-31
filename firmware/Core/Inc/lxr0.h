@@ -9,7 +9,9 @@
 #define LXR0_MIDI 1
 // parallel global reverb bus: per-voice sends, own buffer, bypassed above 95 % render load
 #define LXR0_REVERB 1
+// user samples as oscillator waveforms: installed from the SD card (/samples, /loops) to sectors 6-11
+#define LXR0_SAMPLES 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.3.4"
+#define LXR0_VERSION "0.4.0"
 
 #endif /* LXR0_H_ */

@@ -39,7 +39,8 @@ MEMORY
   DTCM   (xrw)     : ORIGIN = 0x20000000, LENGTH = 128K	
   RAM    (xrw)     : ORIGIN = 0x20020000,   LENGTH = 384K
   /* sector 1 to end*/
-  FLASH    (rx)    : ORIGIN = 0x08008000,   LENGTH = 992K 
+  /* lxr-0: stops at sector 6, samples live above (lxr0_samples.c). Was 992K. */
+  FLASH    (rx)    : ORIGIN = 0x08008000,   LENGTH = 480K 
 }
 
 /* Highest address of the user mode stack */

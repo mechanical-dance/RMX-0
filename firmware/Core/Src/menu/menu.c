@@ -7,6 +7,7 @@
  * NOTICE.md. See LICENSE and NOTICE.md in the root of the repository.
  */
 
+#include "lxr0_samples.h"
 #include "menu/menu.h"
 #include "lcd.h"
 #include <string.h>
@@ -1383,6 +1384,12 @@ static void menu_repaintLoadSavePage()
 		break;
 #endif
 	//case SAVE_TYPE_SAMPLES:     toptxt=PSTR("Samples "); break;
+#if LXR0_SAMPLES
+	case SAVE_TYPE_SAMPLES:
+		toptxt=PSTR("Samples ");
+		memcpy(&editDisplayBuffer[1][0],"Click: replace",14); // stays on the row: nothing else draws here
+		break;
+#endif
 	}
 
 	strcpy(&editDisplayBuffer[0][6],toptxt);
@@ -1776,6 +1783,14 @@ void menu_repaintGeneric()
 				const uint8_t menuId = (parameter_dtypes[parNr] >> 8);
 				// get the value name
 				getMenuItemNameForValue(menuId, curParmVal, &editDisplayBuffer[1][13]);
+#if LXR0_SAMPLES
+				if(menuId == MENU_WAVEFORM)
+				{
+					const Lxr0Sample* sample = lxr0Samples_get(curParmVal);
+					if(sample)
+						memcpy(&editDisplayBuffer[1][0], sample->name, sizeof(sample->name));
+				}
+#endif
 			}
 				break; // switch(parameters[parNr].dtype&0x0F) case DTYPE_MENU
 
@@ -2531,6 +2546,11 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 					preset_loadGlobals();
 					menu_resetSaveParameters();						
 					break;
+#if LXR0_SAMPLES
+				case SAVE_TYPE_SAMPLES:
+					lxr0Samples_installFromSd(); // resets when done
+					break;
+#endif
 #if USE_SAMPLES
 				case SAVE_TYPE_SAMPLES:
 
@@ -3462,6 +3482,9 @@ void menu_setLoadSaveCategory(uint8_t cat)
 		case SAVE_TYPE_GLO:
 #if !EURORACK_MODULE
 		case SAVE_TYPE_ALL:
+#endif
+#if LXR0_SAMPLES
+		case SAVE_TYPE_SAMPLES:
 #endif
 			menu_saveOptions.nameBuffer = UNUSED_NAMES;
 			break;

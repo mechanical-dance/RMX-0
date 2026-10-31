@@ -122,6 +122,9 @@ void Cymbal_trigger( const uint8_t vel, const uint8_t note)
 
 	cymbalVoice.modOsc.phase = 0;
 	cymbalVoice.modOsc2.phase = 0;
+	OSC_RESTART_SAMPLE(cymbalVoice.osc); // lxr-0
+	OSC_RESTART_SAMPLE(cymbalVoice.modOsc);
+	OSC_RESTART_SAMPLE(cymbalVoice.modOsc2);
 
 	osc_setBaseNote(&cymbalVoice.osc,note);
 	osc_setBaseNote(&cymbalVoice.modOsc,note);

@@ -605,6 +605,9 @@ enum loadSaveEnum
 	//SAVE_TYPE_ALL,			// all global settings, kit data and pattern data
 	SAVE_TYPE_GLO,
 	//SAVE_TYPE_SAMPLES,
+#if LXR0_SAMPLES
+	SAVE_TYPE_SAMPLES,	// lxr-0: load page only, installs from the SD card
+#endif
 	NUM_SAVE_TYPES
 };
 

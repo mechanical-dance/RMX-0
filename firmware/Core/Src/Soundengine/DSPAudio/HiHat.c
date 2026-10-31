@@ -126,6 +126,9 @@ void HiHat_trigger( uint8_t vel, uint8_t isOpen, const uint8_t note)
 
 	hatVoice.modOsc.phase = 0;
 	hatVoice.modOsc2.phase = 0;
+	OSC_RESTART_SAMPLE(hatVoice.osc); // lxr-0
+	OSC_RESTART_SAMPLE(hatVoice.modOsc);
+	OSC_RESTART_SAMPLE(hatVoice.modOsc2);
 
 	osc_setBaseNote(&hatVoice.osc,note);
 	osc_setBaseNote(&hatVoice.modOsc,note);

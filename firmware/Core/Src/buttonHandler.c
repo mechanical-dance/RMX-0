@@ -29,6 +29,10 @@
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include <Soundengine/TriggerProcessor.h>
 
+#if LXR0_SAMPLES
+static uint8_t lxr0_onSamplesPage = 0; // the load page shows the sample install
+#endif
+
 //used to remember the last active page when entering the sequencer mode
 //needed to return to the previously shown page when seq mode button is released
 //static uint8_t lastActivePage = 0;
@@ -326,6 +330,11 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 	if(mode==SELECT_MODE_LOAD)
 	{
 		//Load kit, Save kit, Save Morph
+#if LXR0_SAMPLES
+		// lxr-0: Load kit, Save kit, Save Morph, Install samples
+		const uint8_t wasOnSamples = lxr0_onSamplesPage;
+		lxr0_onSamplesPage = (buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_SAVE_MORPH);
+#endif
 		switch(buttonHandler_stateMemory.selectButtonMode)
 		{
 		default:
@@ -334,6 +343,10 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 			break;
 
 		case SELECT_MODE_LOAD:
+#if LXR0_SAMPLES
+			if(wasOnSamples)
+				break; // back to Load kit
+#endif
 			mode = SELECT_MODE_SAVE;
 			break;
 
@@ -431,7 +444,11 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 				led_clearAllBlinkLeds();
 				led_setMode2(buttonHandler_stateMemory.selectButtonMode);
 
+#if LXR0_SAMPLES
+				menu_setLoadSaveCategory(lxr0_onSamplesPage ? SAVE_TYPE_SAMPLES : SAVE_TYPE_KIT);
+#else
 				menu_setLoadSaveCategory(SAVE_TYPE_KIT);
+#endif
 				//update the status LED
 			//	led_setMode2(2);
 
