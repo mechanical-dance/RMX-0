@@ -16,4 +16,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 
 | Version | Image | Commit | Status |
 |---------|-------|--------|--------|
-| 0.3.0 | `LXRE_LXR0_V0.3.0_ERICA1.51.img` | (next) | Erica v1.51 (e752339) unchanged; built, not flashed |
+| 0.3.0 | `LXRE_LXR0_V0.3.0_ERICA1.51.img` | 31d0c32 | Erica v1.51 (e752339) unchanged; built, not flashed |
