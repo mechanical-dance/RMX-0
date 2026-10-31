@@ -152,3 +152,14 @@ firmware remounts it when it comes back (stock behaviour).
   has it bypassed) and `own` (the bus's own average load, %).
 - Host check of the bus at maximum settings: output stays alive, about 14x quieter than defaults at St1.
   `out` at maximum is R2.
+
+## 0.4.4 reverb readout
+Reverb silent on hardware; the host build of the same code makes sound and recovers from every setting. The
+reverb 2nd screen (`out`) now shows `amt` (amount), `in` (send peak, 0-127), `wet` (wet peak after the amount,
+0-127, or `off` when the load guard has the bus bypassed), updated 4 times a second. Replaces `cpu`/`rev`/`own`.
+| Reading while a voice plays | Means |
+|------|------|
+| `in` 0 | no signal reaches the bus: sends or voice |
+| `amt` 0 | return level is 0: perform page, 4th pot |
+| `in` moves, `amt` up, `wet` 0 | the reverb itself is silent on hardware |
+| `wet` moves, nothing heard | routing: check `out` is St1 and the outs patched |

@@ -2009,18 +2009,19 @@ void menu_repaintGeneric()
 
 		}	// for 1 to 4 .. each menu item
 #if LXR0_REVERB
-		// lxr-0: reverb's 2nd screen, the free slots: peak render load, bus on/off, the bus's own average load
+		// lxr-0: reverb's 2nd screen, the free slots: amount, send level going in, wet level coming out (off: load guard)
 		if(menu_activePage == FX_MODE_PAGE && activePage == LXR0_VERB_SUBPAGE && is2ndPage)
 		{
 			char readout[5];
-			memcpy(&editDisplayBuffer[0][4],"cpu",3);
-			numtostrpu(readout,lxr0Verb_takePeakLoad(),' ');
+			memcpy(&editDisplayBuffer[0][4],"amt",3);
+			numtostrpu(readout,activeParameters[PAR_LXR0_VERB_AMOUNT],' ');
 			memcpy(&editDisplayBuffer[1][4],readout,3);
-			memcpy(&editDisplayBuffer[0][8],"rev",3);
-			memcpy(&editDisplayBuffer[1][8],lxr0Verb_bypassed ? "off" : "on ",3);
-			memcpy(&editDisplayBuffer[0][12],"own",3);
-			numtostrpu(readout,lxr0Verb_ownLoad(),' ');
-			memcpy(&editDisplayBuffer[1][12],readout,3);
+			memcpy(&editDisplayBuffer[0][8],"in ",3);
+			numtostrpu(readout,lxr0Verb_takePeakIn(),' ');
+			memcpy(&editDisplayBuffer[1][8],readout,3);
+			memcpy(&editDisplayBuffer[0][12],"wet",3);
+			numtostrpu(readout,lxr0Verb_takePeakWet(),' ');
+			memcpy(&editDisplayBuffer[1][12],lxr0Verb_bypassed ? "off" : readout,3);
 		}
 #endif
 	} // if editmode not active

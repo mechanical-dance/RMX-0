@@ -8,6 +8,7 @@
 #include "Soundengine/DSPAudio/FX/lxr0_reverbBus.h"
 
 #if LXR0_REVERB
+#include <stdlib.h>
 #include <string.h>
 #include "stm32f7xx_hal.h"
 #include "Soundengine/DSPAudio/FX/Reverb.h"
@@ -37,6 +38,8 @@ static uint32_t onCount;
 static uint32_t overCount;
 static float verbCost;		// % of the block the reverb itself takes, averaged. Held while bypassed
 static uint8_t peakLoad;
+static int32_t peakIn;		// highest send and wet sample since the last readout
+static int32_t peakWet;
 
 volatile uint8_t lxr0Verb_load;
 volatile uint8_t lxr0Verb_bypassed;
@@ -116,6 +119,8 @@ static void mixWet(int16_t* output, int16_t* output2)
 	{
 		const int16_t l = (int16_t)(wet[2*i] * amount);
 		const int16_t r = (int16_t)(wet[2*i+1] * amount);
+		if(abs(l) > peakWet) peakWet = abs(l);
+		if(abs(r) > peakWet) peakWet = abs(r);
 		if(stereo)
 		{
 			int32_t* o = (int32_t*)&out[2*i];
@@ -131,6 +136,10 @@ static void mixWet(int16_t* output, int16_t* output2)
 void lxr0Verb_endBlock(int16_t* output, int16_t* output2)
 {
 	uint32_t verbCycles = 0;
+	for(uint8_t i=0; i<OUTPUT_DMA_SIZE*2; i++)
+	{
+		if(abs(sendSum[i]) > peakIn) peakIn = abs(sendSum[i]);
+	}
 	if(!lxr0Verb_bypassed && amount > 0.f)
 	{
 		const uint32_t t0 = DWT->CYCCNT;
@@ -185,6 +194,24 @@ uint8_t lxr0Verb_takePeakLoad(void)
 uint8_t lxr0Verb_ownLoad(void)
 {
 	return verbCost > 255.f ? 255 : (uint8_t)verbCost;
+}
+
+// 0-127, and at least 1 for any signal, so a very quiet stage doesn't read as dead
+static uint8_t takePeak(int32_t* peak)
+{
+	const int32_t p = *peak;
+	*peak = 0;
+	return p == 0 ? 0 : (uint8_t)(p/258 + 1);
+}
+
+uint8_t lxr0Verb_takePeakIn(void)
+{
+	return takePeak(&peakIn);
+}
+
+uint8_t lxr0Verb_takePeakWet(void)
+{
+	return takePeak(&peakWet);
 }
 
 void lxr0Verb_kitDefaults(uint8_t* para, uint32_t bytesRead)
