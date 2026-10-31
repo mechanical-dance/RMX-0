@@ -55,14 +55,17 @@ If nothing plays in MIDI mode: the input stage may not pass 31.25 kbaud, or the 
   time the bus is bypassed; it comes back (with a cleared tail) after the load plus the reverb's own
   measured cost stays below 90 % for 0.5 s.
 - Menus: `rev` (send) is slot 6 of each voice's MIX page (2nd screen); `rev` (amount) is the 4th pot on
-  the perform page; pressing FX again after the FX type's screens opens the reverb page
-  (`rev out` / `pre dcy ton ref`), and again returns to the FX type.
+  the perform page. FX presses cycle: FX type screen 1, screen 2, reverb `pre dcy ton ref`, reverb
+  `out`, back to the FX type (0.3.4; 0.3.2/0.3.3 skipped the reverb's 2nd screen and showed the
+  amount twice).
 - Host check (scratchpad, 2026-10-31): impulse at decay 90 falls ~33 dB/s; feedback 1.0 stays bounded.
 - Stereo (0.3.3): their code builds only the left output of the Dattorro/Spin tap table in the comment;
   `Reverb.stereo` adds the right-output taps on the same lines (taps past 2048 samples dropped or
   shortened by 1000, as the left does), with its own output EQ. Host check: L/R correlation 0.26,
   levels within 1 dB. Mono outputs (L1/R1/L2/R2) get the sum. The FX-bus reverb stays mono.
-- Noted, not changed: both loops run `apDelay[1]`, so `apDelay[0]` is never written and its taps read 0.
+- Fixed (0.3.4): both loops ran `apDelay[1]`, so `apDelay[0]` was never written and its taps read 0.
+  Loop 1 now runs `apDelay[0]`, as its comment says. Host check: denser, slightly longer tail, L/R
+  correlation 0.23, feedback 1.0 still bounded.
 
 ### 0.3.2 hardware test
 | Check | Pass |

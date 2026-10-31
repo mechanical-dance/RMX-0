@@ -3631,18 +3631,18 @@ void menu_switchPage(uint8_t pageNr)
 	case FX_MODE_PAGE:
 
 #if LXR0_REVERB
-		// lxr-0: FX again cycles: FX type screen 1 -> screen 2 -> reverb bus page -> FX type
+		// lxr-0: FX again cycles: FX type screen 1 -> screen 2 -> reverb screen 1 -> screen 2 -> FX type
 		if(menu_activePage == FX_MODE_PAGE)
 		{
 			const uint8_t subPage = menu_getSubPage();
 			const uint8_t on2ndScreen = (menuIndex & MASK_PARAMETER) >= 4;
-			if(subPage == LXR0_VERB_SUBPAGE || on2ndScreen || !has2ndPage(subPage))
+			if(on2ndScreen || !has2ndPage(subPage))
 			{
 				menuIndex = (uint8_t)(menuIndex & ~MASK_PARAMETER); // land on the 1st screen
 				menu_switchSubPage(subPage == LXR0_VERB_SUBPAGE ? fxBus.fxType : LXR0_VERB_SUBPAGE, 0);
 			}
 			else
-				menu_switchSubPage(fxBus.fxType, 1 );
+				menu_switchSubPage(subPage, 1 ); // to the 2nd screen of this sub-page
 		}
 		else
 #endif

@@ -376,7 +376,12 @@ void Reverb_process(Reverb *r, int16_t *fxBuffer,int16_t* outL, int16_t* outR, u
 
 		    tmp *= r->feedback;
 
+#if LXR0_REVERB
+		    // lxr-0: ap[0] as the comment above says; with ap[1] in both loops ap[0] was never written
+		    tmp = AllpassDelay_process(&r->apDelay[0], (tmp));
+#else
 		    tmp = AllpassDelay_process(&r->apDelay[1], (tmp));
+#endif
 		    tmp = VerbDelay_process(&r->delay[1], tmp);
 
 		     r->lastOut = calcOnePole(&r->lpFeedback, tmp*r->feedback);
