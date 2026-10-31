@@ -26,8 +26,6 @@ extern volatile uint8_t lxr0Verb_load;		// last block's render load, %
 extern volatile uint8_t lxr0Verb_bypassed;	// 1 while the load guard has the bus off
 uint8_t lxr0Verb_takePeakLoad(void);		// highest load since the last call, %
 uint8_t lxr0Verb_ownLoad(void);				// the bus's own average cost, %
-uint8_t lxr0Verb_takePeakIn(void);			// highest send level since the last call, 0-127
-uint8_t lxr0Verb_takePeakWet(void);			// highest wet level since the last call, 0-127
 #endif
 
 #endif /* LXR0_REVERBBUS_H_ */

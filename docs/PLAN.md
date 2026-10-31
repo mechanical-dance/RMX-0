@@ -54,7 +54,7 @@ If nothing plays in MIDI mode: the input stage may not pass 31.25 kbaud, or the 
   every block.
 - Load guard: the render of each block is timed with the DWT cycle counter. Above 95 % of the block
   time the bus is bypassed; it comes back (with a cleared tail) after the load plus the reverb's own
-  measured cost stays below 90 % for 0.5 s.
+  measured cost stays below 95 % for 0.5 s (90 % until 0.4.5).
 - Menus: `rev` (send) is slot 6 of each voice's MIX page (2nd screen); `rev` (amount) is the 4th pot on
   the perform page. FX presses cycle: FX type screen 1, screen 2, reverb `pre dcy ton ref`, reverb
   `out`, back to the FX type (0.3.4; 0.3.2/0.3.3 skipped the reverb's 2nd screen and showed the
@@ -163,3 +163,9 @@ reverb 2nd screen (`out`) now shows `amt` (amount), `in` (send peak, 0-127), `we
 | `amt` 0 | return level is 0: perform page, 4th pot |
 | `in` moves, `amt` up, `wet` 0 | the reverb itself is silent on hardware |
 | `wet` moves, nothing heard | routing: check `out` is St1 and the outs patched |
+
+## 0.4.5 reverb guard
+Hardware on 0.4.3, kit 103: `cpu` 61, `rev` off, `own` 32. The guard had bypassed the bus and could not come back:
+the peak 61 + 32 = 93 was over the 90 % return limit, though under the 95 % limit that turns it off. The return
+limit is now 95 %. A host test of the guard with a stubbed reverb reproduces the latch before the change and
+recovers after it; dry peak 70 + 32 stays off. The `amt`/`in`/`wet` readout from 0.4.4 is removed.

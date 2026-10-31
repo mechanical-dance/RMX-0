@@ -26,3 +26,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.4.2 | `LXRE_LXR0_V0.4.2.img` | 75e82cf | 0.4.1 + restart menu (SHIFT + EDIT + PERF, fill the bar with the encoder) |
 | 0.4.3 | `LXRE_LXR0_V0.4.3.img` | a371786 | 0.4.2 + sample scan fixed (FatFs lock), refusals no longer restart, reverb guard latch fixed, load readout on the reverb page |
 | 0.4.4 | `LXRE_LXR0_V0.4.4.img` | 5acbf82 | 0.4.3 + reverb stage readout on the reverb 2nd screen (`amt`, `in`, `wet`), to find where the silent reverb stops |
+| 0.4.5 | `LXRE_LXR0_V0.4.5.img` | COMMIT | 0.4.3 readout back (`cpu`, `rev`, `own`); reverb guard comes back below 95 %, not 90 %, which kept the reverb off on kit 103 |
