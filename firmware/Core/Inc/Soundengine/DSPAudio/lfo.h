@@ -21,7 +21,7 @@
 #include "Soundengine/DSPAudio/Oscillator.h"
 #include "Soundengine/DSPAudio/wavetable.h"	//sine
 #include "Soundengine/config.h"
-#include "Soundengine/Sequencer/sequencer.h"
+//#include "Soundengine/Sequencer/sequencer.h"
 #include "Soundengine/DSPAudio/modulationNode.h"
 //-------------------------------------------------------------
 enum
@@ -51,12 +51,16 @@ typedef struct LfoStruct
 	float 		rnd;
 	uint8_t 	sync;
 	float 		freq;
-	ModulationNode modTarget;
+//	ModulationNode modTarget;
 	float		modNodeValue;
+
+	float value;
 } Lfo;
 //-------------------------------------------------------------
 void lfo_init(Lfo *lfo);
-void lfo_dispatchNextValue(Lfo* lfo);
+
+void lfo_calcNextValue(Lfo* lfo);
+
 void lfo_setFreq(Lfo *lfo, float f);
 void lfo_setSync(Lfo* lfo, uint8_t sync);
 void lfo_recalcSync();

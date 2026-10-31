@@ -4,7 +4,6 @@
 # STM32F7 HAL + CMSIS (vendor code, generated/copied by STM32CubeMX).
 #
 # Only the HAL modules enabled in Core/Inc/stm32f7xx_hal_conf.h are built.
-# stm32f7xx_hal_mmc.c is intentionally left out (HAL_MMC_MODULE_ENABLED is off).
 
 add_library(stm32f7_hal OBJECT
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c
@@ -20,22 +19,15 @@ add_library(stm32f7_hal OBJECT
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2s.c
-    STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pcd.c
-    STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pcd_ex.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rng.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_sd.c
-    STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_spi.c
-    STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_spi_ex.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c
-    STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c
-    STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c
     STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_sdmmc.c
-    STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_usb.c
 )
 
 target_include_directories(stm32f7_hal PUBLIC

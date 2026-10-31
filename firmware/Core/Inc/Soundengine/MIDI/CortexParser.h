@@ -25,7 +25,9 @@ extern uint8_t frontParser_sysexActive;
 
 extern uint8_t frontParser_activeFrontTrack;
 
-void frontParser_parseUartData(unsigned char data);
+void frontParser_handleMidiMessage( MidiMsg msg);
+
+//void frontParser_parseUartData(unsigned char data);
 
 //void frontParser_updateTrackLeds(const uint8_t trackNr, uint8_t patternNr);
 

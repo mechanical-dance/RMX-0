@@ -17,14 +17,17 @@
 
 #include "main.h"
 
-//number of connected outputs
-#define NUM_OUTS 40
-#define NUM_INPUTS 40
+//number of connected outputs (multiple of 8!!!)
+#define NUM_OUTS 16
 
 
-extern INDTCMZ uint8_t din_inputData[NUM_INPUTS/8];
+#define NUM_INPUTS 14
+
+
+//extern INDTCMZ uint8_t din_inputData[NUM_INPUTS/8];
 extern uint8_t dout_outputData[NUM_OUTS/8];
 
-void dio_init(SPI_HandleTypeDef* _hspi1);
+void dio_init();
 void dio_process();
+void dio_mute(uint8_t voice, uint8_t onOff);
 #endif /* INC_IO_DIO_H_ */

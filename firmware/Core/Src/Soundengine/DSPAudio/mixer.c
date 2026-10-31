@@ -11,6 +11,8 @@
  * NOTICE.md. See LICENSE and NOTICE.md in the root of the repository.
  */
 
+#include <Soundengine/ModMatrix_Processor.h>
+#include <Soundengine/TriggerProcessor.h>
 #include "Soundengine/DSPAudio/mixer.h"
 #include "Soundengine/config.h"
 #include "Soundengine/AudioCodecManager.h"
@@ -21,9 +23,9 @@
 #include "Soundengine/DSPAudio/BufferTools.h"
 #include "Soundengine/DSPAudio/squareRootLut.h"
 #include "main.h"
-#include "Soundengine/TriggerOut.h"
 #include "menu/menu.h"
 #include "Soundengine/FxBus.h"
+#include "Soundengine/MIDI/MidiVoiceControl.h"
 
 	uint8_t r2_Available;
 	uint8_t l1_Available;
@@ -389,8 +391,7 @@ IN_ITCM_RAM static inline void mixer_addDataToOutputFilteredPan(uint8_t dest, co
 			//*((int32_t*)outL) = __SADD16(x, y);
 			//x.word[0] = data[i] * panL;
 			//x.word[1] = data[i] * panR;
-			x = __PKHBT( (int16_t)(data[i] * panL), (int16_t)(data[i] * panR), 16);
-			//x = __PKHBT(data[i] * panL, data[i] * panR, 16);
+			x = __PKHBT(data[i] * panL, data[i] * panR, 16);
 			*((int32_t*)outL) = __QADD16(x, y);
 			outL += 2;
 #else
@@ -547,30 +548,28 @@ IN_ITCM_RAM static inline void mixer_addDataToOutput(uint8_t dest, const float p
 //-----------------------------------------------------------------------
 IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 {
-
-#if LXR_MODULE
-	//lxr-0: the module has no output jack switches. These pins are accent inputs (PD6, PD7), an
-	//LED (PB4) and the DRUM button (PB6) there; the stock module's mixer (itcm_20c4) doesn't
-	//read them.
-	r2_Available = l1_Available = l2_Available = r1_Available = 1;
-#else
+	voiceControl_processQueue();
+#if !EURORACK_MODULE
 	r2_Available = (switch_r2_GPIO_Port->IDR & switch_r2_Pin)>0;
 	l1_Available = (switch_l1_GPIO_Port->IDR & switch_l1_Pin)>0;
 	l2_Available = (switch_l2_GPIO_Port->IDR & switch_l2_Pin)>0;
 	r1_Available = (switch_r1_GPIO_Port->IDR & switch_r1_Pin)>0;
 #endif
 
-	modNode_resetTargets();
+
+#if OLD_LFO_ROUTING
 	//re assign velocity modulation
 	modNode_reassignVeloMod();
-
+#endif
 	//calc and dispatch LFO
-	lfo_dispatchNextValue(&voiceArray[0].lfo);
-	lfo_dispatchNextValue(&voiceArray[1].lfo);
-	lfo_dispatchNextValue(&voiceArray[2].lfo);
-	lfo_dispatchNextValue(&snareVoice.lfo);
-	lfo_dispatchNextValue(&cymbalVoice.lfo);
-	lfo_dispatchNextValue(&hatVoice.lfo);
+	lfo_calcNextValue(&voiceArray[0].lfo);
+	lfo_calcNextValue(&voiceArray[1].lfo);
+	lfo_calcNextValue(&voiceArray[2].lfo);
+	lfo_calcNextValue(&snareVoice.lfo);
+	lfo_calcNextValue(&cymbalVoice.lfo);
+	lfo_calcNextValue(&hatVoice.lfo);
+
+	modNode_resetTargets();
 
 	//update filter frequencies
 	SVF_recalcFreq(&voiceArray[0].filter);
@@ -579,6 +578,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 	SVF_recalcFreq(&snareVoice.filter);
 	SVF_recalcFreq(&cymbalVoice.filter);
 	SVF_recalcFreq(&hatVoice.filter);
+
+	//process CV
+	CV_process();
 
 	//--- Calc async -----
 	calcDrumVoiceAsync(0);

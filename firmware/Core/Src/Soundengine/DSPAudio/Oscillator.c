@@ -17,7 +17,9 @@
 #include "Soundengine/DSPAudio/Samples.h"
 #include "Soundengine/MIDI/MidiParser.h"
 #include "Soundengine/MIDI/MidiNoteNumbers.h"
-#include "Soundengine/Sequencer/sequencer.h"
+#include "main.h"
+#include "math.h"
+//#include "Soundengine/Sequencer/sequencer.h"
 
 static __inline uint32_t freq2PhaseIncr(const float f) //4096
 {
@@ -721,7 +723,24 @@ int16_t calcSampleOsc(OscInfo* osc)
  //-----------------------------------------------------------
 void osc_calcSineFreq(OscInfo* osc)
 {
-	osc->phaseInc = freq2PhaseIncr(osc->freq* osc->pitchMod*osc->modNodeValue);
+	if(osc->cvFreq == -1.0)
+	{
+		//no CV!
+		osc->phaseInc = freq2PhaseIncr(osc->freq*osc->pitchMod*osc->modNodeValue);
+	}
+	else
+	{
+
+		 //get fine tune
+		 const float cent = midiParser_calcDetune(osc->midiFreq&0xff);
+
+		//CV present... use CV as base Freq and osc->freq as detune
+		float detune = (osc->midiFreq>>8) - 60;
+		detune /= 12;
+		detune = powf(2.f,detune);
+		osc->phaseInc = freq2PhaseIncr(detune * osc->cvFreq*cent*osc->pitchMod*osc->modNodeValue);
+	}
+
 }
 //-----------------------------------------------------------
 void osc_calcNoiseFreq(OscInfo* osc)
@@ -731,8 +750,25 @@ void osc_calcNoiseFreq(OscInfo* osc)
 //-----------------------------------------------------------
 void osc_calcWavetableFreq(OscInfo* osc)
 {
-	const float currentFreq = osc->freq*osc->pitchMod*osc->modNodeValue;
-	osc->phaseInc = freq2PhaseIncr1024(currentFreq);
+	float currentFreq;
+	if(osc->cvFreq == -1.0)
+	{
+		//no CV!
+		currentFreq = osc->freq*osc->pitchMod*osc->modNodeValue;
+		osc->phaseInc = freq2PhaseIncr1024(currentFreq);
+	}
+	else
+	{
+		 //get fine tune
+		 const float cent = midiParser_calcDetune(osc->midiFreq&0xff);
+
+		//CV present... use CV as base Freq and osc->freq as detune
+		float detune = (osc->midiFreq>>8) - 60;
+		detune /= 12;
+		detune = powf(2.f,detune);
+		currentFreq = detune * osc->cvFreq*cent*osc->pitchMod*osc->modNodeValue;
+		osc->phaseInc = freq2PhaseIncr1024(currentFreq);
+	}
 
 	const uint8_t overtoneIndex = freqToTableIndex(currentFreq);
 	osc->tableOffset = overtoneIndex>10?10:overtoneIndex;
@@ -740,13 +776,13 @@ void osc_calcWavetableFreq(OscInfo* osc)
 //-----------------------------------------------------------
 void osc_calcSampleFreq(OscInfo* osc)
 {
-	const float currentFreq = osc->freq*osc->pitchMod*osc->modNodeValue;
+	const float currentFreq = osc->freq*osc->cvFreq*osc->pitchMod*osc->modNodeValue;
 	osc->phaseInc = freq2PhaseIncr32767(currentFreq);
 }
 //-----------------------------------------------------------
 void osc_calcUserSampleFreq(OscInfo* osc)
 {
-	const float currentFreq = osc->freq*osc->pitchMod*osc->modNodeValue;
+	const float currentFreq = osc->freq*osc->cvFreq*osc->pitchMod*osc->modNodeValue;
 	osc->phaseInc = freq2PhaseIncr32767(currentFreq);
 }
 //-----------------------------------------------------------

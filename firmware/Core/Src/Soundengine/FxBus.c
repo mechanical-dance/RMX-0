@@ -74,33 +74,33 @@ IN_ITCM_RAM void FxBus_process(int16_t *fxBuffer, int16_t* outL,int16_t* outR,in
 	{
 	default:
 	case FX_OFF:
-	{
-		if(channels == 2)
 		{
-			int32_t* stereoIn = (int32_t*)fxBuffer;
-			int32_t* stereoOut = (int32_t*)out;
-
-			for(uint8_t i=0;i<size;i++)
+			if(channels == 2)
 			{
-				//add stereo samples using SIMD
-				*stereoOut = __QADD16(*stereoOut, *stereoIn);
-				stereoOut++;
-				stereoIn++;
+				int32_t* stereoIn = (int32_t*)fxBuffer;
+				int32_t* stereoOut = (int32_t*)out;
+
+				for(uint8_t i=0;i<size;i++)
+				{
+					//add stereo samples using SIMD
+					*stereoOut = __QADD16(*stereoOut, *stereoIn);
+					stereoOut++;
+					stereoIn++;
+				}
+			}
+			else
+			{
+				int32_t* in = (int32_t*)fxBuffer;
+				for(uint8_t i=0;i<size;i++)
+				{
+					*out =  __QADD16(*out, *in);
+					out +=2;
+					in++;
+
+				}
 			}
 		}
-		else
-		{
-			int32_t* in = (int32_t*)fxBuffer;
-			for(uint8_t i=0;i<size;i++)
-			{
-				*out =  __QADD16(*out, *in);
-				out +=2;
-				in++;
-
-			}
-		}
-	}
-	break;
+		break;
 
 	case FX_DISTORTION:
 		Distortion_process(&fxBus.distortion, fxBuffer, out, out2, size, channels, fxBus.dryWet);

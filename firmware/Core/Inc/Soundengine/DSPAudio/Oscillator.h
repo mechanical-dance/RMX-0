@@ -55,6 +55,8 @@ typedef struct OscStruct
 
 	float		modNodeValue;
 
+	float cvFreq;
+
 	//for midi
 	uint16_t	midiFreq;  //upper 8 bit coarse, lower 8 bit fine -> the sound edit freq offset
 	uint8_t baseNote;		// the last played midi note

@@ -12,6 +12,7 @@
  */
 
 
+#include <Soundengine/TriggerProcessor.h>
 #include "Soundengine/DSPAudio/DrumVoice.h"
 #include "Soundengine/DSPAudio/Oscillator.h"
 #include "Soundengine/DSPAudio/random.h"
@@ -20,7 +21,6 @@
 #include "Soundengine/DSPAudio/BufferTools.h"
 #include "Soundengine/MIDI/ParameterArray.h"
 #include "Soundengine/DSPAudio/modulationNode.h"
-#include "Soundengine/TriggerOut.h"
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "IO/adcPots.h"
 
@@ -50,9 +50,9 @@ void initDrumVoice()
 	int i;
 	for(i=0;i<NUM_DRUM_VOICES;i++)
 	{
-
-		initOnePole(&voiceArray[i].FaderVolumeFilter);
-		setOnePoleCoef(&voiceArray[i].FaderVolumeFilter,0.01);
+		voiceArray[i].cvFreq = -1;
+	//	initOnePole(&voiceArray[i].FaderVolumeFilter);
+	//	setOnePoleCoef(&voiceArray[i].FaderVolumeFilter,0.01);
 
 #if SMOOTH_MIXER_VOL_PAN_DRIVE
 		for(uint8_t j=0;j<2;j++)
@@ -83,6 +83,7 @@ void initDrumVoice()
 		voiceArray[i].modOsc.midiFreq = 70<<8 | 64;
 		voiceArray[i].modOsc.pitchMod = 1.0f;
 		voiceArray[i].modOsc.modNodeValue = 1;
+		voiceArray[i].modOsc.cvFreq = -1.f;
 
 		voiceArray[i].volumeMod = 1;
 
@@ -91,6 +92,7 @@ void initDrumVoice()
 		voiceArray[i].osc.waveform = TRI+i; //for testing init to tri,saw,rec
 		voiceArray[i].osc.fmMod = 0;
 		voiceArray[i].osc.midiFreq = 70<<8 | 64;
+		voiceArray[i].osc.cvFreq = -1.f;
 
 		DecayEg_init(&voiceArray[i].oscPitchEg);
 		voiceArray[i].egPitchModAmount = 0.5f;
@@ -118,13 +120,24 @@ void Drum_updatePan(const uint8_t voiceNr)
 	voiceArray[voiceNr].triggeredPanR = sqrtf(voiceArray[voiceNr].pan/127.f);
 }
 //---------------------------------------------------
+void Drum_setCv1VOct(const uint8_t voiceNr, float oct)
+{
+	voiceArray[voiceNr].osc.cvFreq		= oct;		// the main fm oscillator
+	voiceArray[voiceNr].modOsc.cvFreq	= oct;		// the mod osc
+	voiceArray[voiceNr].transGen.cvFreq = oct;
+}
+//---------------------------------------------------
 void Drum_trigger(const uint8_t voiceNr, const uint8_t vol, const uint8_t note)
 {
 
 	lfo_retrigger(voiceNr);
 
 	//update velocity modulation
+#if OLD_LFO_ROUTING
 	modNode_updateValue(&velocityModulators[voiceNr],vol/127.f);
+#else
+		voiceArray[voiceNr].velocity = vol/127.f;
+#endif
 
 	//only reset phase if envelope is closed
 #ifdef USE_AMP_FILTER
@@ -144,12 +157,14 @@ void Drum_trigger(const uint8_t voiceNr, const uint8_t vol, const uint8_t note)
 			setOnePoleCoef(&voiceArray[voiceNr].ampFilter,ampSmoothValue);
 #endif
 		}
+
 		if(voiceArray[voiceNr].osc.waveform == SINE)
 			voiceArray[voiceNr].osc.phase = 1024 + ( (0x3ff<<20) - 1024)*offset;//voiceArray[voiceNr].osc.startPhase ;
 		else if(voiceArray[voiceNr].osc.waveform > SINE && voiceArray[voiceNr].osc.waveform <= REC)
 			voiceArray[voiceNr].osc.phase = (0xff<<22)*offset;
 		else
 			voiceArray[voiceNr].osc.phase = 0;
+
 
 		//reset mod osc phase
 		if(voiceArray[voiceNr].modOsc.waveform == SINE)
@@ -303,7 +318,7 @@ IN_ITCM_RAM void calcDrumVoiceSyncBlock(const uint8_t voiceNr, int16_t* buf, con
 #if SMOOTH_MIXER_VOL_PAN_DRIVE
 
 		float mixVol 	= calcOnePole( &voiceArray[voiceNr].MixerPageFilter[0], voiceArray[voiceNr].vol);
-		voiceArray[voiceNr].combinedVolume = mixVol * calcOnePole( &voiceArray[voiceNr].FaderVolumeFilter, adc_getFaderVolume(voiceNr));
+		voiceArray[voiceNr].combinedVolume = mixVol ;//* calcOnePole( &voiceArray[voiceNr].FaderVolumeFilter, adc_getFaderVolume(voiceNr));
 #else
 		voiceArray[voiceNr].combinedVolume = voiceArray[voiceNr].vol * calcOnePole( &voiceArray[voiceNr].FaderVolumeFilter, adc_getFaderVolume(voiceNr));
 #endif

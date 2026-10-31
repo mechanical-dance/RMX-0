@@ -19,10 +19,9 @@
 #include "main.h"
 
 extern uint8_t buttonHandler_selectedStep;
-extern volatile uint16_t buttonHandler_originalParameter[2];	//saves parameter number for step automation reset (stgep assign)
-extern uint8_t buttonHandler_originalValue[2]; 
-extern uint8_t buttonHandler_resetLock1;
-extern uint8_t buttonHandler_resetLock2;
+extern uint16_t buttonHandler_originalParameter;	//saves parameter number for step automation reset (stgep assign)
+extern uint8_t buttonHandler_originalValue; 
+extern uint8_t buttonHandler_resetLock;
 
 #define BUTTON_TIMEOUT 2000//(38) //~500[ms]
 #define NO_STEP_SELECTED -1
@@ -59,21 +58,26 @@ enum SelectModes
 {
 	SELECT_MODE_VOICE,
 	SELECT_MODE_PERF,
+	SELECT_MODE_MOD,
+
 	SELECT_MODE_LOAD,
 	SELECT_MODE_SAVE,
-
+#if !EURORACK_MODULE
 	SELECT_MODE_STEP,
 	SELECT_MODE_PAT_GEN,
-
+#endif
 	SELECT_MODE_FX,
 
 	SELECT_MODE_MENU,
 
+	SELECT_MODE_SAVE_MORPH,
+#if !EURORACK_MODULE
 	SELECT_MODE_PATTERN,
 	SELECT_MODE_SONG,
 
 	SELECT_MODE_LAST_STEP_TRACK,
 	SELECT_MODE_LAST_STEP_ALL,
+#endif
 
 };
 		
@@ -86,6 +90,8 @@ enum SeqButtonFunctions
 	SEQ_CLP,
 	SEQ_CL_HH,
 	SEQ_OP_HH,
+	SEQ_FX,
+#if !EURORACK_MODULE
 	SEQ_KIT,
 	SEQ_MORPH,
 	SEQ_SONG,
@@ -93,13 +99,35 @@ enum SeqButtonFunctions
 	SEQ_CONFIG,
 	SEQ_RELOAD,
 	SEQ_LAST_STEP,
-	SEQ_FX,
+
 	SEQ_PATTERN,
+#endif
 };
 
 enum ButtonNumbers
 {
+#if EURORACK_MODULE
+	BUT_EDIT,
+	BUT_PERF, //performance
+	BUT_MOD, //MOD
+	BUT_FX, //FX
 
+	BUT_1,
+	BUT_2,
+	BUT_3,
+	BUT_4,
+	BUT_5,
+	BUT_6,
+	BUT_7,
+	BUT_8,
+
+	BUT_SHIFT,
+	BUT_SAVE_LOAD
+
+
+
+
+#else
 	BUT_PAGE_UP,
 	BUT_VOICE_1,
 	BUT_VOICE_2,
@@ -148,7 +176,7 @@ enum ButtonNumbers
 	BUT_SEQ1,
 
 	BUT_PAGE_DOWN	//not in shift register!
-
+#endif
 };
 
 //--------------------------------------------------------
@@ -158,7 +186,7 @@ void buttonHandler_tick();
 //--------------------------------------------------------
 void buttonHandler_buttonPressed(uint8_t buttonNr);
 //--------------------------------------------------------
-//uint8_t buttonHandler_getMutedVoices();
+uint8_t buttonHandler_getMutedVoices();
 //--------------------------------------------------------
 void buttonHandler_buttonReleased(uint8_t buttonNr);
 //--------------------------------------------------------
@@ -169,15 +197,26 @@ uint8_t buttonHandler_getMode();
 //--------------------------------------------------------
 void buttonHandler_setMode(uint8_t mode);
 //--------------------------------------------------------
+
+
+#if !EURORACK_MODULE
 uint8_t buttonHandler_getCopy();
 //--------------------------------------------------------
 uint8_t buttonHandler_getShift();
+
 //--------------------------------------------------------
 uint8_t buttonHandler_getLoad();
 //--------------------------------------------------------
 uint8_t buttonHandler_getSave();
 //--------------------------------------------------------
 int8_t buttonHandler_getArmedAutomationStep();
+#else
+uint8_t buttonHandler_getDrumButton();
+uint8_t buttonHandler_getManualButton();
+uint8_t buttonHandler_getSaveButton ();
+uint8_t buttonHandler_getShiftButton ();
+//--------------------------------------------------------
+#endif
 //--------------------------------------------------------
 void buttonHandler_muteVoice(uint8_t voice, uint8_t isMuted);
 //--------------------------------------------------------

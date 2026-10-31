@@ -64,9 +64,12 @@ typedef struct CymbalStruct
 	SnapEg 		snapEg;
 
 	float combinedVolume;
-	OnePoleFilter FaderVolumeFilter;
+	//OnePoleFilter FaderVolumeFilter;
 
 	float pwm;
+	float cvFreq;
+
+	float velocity; //last accent value
 
 } CymbalVoice;
 
@@ -75,7 +78,7 @@ extern CymbalVoice cymbalVoice;
 
 //initialize all the parameters to sane values
 void Cymbal_init();
-
+void Cymbal_setCv1VOct(float oct);
 void Cymbal_trigger( const uint8_t vel, const uint8_t note);
 void Cymbal_updatePan();
 void Cymbal_calcSyncBlock(int16_t* buf, const uint8_t size);

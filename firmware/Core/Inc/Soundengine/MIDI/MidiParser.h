@@ -21,12 +21,12 @@
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 
 
-void midiParser_parseUartData(unsigned char data);
+//void midiParser_parseUartData(unsigned char data);
 void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFloatModulator, float v);
-void midiParser_parseMidiMessage(volatile MidiMsg msg);
+void midiParser_parseMidiMessage(MidiMsg msg);
 float midiParser_calcDetune(uint8_t value);
 // check mtc status, might stop the sequencer
-void midiParser_checkMtc();
+//void midiParser_checkMtc();
 
 #if 0
 void midiDebugSend(uint8_t b1, uint8_t b2);

@@ -15,7 +15,7 @@
 #include "Soundengine/AudioCodecManager.h"
 #include "Preset/PresetManager.h"
 #include <string.h>
-#include "Soundengine/USB/usb_manager.h"
+//#include "Soundengine/USB/usb_manager.h"
 #include "Soundengine/MIDI/Uart.h"
 
 uint8_t soundengine_calcNextSampleBlock()
@@ -48,18 +48,24 @@ void soundengine_init()
 
 	parameterArray_init();
 
+#if !EURORACK_MODULE
 	euklid_init();
+#endif
 
+
+#if OLD_LFO_ROUTING
 	int i;
 	for(i=0;i<6;i++)
 	{
 		modNode_init(&velocityModulators[i]);
 	}
+#endif
 
 	//init the seq speed
+#if !EURORACK_MODULE
 	seq_init();
 	seq_setBpm(120);
-
+#endif
 	memset(midi_MidiChannels,0,8);
 //	memset(midi_NoteOverride,0,7);
 
@@ -79,28 +85,35 @@ void soundengine_process()
 #if CALC_SAMPLES_IN_INTERRUPT
 	__HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
 	//HAL_TIM_Base_Stop_IT(&htim2);
+#if !EURORACK_MODULE
 	seq_tick();
+#endif
 	soundengine_calcNextSampleBlock();
-	__HAL_TIM_SetCounter(&htim2, 1950);
+	//__HAL_TIM_SetCounter(&htim2, 450);
 	//HAL_TIM_Base_Start_IT(&htim2);
 	__HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
 #endif
 	//generate next sample if no valid sample is present
 #if !CALC_SAMPLES_IN_INTERRUPT
 #if 1//#ifndef DEBUG
-		seq_tick();
+#if !EURORACK_MODULE
+	seq_tick();
+#endif
 		soundengine_calcNextSampleBlock();
 
 
 
 #endif
 #endif
+#if !EURORACK_MODULE
 		//process midi on midi port
 		uart_processMidi();
-
+#endif
 		//process the sequencer
 	//	seq_tick(); //moved to tim 14?
+#if !EURORACK_MODULE
 	usb_tick();
+#endif
 	//process incoming frontpanel data
 		//	uart_processFront();
 

@@ -17,6 +17,7 @@
 
 #include "stm32f7xx_hal.h"
 #include "Soundengine/MIDI/ParameterArray.h"
+#include <Soundengine/ModMatrix_Processor.h>
 
 typedef struct ModulatorStruct
 {
@@ -30,12 +31,15 @@ typedef struct ModulatorStruct
 } ModulationNode;
 
 //TODO move into corresponding voice
-extern ModulationNode velocityModulators[6];
+//extern ModulationNode velocityModulators[6];
+
+extern ModulationNode cvModulators[NUM_MOD_SLOTS];
 
 void modNode_init(ModulationNode* vm);
 void modNode_resetTargets();
+#if OLD_LFO_ROUTING
 void modNode_reassignVeloMod();
-
+#endif
 /** if multiple nodes address the same target we need to update the other modNodes if one of them changes the destionation*/
 //void modNode_originalValueModulated(uint16_t idx, ModulationNode* modSource);
 void modNode_originalValueChanged(uint16_t idx);

@@ -17,6 +17,6 @@
 
 #include "stm32f7xx_hal.h"
 //init kit from hrtlkits_batch3.zip
-#define INIT_KIT_SIZE 254
+#define INIT_KIT_SIZE 272
 const extern uint8_t initKit[INIT_KIT_SIZE];
 #endif /* INC_PRESET_INITKIT_H_ */

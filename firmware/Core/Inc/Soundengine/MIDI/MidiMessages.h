@@ -15,6 +15,8 @@
 #ifndef MIDIMESSAGES_H_
 #define MIDIMESSAGES_H_
 
+#pragma once
+
 #include "stm32f7xx_hal.h"
 
 enum MidiSource {
@@ -33,7 +35,6 @@ struct MidiBits {
 /** a struct defining a standard midi message*/
 typedef struct MidiStruct {
 	uint8_t status;
-  uint8_t lastNonSysStatus;
 	uint8_t data1;
 	uint8_t data2;
 	struct MidiBits bits;
@@ -46,7 +47,8 @@ typedef struct MidiStruct {
 #define NOTE_OFF 			0x80	// 2 data bytes
 #define NOTE_ON 			0x90	// 2 data bytes
 #define MIDI_CC				0xB0	// 2 data bytes
-#define MIDI_CC2			0xF4	// 2 data bytes an unused midi status is used to indicate another cc message for params above 127
+#define MIDI_CC2			0xd6	// 2 data bytes an unused midi status is used to indicate another cc message for params above 127
+#define MIDI_CC3			0xd9
 #define PROG_CHANGE			0xC0	// 1 data bytes
 #define MIDI_PITCH_WHEEL	0xE0	// 2 data bytes
 #define MIDI_AT				0xA0	// 2 data bytes
@@ -349,12 +351,13 @@ typedef enum
 	CC2_AUDIO_OUT5,
 	CC2_AUDIO_OUT6,
 
-	CC2_UNUSED1,
-	CC2_UNUSED2,
-	CC2_UNUSED3,
-	CC2_UNUSED4,
-	CC2_UNUSED5,
-	CC2_UNUSED6,
+
+	CC2_1VOCT_1,
+	CC2_1VOCT_2,
+	CC2_1VOCT_3,
+	CC2_1VOCT_4,
+	CC2_1VOCT_5,
+	CC2_1VOCT_6,
 	CC2_UNUSED7, // s/b 111 i think
 	
 	CC2_PWM_1,
@@ -377,6 +380,8 @@ typedef enum
 	CC2_FX_WAVE,
 	CC2_FX_REVERB_TYPE,
 	CC2_FX_DELAY_TYPE,
+
+
 
 	/*
 	CC2_MIDI_NOTE1,
@@ -410,6 +415,7 @@ typedef enum
 
 extern Param2EnumsDefinition Param2Enums;
 
+
 //Cortex <-> Front messages
 
 //control messages from cortex for leds
@@ -423,6 +429,7 @@ extern Param2EnumsDefinition Param2Enums;
 #define FRONT_CC_LFO_TARGET				0xd7
 #define FRONT_CC_VELO_TARGET			0xd8
 //#define FRONT_STEP_CC					0xd9	// toggle a step in the subStepPattern array
+#define FRONT_CC_3						0xd9
 #define FRONT_SET_P1_DEST				0xda	// SET_P1_DEST, stepNr, destinationNr --> track(voice) via set active track cmd
 #define FRONT_SET_P2_DEST				0xdb
 #define FRONT_SET_P1_VAL				0xdc	// SET_P1_VAL, stepNr, value --> track(voice) via set active track cmd

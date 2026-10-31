@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.21)
 
-# LXR V2 desktop drum machine firmware (STM32F765VG, Cortex-M7).
+# LXR V2 Eurorack drum module firmware (STM32F765VG, Cortex-M7).
 #
 #   cmake --preset release
 #   cmake --build --preset release
@@ -19,9 +19,9 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "${LXR_CMAKE_DIR}/arm-none-eabi.cmake")
 endif()
 
-project(LXR_V2_STM32F765
-    VERSION 1.7
-    DESCRIPTION "LXR V2 drum machine firmware"
+project(LXR_V2_STM32F765_Eurorack
+    VERSION 1.51
+    DESCRIPTION "LXR V2 Eurorack drum module firmware"
     LANGUAGES C ASM
 )
 
@@ -34,27 +34,25 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Same optimisation as the original STM32CubeIDE configurations: the audio
-# engine has to run at -O3 to keep up in real time, even in Debug builds.
+# The audio engine has to run at -O3 to keep up in real time, even in Debug builds.
 set(CMAKE_C_FLAGS_DEBUG     "-O3 -g3")
 set(CMAKE_C_FLAGS_RELEASE   "-O3 -g0")
 set(CMAKE_ASM_FLAGS_DEBUG   "-g3")
 set(CMAKE_ASM_FLAGS_RELEASE "")
 
-# The 16 KB ITCM is tight. Measured .itcm_text (without linker stubs, ~0.5 KB)
-# with Arm GNU 15.2.rel1: -O3 14564 B, -O2 10420 B (with -fno-thread-jumps on
-# ResonantFilter.c, see Core/CMakeLists.txt; without it -O3 18724 B, -O2 16152 B);
-# with Arm GNU 11.3.rel1: -O3 14552 B. Set e.g. -DLXR_ITCM_OPT=-O2 if a future
-# compiler overflows again. See LXR_ITCM_SOURCES in Core/CMakeLists.txt.
+# The 16 KB ITCM can overflow at -O3 with newer GCC releases. Measured .itcm_text
+# with Arm GNU 14.3.rel1: -O3 14392 B (fits), -O2 10920 B. If it stops fitting,
+# configure with -DLXR_ITCM_OPT=-O2. See LXR_ITCM_SOURCES in Core/CMakeLists.txt.
 set(LXR_ITCM_OPT "" CACHE STRING
     "Optimisation flag for translation units with IN_ITCM_RAM code (empty = same as the rest)")
 
 # Bootloader for the full-flash image and "flash_full" (blank devices only).
 # Normal firmware updates don't need it, so by default neither is set and the
 # build produces just the firmware. Set at most one of them:
-#   A: a prebuilt bootloader .hex, e.g. from a bootloader release
-#   B: the bootloader source tree, which is then built together with the firmware
-set(LXR_BOOTLOADER_HEX "" CACHE FILEPATH "Prebuilt LXR bootloader .hex for the full-flash image (optional)")
+#   A: a prebuilt Eurorack bootloader .hex, e.g. from a bootloader release
+#   B: the bootloader source tree, which is then built (as the Eurorack variant)
+#      together with the firmware
+set(LXR_BOOTLOADER_HEX "" CACHE FILEPATH "Prebuilt LXR Eurorack bootloader .hex for the full-flash image (optional)")
 set(LXR_BOOTLOADER_DIR "" CACHE PATH "LXR bootloader source tree to build for the full-flash image (optional)")
 
 include(${LXR_CMAKE_DIR}/stm32f765.cmake)
@@ -72,8 +70,6 @@ target_compile_options(lxr_board_config INTERFACE
 add_subdirectory(Drivers)
 add_subdirectory(Middlewares)
 add_subdirectory(Core)
-add_subdirectory(bringup)  # lxr-0: module bring-up image
-add_subdirectory(module)  # lxr-0: module firmware
 
 add_executable(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -81,13 +77,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     # so every one of them is listed here.
     stm32f7_hal
     fatfs
-    usb_midi
     ${LXR_APP_MODULES}
 )
 
 # Linked at 0x08008000, behind the 32 KB bootloader.
 lxr_firmware_executable(${PROJECT_NAME} LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/STM32F765VGTX_FLASH.ld)
-lxr_add_firmware_outputs(${PROJECT_NAME} IMAGE_MAGIC LXRV2IMG IMAGE_NAME LXR_V2_V${PROJECT_VERSION})
+lxr_add_firmware_outputs(${PROJECT_NAME} IMAGE_MAGIC LXRERIMG IMAGE_NAME LXRE_V2_V${PROJECT_VERSION})
 
 # "flash": application only, the bootloader on the device is left alone.
 lxr_add_openocd_flash_target(flash
@@ -107,7 +102,7 @@ elseif(LXR_BOOTLOADER_HEX)
     endif()
     if(Python3_EXECUTABLE)  # report a wrong file now rather than at build time
         execute_process(
-            COMMAND ${Python3_EXECUTABLE} ${LXR_CMAKE_TOOLS_DIR}/check_bootloader_hex.py --magic LXRV2IMG ${bootloader}
+            COMMAND ${Python3_EXECUTABLE} ${LXR_CMAKE_TOOLS_DIR}/check_bootloader_hex.py --magic LXRERIMG ${bootloader}
             RESULT_VARIABLE check_result
             OUTPUT_QUIET
             ERROR_VARIABLE check_error
@@ -128,10 +123,10 @@ elseif(LXR_BOOTLOADER_DIR)
         message(FATAL_ERROR "LXR_BOOTLOADER_DIR: ${bootloader_dir} is not the LXR bootloader project "
                             "(no CMakeLists.txt with project(LXR_V2_STM32F765_Bootloader ...)).")
     endif()
-    set(LXR_BOOTLOADER_EURORACK OFF)  # the desktop firmware needs the desktop bootloader
+    set(LXR_BOOTLOADER_EURORACK ON)  # the Eurorack firmware needs the Eurorack bootloader
     add_subdirectory(${bootloader_dir} bootloader)
     set(bootloader lxr_bootloader)
-    message(STATUS "Bootloader for the full-flash image: built from ${bootloader_dir}")
+    message(STATUS "Bootloader for the full-flash image: built from ${bootloader_dir} (Eurorack variant)")
 else()
     message(STATUS "No bootloader configured: building the firmware only (no full-flash image, no flash_full). "
                    "Set LXR_BOOTLOADER_HEX or LXR_BOOTLOADER_DIR for blank devices.")
@@ -142,23 +137,23 @@ if(NOT bootloader)
     # Explain how to get flash_full instead of Ninja's "unknown target" error.
     lxr_add_unavailable_target(flash_full
         "'flash_full' is not available: no bootloader is configured for this build."
-        "It is only needed for blank devices. To update a working LXR, use the SD card"
+        "It is only needed for blank devices. To update a working module, use the SD card"
         "update file (.img), or the 'flash' target which writes only the firmware."
         "For a blank device, set up the build with the bootloader, then run flash_full again:"
         "  cmake --preset ${preset} -DLXR_BOOTLOADER_DIR=path/to/LXR_V2_STM32F765_Bootloader"
-        "or, with a prebuilt bootloader:"
-        "  cmake --preset ${preset} -DLXR_BOOTLOADER_HEX=path/to/LXR_V2_STM32F765_Bootloader.hex"
+        "or, with a prebuilt Eurorack bootloader:"
+        "  cmake --preset ${preset} -DLXR_BOOTLOADER_HEX=path/to/LXR_V2_Eurorack_Bootloader.hex"
         "(Give the path with -DLXR_BOOTLOADER_DIR= or -DLXR_BOOTLOADER_HEX=, not on its own.)"
     )
 endif()
 
 if(bootloader)
-    # LXR_V2_V<version>_full.hex/.bin: bootloader at 0x08000000 + firmware at 0x08008000.
+    # LXRE_V2_V<version>_full.hex/.bin: bootloader at 0x08000000 + firmware at 0x08008000.
     lxr_add_combined_image(full_image
-        OUTPUT_NAME LXR_V2_V${PROJECT_VERSION}_full
+        OUTPUT_NAME LXRE_V2_V${PROJECT_VERSION}_full
         BOOTLOADER ${bootloader}
         APPLICATION ${PROJECT_NAME}
-        BOOTLOADER_MAGIC LXRV2IMG
+        BOOTLOADER_MAGIC LXRERIMG
     )
 
     # "flash_full": erases and programs bootloader and firmware. Asks for
@@ -186,6 +181,8 @@ if(TARGET full_image)
     list(APPEND info_depends full_image)  # print after everything else is done
 endif()
 lxr_add_update_info(update_info
-    IMAGE ${CMAKE_CURRENT_BINARY_DIR}/LXR_V2_V${PROJECT_VERSION}.img
+    IMAGE ${CMAKE_CURRENT_BINARY_DIR}/LXRE_V2_V${PROJECT_VERSION}.img
+    IMAGE_PATTERN LXRE*.img
+    DEVICE "module"
     DEPENDS ${info_depends}
 )

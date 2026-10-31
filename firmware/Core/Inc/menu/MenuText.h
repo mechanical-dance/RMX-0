@@ -42,7 +42,9 @@
 #define MENU_PAT_MODE	 	23
 #define MENU_STEP_FLAM	 	24
 #define MENU_STEP_SHIFT	 	25
-#define MENU_AUDIO_OUT_FX	26
+#define MENU_CV_SRC			26
+#define MENU_CV_SAVE		27
+#define MENU_AUDIO_OUT_FX	28
 
 //-----------------------------------------------------------------
 // Shared texts. Reduce mem usage by pooling common text
@@ -55,6 +57,43 @@ const char menuText_fm[] 	= 	"fm ";
 const char menuText_dash[] 	="---";
 const char menuText_blank[] ="   ";
 const char menuText_any[]  	= "any";
+//-----------------------------------------------------------------
+const char cvSaveNames[][4] =
+{
+	{2},		//number of entries
+	{"kit"},
+	{"glo"},
+
+
+	//{"+8"},
+
+};
+//-----------------------------------------------------------------
+const char cvSrcNames[][4] =
+{
+	{17},		//number of entries
+	{"cv1"},
+	{"cv2"},
+	{"cv3"},
+	{"cv4"},
+	{"cv5"},
+	{"lf1"},
+	{"lf2"},
+	{"lf3"},
+	{"lf4"},
+	{"lf5"},
+	{"lf6"},
+	{"ac1"},
+	{"ac2"},
+	{"ac3"},
+	{"ac4"},
+	{"ac5"},
+	{"ac6"}
+
+
+	//{"+8"},
+
+};
 //-----------------------------------------------------------------
 const char stepFlamNames[][4] =
 {
@@ -307,18 +346,6 @@ const char waveformNames[][4]  =
 
 };
 //-----------------------------------------------------------------
-const char outputNames[][7]  =
-{
-	{7},		//number of entries
-	{"St1"}	,	//Stereo Out DAC 1
-	{"St2"}	,	//Stereo Out DAC 2
-	{"L1"}	,	//Mono Out Left DAC 1
-	{"R1"}	,	//Mono Out Right DAC 1
-	{"L2"}	,	//Mono Out Left DAC 2
-	{"R2"}	,	//Mono Out Right DAC 2
-	{"FX"}	,	//to FX Bus
-};
-//-----------------------------------------------------------------
 //output routing for FX processor, without FX target
 const char outputNamesFx[][7]  =
 {
@@ -330,6 +357,18 @@ const char outputNamesFx[][7]  =
 	{"L2"}	,	//Mono Out Left DAC 2
 	{"R2"}	,	//Mono Out Right DAC 2
 
+};
+//-----------------------------------------------------------------
+const char outputNames[][7]  =
+{
+	{7},		//number of entries
+	{"St1"}	,	//Stereo Out DAC 1
+	{"St2"}	,	//Stereo Out DAC 2
+	{"L1"}	,	//Mono Out Left DAC 1
+	{"R1"}	,	//Mono Out Right DAC 1
+	{"L2"}	,	//Mono Out Left DAC 2
+	{"R2"}	,	//Mono Out Right DAC 2
+	{"FX"}	,	//to FX Bus
 };
 //-----------------------------------------------------------------
 const char filterTypes[][8]  =
@@ -480,6 +519,10 @@ const char shortNames[][4]  =
 	{"kcm"},
 	{"flm"},
 	{"shf"},
+	{"src"},
+	{"v/o"},
+	{"cv"},
+	{"mtg"},
 
 };
 //-----------------------------------------------------------------
@@ -509,13 +552,14 @@ const char catNames[][16] =
 	{"Step"},
 	{"Euklid"},		
 	{"Global"},	
-	{"Velocity"},
+	{"Accent"},
 	{"Parametr"},
 	{"Sequencr"},
 	{"Generatr"},
 	{"MIDI"},
 	{"Clock"},
 	{"Fx"},
+	{"Mod"},
 };
 //-----------------------------------------------------------------
 // these must correspond to longNamesEnum
@@ -610,6 +654,10 @@ const char longNames[][16] =
 	{"KitChMde"},
 	{"Flam"},
 	{"Shift"},
+	{"Source"},
+	{"1V/Oct"},
+	{"CV Save"},
+	{"MrphTrgt"},
 };
 
 

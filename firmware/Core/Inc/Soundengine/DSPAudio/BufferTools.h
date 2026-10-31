@@ -78,7 +78,7 @@ static inline void bufferTool_copyWithGain(int16_t* buf1, int16_t* buf2, float g
 	}
 }
 //---------------------------------------------------
-IN_ITCM_RAM static inline void bufferTool_clearBuffer(int16_t* buf, const uint8_t size)
+IN_ITCM_RAM static inline void bufferTool_clearBuffer(int16_t* buf, const uint16_t size)
 {
 #if 0
 	uint8_t i;

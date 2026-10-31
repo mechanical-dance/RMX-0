@@ -12,10 +12,10 @@
  */
 
 
+#include <Soundengine/TriggerProcessor.h>
 #include "Soundengine/DSPAudio/CymbalVoice.h"
 #include "Soundengine/DSPAudio/squareRootLut.h"
 #include "Soundengine/DSPAudio/modulationNode.h"
-#include "Soundengine/TriggerOut.h"
 #include "Soundengine/config.h"
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "IO/adcPots.h"
@@ -34,9 +34,9 @@ void Cymbal_setPan(const uint8_t pan)
 void Cymbal_init()
 {
 
-	initOnePole(&cymbalVoice.FaderVolumeFilter);
-	setOnePoleCoef(&cymbalVoice.FaderVolumeFilter,0.1);
-
+	//initOnePole(&cymbalVoice.FaderVolumeFilter);
+	//setOnePoleCoef(&cymbalVoice.FaderVolumeFilter,0.1);
+	cymbalVoice.cvFreq = 0.5;
 	SnapEg_init(&cymbalVoice.snapEg);
 	Cymbal_setPan(0);
 	cymbalVoice.vol = 0.8f;
@@ -56,6 +56,7 @@ void Cymbal_init()
 	cymbalVoice.modOsc.midiFreq = 70<<8 | 64;
 	cymbalVoice.modOsc.pitchMod = 1.0f;
 	cymbalVoice.modOsc.modNodeValue = 1;
+	cymbalVoice.modOsc.cvFreq = -1.f;
 
 	cymbalVoice.modOsc2.freq = 440;
 	cymbalVoice.modOsc2.waveform = NOISE;//SINE;
@@ -63,6 +64,7 @@ void Cymbal_init()
 	cymbalVoice.modOsc2.midiFreq = 70<<8| 64;
 	cymbalVoice.modOsc2.pitchMod = 1.0f;
 	cymbalVoice.modOsc2.modNodeValue = 1;
+	cymbalVoice.modOsc2.cvFreq = -1.f;
 
 	cymbalVoice.osc.freq = 440;
 	cymbalVoice.osc.waveform = 1;
@@ -70,6 +72,7 @@ void Cymbal_init()
 	cymbalVoice.osc.midiFreq = 70<<8 | 64;
 	cymbalVoice.osc.pitchMod = 1.0f;
 	cymbalVoice.osc.modNodeValue = 1;
+	cymbalVoice.osc.cvFreq = -1.f;
 
 	cymbalVoice.volumeMod = 1;
 
@@ -88,12 +91,23 @@ void Cymbal_updatePan()
 	cymbalVoice.triggeredPanR = sqrtf(cymbalVoice.pan/127.f);
 }
 //---------------------------------------------------
+void Cymbal_setCv1VOct(float oct)
+{
+	cymbalVoice.osc.cvFreq		= oct;		// the main fm oscillator
+	cymbalVoice.modOsc.cvFreq	= oct;		// the mod osc
+	cymbalVoice.modOsc2.cvFreq	= oct;		// the mod osc
+	cymbalVoice.transGen.cvFreq = oct;
+}
+//---------------------------------------------------
 void Cymbal_trigger( const uint8_t vel, const uint8_t note)
 {
 	lfo_retrigger(4);
 	//update velocity modulation
+#if OLD_LFO_ROUTING
 	modNode_updateValue(&velocityModulators[4],vel/127.f);
-
+#else
+	cymbalVoice.velocity = vel/127.f;
+#endif
 	float offset = 1;
 	if(cymbalVoice.transGen.waveform==1) //offset mode
 	{
@@ -202,7 +216,7 @@ void Cymbal_calcSyncBlock(int16_t* buf, const uint8_t size)
 			for(j=0;j<size;j++)
 			{
 				//add volume
-				buf[j] *=  cymbalVoice.combinedVolume * calcOnePole( &cymbalVoice.FaderVolumeFilter, adc_getFaderVolume(4));
+				buf[j] *=  cymbalVoice.combinedVolume ;//* calcOnePole( &cymbalVoice.FaderVolumeFilter, adc_getFaderVolume(4));
 			}
 #else
 			for(j=0;j<size;j++)
@@ -231,7 +245,7 @@ void Cymbal_calcSyncBlock(int16_t* buf, const uint8_t size)
 			for(j=0;j<size;j++)
 			{
 				//add volume
-				buf[j] *=  cymbalVoice.combinedVolume * calcOnePole( &cymbalVoice.FaderVolumeFilter, adc_getFaderVolume(4));
+				buf[j] *=  cymbalVoice.combinedVolume ;//* calcOnePole( &cymbalVoice.FaderVolumeFilter, adc_getFaderVolume(4));
 			}
 #else
 			for(j=0;j<size;j++)

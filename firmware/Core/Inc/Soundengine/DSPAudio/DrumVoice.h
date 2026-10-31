@@ -86,13 +86,16 @@ typedef struct VoiceStruct
 
 	Dither dither;
 	float combinedVolume;
-	OnePoleFilter FaderVolumeFilter;
+//	OnePoleFilter FaderVolumeFilter;
 
 #if SMOOTH_MIXER_VOL_PAN_DRIVE
 	OnePoleFilter MixerPageFilter[2];
 #endif
 
 	float pwm;
+	float cvFreq;
+
+	float velocity; //last accent value
 } DrumVoice;
 //------------------------------------------------------------------------
 
@@ -102,6 +105,8 @@ extern DrumVoice voiceArray[NUM_DRUM_VOICES];
 
 //initialize all the parameters to sane values
 void initDrumVoice();
+
+void Drum_setCv1VOct(const uint8_t voiceNr, float oct);
 
 void Drum_trigger(const uint8_t voiceNr, const uint8_t vol, const uint8_t note);
 

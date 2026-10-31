@@ -96,6 +96,8 @@ void lcd_init( void )
     // warten auf die Bereitschaft des LCD
     //_delay_ms( LCD_BOOTUP_MS );
 	HAL_Delay( LCD_BOOTUP_MS );
+
+
     
    
     // Set 8 bit mode 3 times (soft reset)
@@ -138,6 +140,16 @@ void lcd_init( void )
              LCD_FUNCTION_4BIT );
     HAL_Delay( LCD_SET_4BITMODE_MS );
     
+    // 4-bit Modus aktivieren
+    lcd_out( LCD_SET_FUNCTION |
+             LCD_FUNCTION_4BIT );
+    HAL_Delay( LCD_SET_4BITMODE_MS );
+
+    // 4-bit Modus aktivieren
+    lcd_out( LCD_SET_FUNCTION |
+             LCD_FUNCTION_4BIT );
+    HAL_Delay( LCD_SET_4BITMODE_MS );
+
     //Special case winstar OLED for repeat init bug
     lcd_command(LCD_SET_SHIFT | OLED_POWER_OFF);	//0x13
     lcd_command(LCD_SET_SHIFT | OLED_POWER_ON);	//0x17

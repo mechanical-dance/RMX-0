@@ -15,6 +15,7 @@
 #include "Soundengine/DSPAudio/lfo.h"
 #include "Soundengine/DSPAudio/random.h"
 #include <math.h>
+#include <Soundengine/ModMatrix_Processor.h>
 
 #include "Soundengine/DSPAudio/DrumVoice.h"
 #include "Soundengine/DSPAudio/CymbalVoice.h"
@@ -32,8 +33,9 @@ void lfo_init(Lfo *lfo)
 	lfo->sync			= 0;
 	lfo->freq			= 1;
 	lfo->modNodeValue	= 1;
-
+#if OLD_LFO_ROUTING
 	modNode_init(&lfo->modTarget);
+#endif
 }
 //-------------------------------------------------------------
 IN_ITCM_RAM float lfo_calc(Lfo *lfo)
@@ -105,22 +107,27 @@ IN_ITCM_RAM float lfo_calc(Lfo *lfo)
 	return 0;
 }
 //-------------------------------------------------------------
-void lfo_dispatchNextValue(Lfo* lfo)
+
+void lfo_calcNextValue(Lfo* lfo)
 {
-	float val = lfo_calc(lfo);
-	modNode_updateValue(&lfo->modTarget,val);
+	lfo->value = lfo_calc(lfo);
+#if OLD_LFO_ROUTING
+	modNode_updateValue(&lfo->modTarget,lfo->value);
+#endif
 }
+
 //-------------------------------------------------------------
 IN_ITCM_RAM uint32_t lfo_calcPhaseInc(float freq, uint8_t sync)
 {
-	if(sync==0)//no sync
+	//if(sync==0)//no sync
+	if(1) //we have no sync yet in eurorack
 	{
 		return freq/(LFO_SR) * 0xffffffff;
 	}
 
 	//sync is on
 
-	float bpm =  seq_getBpm();
+	float bpm =  CV_getBpm();
 
 	float tempoAsFrequency = bpm > 0.0 ? bpm / 60.f /4: 0.0f; //bpm/60 = beat duration /4 = bar duration
 

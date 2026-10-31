@@ -63,7 +63,6 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void);
 void SDMMC1_IRQHandler(void);
 void DMA2_Stream0_IRQHandler(void);
 void DMA2_Stream3_IRQHandler(void);
-void OTG_FS_IRQHandler(void);
 void DMA2_Stream6_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
@@ -74,5 +73,3 @@ void DMA2_Stream6_IRQHandler(void);
 #endif
 
 #endif /* __STM32F7xx_IT_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

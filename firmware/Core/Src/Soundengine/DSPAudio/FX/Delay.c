@@ -95,6 +95,7 @@ void Delay_processPingPong(Delay *d, int16_t *fxBuffer,int16_t* outL, int16_t* o
 
 	int32_t x;
 	int32_t* stereoOut = (int32_t*)outL;
+	int16_t* monoOut = outL;
 
 	for(uint8_t i=0;i<size;i++)
 	{
@@ -164,22 +165,26 @@ void Delay_processPingPong(Delay *d, int16_t *fxBuffer,int16_t* outL, int16_t* o
 
 			//*fxBuffer = out;//dryWetMixer(out,*signalAudio,d->dryWet);
 			int16_t wet =  outL;
-			int16_t wet2 =  outR;
 
-			x = __PKHBT(__SSAT(fxBuffer[idx1] + __SSAT((wet - fxBuffer[idx1]) * dryWet,16),16),   __SSAT(fxBuffer[idx2] + __SSAT((wet2 - fxBuffer[idx2]) * dryWet,16),16), 16);
-			//LERP dryWet
-			if (channels == 2)
-      {
-        *stereoOut = __QADD16(*stereoOut, x);
-        stereoOut++;
-      }
-      else
-      {
-        *(uint16_t*)stereoOut = __QADD16(*stereoOut, x);
-        stereoOut++;
-      }
+			if(channels == 2)
+			{
+				int16_t wet2 =  outR;
 
+				x = __PKHBT(__SSAT(fxBuffer[idx1] + __SSAT((wet - fxBuffer[idx1]) * dryWet,16),16),   __SSAT(fxBuffer[idx2] + __SSAT((wet2 - fxBuffer[idx2]) * dryWet,16),16), 16);
+				//LERP dryWet
+				*stereoOut = __QADD16(*stereoOut, x);
+				stereoOut++;
+			}
+			else
+			{
+				int16_t tmp = __SSAT(fxBuffer[idx1] + __SSAT((wet - fxBuffer[idx1]) * dryWet,16),16);
+				*monoOut = __SSAT(*monoOut + tmp, 16);
+				monoOut+=2;
+			}
 			//*input1 = dryWet*out + (1-dryWet)* (*input1);
+
+
+
 
 	}
 }
@@ -190,82 +195,133 @@ void Delay_process(Delay *d, int16_t *fxBuffer,int16_t* outL, int16_t* outR, uin
 
 	int32_t x;
 	int32_t* stereoOut = (int32_t*)outL;
-
+	int16_t* monoOut = outL;
 	for(uint8_t i=0;i<size;i++)
 	{
 
 		const uint8_t idx1 = i*2;
 		const uint8_t idx2 = i*2+1;
 
-    int16_t out;
+	#if 0
+		int16_t out;
+
+		if(phase>=1)
+		{
+			phase-=1;
+		}
+
+		phase+=variationParameter*variationParameter*0.25;
+
+		if(phase>=0.5) out=32767;
+		else out=-32767;
+
+		return out;
+
+	#else
+			int16_t out;
 
 
-    if(d->interpValue <= 0.f) //no parameter change in progress -> no crossfade
-    {
-      Delay_calcBuffer(d, 0);
-      out = d->tmpBuffer[0];
-      //if(d->interpValue <= 0.f) //no parameter change in progress -> no crossfade
-      {
-        //lfo modulation can cause pending delay times
-        if(	d->timePending )
-        {
-          d->timePending = 0;
-          Delay_setDelayTime(d, d->pendingDelayTime);
-        }
-      }
-      //out = fourPole.process(out,sizeParameter,variationParameter*5);
-    } else
-    {
-      Delay_calcBuffer(d, 0);
-      Delay_calcBuffer(d, 1);
+			if(d->interpValue <= 0.f) //no parameter change in progress -> no crossfade
+			{
+				Delay_calcBuffer(d, 0);
+				out = d->tmpBuffer[0];
+				//if(d->interpValue <= 0.f) //no parameter change in progress -> no crossfade
+				{
+					//lfo modulation can cause pending delay times
+					if(	d->timePending )
+					{
+						d->timePending = 0;
+						Delay_setDelayTime(d, d->pendingDelayTime);
+					}
+				}
+				//out = fourPole.process(out,sizeParameter,variationParameter*5);
+			} else
+			{
+				Delay_calcBuffer(d, 0);
+				Delay_calcBuffer(d, 1);
 
-      out = d->tmpBuffer[0] * d->interpValue + d->tmpBuffer[1] * (1.0 - d->interpValue);
-      //out = fourPole.process(out,sizeParameter,variationParameter*200);
-      d->interpValue -= d->interpStep; //decrement InterpFactor toward zero
-
-
-      if (d->interpValue <= 0.0)
-      {
-        d->oldRead = d->newRead; //update the OldParms after crossfade finished
-        d->fracReadOld = d->fracReadNew;
-      }
-    }
-
-    //calc tone filter
-    out = calcOnePole(&d->tone, out);
-
-    //-------------
+				out = d->tmpBuffer[0] * d->interpValue + d->tmpBuffer[1] * (1.0 - d->interpValue);
+				//out = fourPole.process(out,sizeParameter,variationParameter*200);
+				d->interpValue -= d->interpStep; //decrement InterpFactor toward zero
 
 
-    //we add both stereo channels together for a mono delay
-    int16_t itg = (__QADD16(__QADD16(fxBuffer[idx1], fxBuffer[idx2]) , (int16_t)(out*d->feedback)));
-    float val = itg/32767.f;
-    if(val > 1.f) val = 1.f;
-    else if(val < -1.f) val = -1.f;
-    FX_BUFFER[d->write++] = (__fp16)val;//(itg/32767.f);
-    //*signalFeedback = out;
+				if (d->interpValue <= 0.0)
+				{
+					d->oldRead = d->newRead; //update the OldParms after crossfade finished
+					d->fracReadOld = d->fracReadNew;
+				}
+			}
 
-    d->write &= FX_BUFFER_SIZE;
+			//calc tone filter
+			out = calcOnePole(&d->tone, out);
+
+			//-------------
+
+	#if 0
+			float floatDataOversampled[2];
+			float in = out/32767.f;
+			float filtered[2];
 
 
-    //*fxBuffer = out;//dryWetMixer(out,*signalAudio,d->dryWet);
-    int16_t wet =  out;
-    int16_t wet2 =  out;
+			oversampler.upsample2(&in,floatDataOversampled,1);
 
-    x = __PKHBT(__SSAT(fxBuffer[idx1] + __SSAT((wet - fxBuffer[idx1]) * dryWet,16),16),   __SSAT(fxBuffer[idx2] + __SSAT((wet2 - fxBuffer[idx2]) * dryWet,16),16), 16);
-    //LERP dryWet
-    if (channels == 2)
-    {
-      *stereoOut = __QADD16(*stereoOut, x);
-      stereoOut++;
-    }
-    else
-    {
-      *(uint16_t*)stereoOut = __QADD16(*stereoOut, x);
-      stereoOut++;
-    }
+			#if USE_SVF
 
-    //*input1 = dryWet*out + (1-dryWet)* (*input1);
+				floatDataOversampled[0] = floatDataOversampled[0]*svf.getGain();
+				floatDataOversampled[1] = floatDataOversampled[1]*svf.getGain();
+
+				svf.process<SVF_LP_2>(floatDataOversampled[0]);
+				svf.process<SVF_LP_2>(floatDataOversampled[1]);
+
+				floatDataOversampled[0] = svf.clip(floatDataOversampled[0],1);
+				floatDataOversampled[1] = svf.clip(floatDataOversampled[1],1);
+			#else
+			floatDataOversampled[0] = fourPole.process(floatDataOversampled[0],fc,variationParameter*4);
+			floatDataOversampled[1] = fourPole.process(floatDataOversampled[1],fc,variationParameter*4);
+			#endif
+
+			oversampler.downsample2(floatDataOversampled,filtered,1);
+			filtered[0] *= 32767;
+			out = filtered[0];
+			//---------
+
+
+
+	#endif
+
+			//we add both stereo channels together for a mono delay
+			int16_t itg = (__QADD16(__QADD16(fxBuffer[idx1], fxBuffer[idx2]) , (int16_t)(out*d->feedback)));
+			//int16_t itg = (__QADD16(fxBuffer[idx1] , (int16_t)(out*d->feedback)));
+			float val = itg/32767.f;
+			if(val > 1.f) val = 1.f;
+			else if(val < -1.f) val = -1.f;
+			FX_BUFFER[d->write++] = (__fp16)val;//(itg/32767.f);
+			//*signalFeedback = out;
+
+			d->write &= FX_BUFFER_SIZE;
+
+
+			//*fxBuffer = out;//dryWetMixer(out,*signalAudio,d->dryWet);
+			int16_t wet =  out;
+
+			if(channels == 2)
+			{
+				int16_t wet2 =  out;
+
+				x = __PKHBT(__SSAT(fxBuffer[idx1] + __SSAT((wet - fxBuffer[idx1]) * dryWet,16),16),   __SSAT(fxBuffer[idx2] + __SSAT((wet2 - fxBuffer[idx2]) * dryWet,16),16), 16);
+				//LERP dryWet
+				*stereoOut = __QADD16(*stereoOut, x);
+				stereoOut++;
+			}
+			else
+			{
+				int16_t tmp = __SSAT(fxBuffer[idx1] + __SSAT((wet - fxBuffer[idx1]) * dryWet,16),16);
+				*monoOut = __SSAT(*monoOut + tmp, 16);
+				monoOut+=2;
+			}
+
+			//*input1 = dryWet*out + (1-dryWet)* (*input1);
+	#endif
 	}
 }
 

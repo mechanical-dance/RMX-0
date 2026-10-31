@@ -1,11 +1,11 @@
 # Copyright (C) 2026 Erica Synths
 # SPDX-License-Identifier: GPL-3.0-only
 
-# LXR V2 application code, split into modules.
+# LXR V2 Eurorack application code, split into modules.
 #
-# The modules call into each other in a cycle (sequencer <-> menu <-> preset
-# <-> DSP), so they are OBJECT libraries that are all linked directly into the
-# firmware executable rather than static libraries with a link order.
+# The modules call into each other in a cycle (menu <-> preset <-> DSP), so
+# they are OBJECT libraries that are all linked directly into the firmware
+# executable rather than static libraries with a link order.
 
 add_library(lxr_app_common INTERFACE)
 target_link_libraries(lxr_app_common INTERFACE
@@ -13,7 +13,6 @@ target_link_libraries(lxr_app_common INTERFACE
     lxr_board_config
     stm32f7_hal
     fatfs
-    usb_midi
 )
 target_compile_options(lxr_app_common INTERFACE $<$<COMPILE_LANGUAGE:C>:-Wall>)
 
@@ -27,14 +26,13 @@ add_library(lxr_platform OBJECT
     Src/syscalls.c
     Src/sysmem.c
     Src/delay.c
-    Src/flash_if.c
 )
 # Shown on the boot splash screen; comes from project(VERSION) in the top-level CMakeLists.txt.
 set_source_files_properties(Src/main.c PROPERTIES
-    COMPILE_DEFINITIONS "FIRMWARE_VERSION=\" ${PROJECT_VERSION}\""
+    COMPILE_DEFINITIONS "FIRMWARE_VERSION=\"${PROJECT_VERSION}\""
 )
 
-# Hardware inputs/outputs: shift-register buttons/LEDs, pots & faders.
+# Hardware inputs/outputs: shift-register buttons/LEDs, pots and CV inputs.
 add_library(lxr_io OBJECT
     Src/IO/adcPots.c
     Src/IO/DIO.c
@@ -51,12 +49,11 @@ add_library(lxr_ui OBJECT
     Src/frontPanelParser.c
     Src/Parameters.c
     Src/menu/Cc2Text.c
-    Src/menu/copyClearTools.c
     Src/menu/menu.c
     Src/menu/screensaver.c
 )
 
-# Kit/pattern/project storage on the SD card.
+# Kit/project storage on the SD card.
 add_library(lxr_preset OBJECT
     Src/Preset/initKit.c
     Src/Preset/presetManager.c
@@ -100,14 +97,16 @@ add_library(lxr_dsp OBJECT
     Src/Soundengine/DSPAudio/FX/VerbTools/VerbModDelay.c
 )
 
-# Audio engine: codec/I2S DMA, sample block rendering, FX bus, clock/trigger I/O.
+# Audio engine: codec/I2S DMA, sample block rendering, FX bus, trigger and
+# CV modulation inputs.
 add_library(lxr_engine OBJECT
     Src/Soundengine/AudioCodecManager.c
     Src/Soundengine/cs4344_cs5343.c
     Src/Soundengine/FIFO.c
     Src/Soundengine/FxBus.c
+    Src/Soundengine/ModMatrix_Processor.c
     Src/Soundengine/Soundengine.c
-    Src/Soundengine/TriggerOut.c
+    Src/Soundengine/TriggerProcessor.c
 )
 
 # MIDI: UART driver, parsers, parameter mapping, voice control.
@@ -120,18 +119,6 @@ add_library(lxr_midi OBJECT
     Src/Soundengine/MIDI/Uart.c
 )
 
-# Step sequencer, Euclidean generator, external clock sync.
-add_library(lxr_sequencer OBJECT
-    Src/Soundengine/Sequencer/clockSync.c
-    Src/Soundengine/Sequencer/EuklidGenerator.c
-    Src/Soundengine/Sequencer/sequencer.c
-)
-
-# USB-MIDI message queue on top of the USB device stack.
-add_library(lxr_usb_app OBJECT
-    Src/Soundengine/USB/usb_manager.c
-)
-
 set(LXR_APP_MODULES
     lxr_platform
     lxr_io
@@ -140,8 +127,6 @@ set(LXR_APP_MODULES
     lxr_dsp
     lxr_engine
     lxr_midi
-    lxr_sequencer
-    lxr_usb_app
 )
 foreach(module IN LISTS LXR_APP_MODULES)
     target_link_libraries(${module} PUBLIC lxr_app_common)
@@ -174,12 +159,10 @@ set(LXR_ITCM_SOURCES
     Src/Soundengine/DSPAudio/FX/Distortion.c
     Src/Soundengine/DSPAudio/FX/Reverb.c
     Src/Soundengine/MIDI/ParameterArray.c
-    Src/Soundengine/Sequencer/sequencer.c
 )
 if(LXR_ITCM_OPT)
     set_source_files_properties(${LXR_ITCM_SOURCES} PROPERTIES COMPILE_OPTIONS "${LXR_ITCM_OPT}")
 endif()
-# The SVF filters switch on the filter type inside the per-sample loop. GCC 15
-# jump-threads the loop back edge through that switch and duplicates the whole
-# loop body per case (ResonantFilter.c: 2772 B -> 6720 B at -O3, 8028 B at -O2).
+
+
 set_property(SOURCE Src/Soundengine/DSPAudio/ResonantFilter.c APPEND PROPERTY COMPILE_OPTIONS -fno-thread-jumps)

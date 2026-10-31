@@ -24,13 +24,13 @@
 //#include "../Hardware/SD/SPI_routines.h"
 #include "menu/screensaver.h"
 #include "menu/CcNr2Text.h"
-#include "menu/copyClearTools.h"
+//#include "menu/copyClearTools.h"
 #include "buttonHandler.h"
 #include <ctype.h>
 #include <frontPanelParser_ui.h>
 #include "front.h"
-
-#include "Soundengine/Sequencer/sequencer.h"
+#include "Soundengine/FxBus.h"
+//#include "Soundengine/Sequencer/sequencer.h"
 #include "Soundengine/Soundengine.h"
 
 
@@ -189,9 +189,9 @@ const Name valueNames[NUM_NAMES] =
 		{SHORT_VOL,CAT_OSC,LONG_VOL},				//TEXT_OSC_VOLUME fm oscillator volume in mix mode
 		{SHORT_DRIVE, CAT_FILTER,LONG_DRIVE},			//TEXT_FILTER_DRIVE
 
-		{SHORT_DEST,	CAT_VELOCITY,	LONG_DEST_PARAM},		//TEXT_VEL_DEST,
-		{SHORT_AMNT,	CAT_VELOCITY,	LONG_AMOUNT},			//TEXT_VEL_AMT,
-		{SHORT_VOL,CAT_VELOCITY,	LONG_VOLUME_MOD},		//TEXT_VEL_MOD_VOL,
+		{SHORT_DEST,	CAT_ACCENT,	LONG_DEST_PARAM},		//TEXT_VEL_DEST,
+		{SHORT_AMNT,	CAT_ACCENT,	LONG_AMOUNT},			//TEXT_VEL_AMT,
+		{SHORT_VOL,CAT_ACCENT,	LONG_VOLUME_MOD},		//TEXT_VEL_MOD_VOL,
 
 		{SHORT_FETCH,	CAT_PARAMETER,	LONG_FETCH},		//TEXT_FETCH					//60
 		{SHORT_FOLLOW,	CAT_SEQUENCER,	LONG_FOLLOW},		//TEXT_FOLLOW
@@ -249,6 +249,15 @@ const Name valueNames[NUM_NAMES] =
 		{SHORT_P3, CAT_FX, LONG_P3},/*TEXT_FX_P3*/
 		{SHORT_P4, CAT_FX, LONG_P4},/*TEXT_FX_P4*/
 		{SHORT_KCM, CAT_GLOBAL, LONG_PATTERN_MODE},/*TEXT_AUTO_SWITCH_KIT*/
+
+		{SHORT_DEST, CAT_MOD, LONG_DEST_PARAM},/*TEXT_CV_DEST*/
+		{SHORT_AMNT, CAT_MOD, LONG_AMOUNT},/*TEXT_CV_AMT*/
+		{SHORT_SRC, CAT_MOD, LONG_SRC}, /*TEXT_CV_SRC*/
+		{SHORT_1VOCT, CAT_MOD, LONG_1VOCT},/*TEXT_1VOCT*/
+
+		{SHORT_CV, CAT_GLOBAL, LONG_CV},/*TEXT_CV_SAVE*/
+		{SHORT_MORPH_TARGET, CAT_SOUND, LONG_MORPH_TARGET},/*TEXT_MORPH_TARGET*/
+
 
 
 };
@@ -478,12 +487,12 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 	    /*PAR_AUDIO_OUT5*/ 		DTYPE_MENU | (MENU_AUDIO_OUT<<8),
 	    /*PAR_AUDIO_OUT6*/ 		DTYPE_MENU | (MENU_AUDIO_OUT<<8),		//220
 	    // these 7
-	    /*PAR_UNUSED1*/		DTYPE_NOTE_NAME,
-	    /*PAR_UNUSED2*/		DTYPE_NOTE_NAME,
-	    /*PAR_UNUSED3*/		DTYPE_NOTE_NAME,
-	    /*PAR_UNUSED4*/		DTYPE_NOTE_NAME,
-	    /*PAR_UNUSED5*/		DTYPE_NOTE_NAME,
-	    /*PAR_UNUSED6*/		DTYPE_NOTE_NAME,
+	    /*CV_1VOCT_1*/		DTYPE_NOTE_NAME,
+	    /*CV_1VOCT_2*/		DTYPE_NOTE_NAME,
+	    /*CV_1VOCT_3*/		DTYPE_NOTE_NAME,
+	    /*CV_1VOCT_4*/		DTYPE_NOTE_NAME,
+	    /*CV_1VOCT_5*/		DTYPE_NOTE_NAME,
+	    /*CV_1VOCT_6*/		DTYPE_NOTE_NAME,
 	    /*PAR_UNUSED7*/		DTYPE_NOTE_NAME,
 
 		/*PAR_PWM_1,*/			DTYPE_0B127,
@@ -508,6 +517,63 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 		/*PAR_FX_DELAY_TYPE*/	DTYPE_MENU | (MENU_DELAY<<8),
 		/*PAR_MORPH_KIT_DEST*/	DTYPE_0B127,
 
+		/*PAR_CV_DEST_1*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_2*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_3*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_4*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_5*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_6*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_7*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_8*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_9*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_10*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_11*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_12*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_13*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_14*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_15*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_16*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_17*/		DTYPE_TARGET_SELECTION_CV,
+		/*PAR_CV_DEST_18*/		DTYPE_TARGET_SELECTION_CV,
+
+		/*PAR_CV_MOD_AMT_1*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_2*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_3*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_4*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_5*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_6*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_7*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_8*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_9*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_10*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_11*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_12*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_13*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_14*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_15*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_16*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_17*/	DTYPE_0B100,
+		/*PAR_CV_MOD_AMT_18*/	DTYPE_0B100,
+
+		/*PAR_CV_SRC_1*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_2*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_3*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_4*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_5*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_6*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_7*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_8*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_9*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_10*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_11*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_12*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_13*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_14*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_15*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_16*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_17*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+		/*PAR_CV_SRC_18*/		DTYPE_MENU | (MENU_CV_SRC<<8),
+
 
 	    /*PAR_ROLL*/ 			DTYPE_MENU | (MENU_ROLL_RATES<<8),
 	    /*PAR_MORPH*/ 			DTYPE_0B255,
@@ -519,8 +585,8 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 	    /*PAR_EUKLID_STEPS*/ 	DTYPE_1B16,
 	    /*PAR_EUKLID_ROTATION*/	DTYPE_0B15,
 	    /*PAR_AUTOM_TRACK*/ 	DTYPE_0b1,
-	    /*PAR_P1_DEST*/ 		DTYPE_AUTOM_TARGET,
-	    /*PAR_P2_DEST*/ 		DTYPE_AUTOM_TARGET,
+	    /*PAR_P1_DEST*/ 		DTYPE_0B127,//DTYPE_AUTOM_TARGET, ->unused in module
+	    /*PAR_P2_DEST*/ 		DTYPE_0B127,//DTYPE_AUTOM_TARGET, ->unused in module,
 	    /*PAR_P1_VAL*/ 			DTYPE_0B127,							//240
 	    /*PAR_P2_VAL*/ 			DTYPE_0B127,
 	    /*PAR_SHUFFLE*/ 		DTYPE_0B127,
@@ -534,14 +600,14 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 	    /*PAR_TRACK_ROTATION*/  DTYPE_1B16,  //**PATROT this is not shown in menu, but if it were it would really be 0 to 15
 		/*PAR_STEP_FLAM*/ 		DTYPE_MENU | (MENU_STEP_FLAM<<8),							//251
 		/*PAR_STEP_SHIFT*/		DTYPE_MENU | (MENU_STEP_SHIFT<<8),
-	    /*PAR_BPM*/ 			DTYPE_0B255,							//251 
+	    /*PAR_BPM*/ 			DTYPE_0B255,							//251
 	    /*PAR_MIDI_CHAN_1*/ 	DTYPE_1B16,
 	    /*PAR_MIDI_CHAN_2*/ 	DTYPE_1B16,
 	    /*PAR_MIDI_CHAN_3*/ 	DTYPE_1B16,
 	    /*PAR_MIDI_CHAN_4*/ 	DTYPE_1B16,
 	    /*PAR_MIDI_CHAN_5*/ 	DTYPE_1B16,
 	    /*PAR_MIDI_CHAN_6*/ 	DTYPE_1B16,
-	    /*PAR_FETCH*/ 			DTYPE_ON_OFF,
+	   /*PAR_CV_SAVE*/ 			DTYPE_MENU| (MENU_CV_SAVE<<8),
 	    /*PAR_FOLLOW*/ 			DTYPE_ON_OFF,//DTYPE_MENU | (MENU_FOLLOW<<8),
 	    /*PAR_QUANTISATION*/ 	DTYPE_MENU | (MENU_SEQ_QUANT<<8),
 	    /*PAR_SCREENSAVER_ON_OFF*/ DTYPE_ON_OFF,						//261
@@ -565,13 +631,14 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 	    /*PAR_MIDI_NOTE6*/		DTYPE_NOTE_NAME,
 	    /*PAR_MIDI_NOTE7*/		DTYPE_NOTE_NAME,
 		/*PAR_PATTERN_MODE*/ DTYPE_MENU | (MENU_PAT_MODE<<8),
+		/*PAR_MORPH_TARGET*/ 	DTYPE_0B127
 };
 
 
 
 #define NUM_CHARS 76
 //beware! rearranging this will break toUpper and toLowerCase functions!
-const uint8_t characterOrder[NUM_CHARS] =
+const char characterOrder[NUM_CHARS] =
 {
 		32, //space
 		65, //A
@@ -695,7 +762,7 @@ uint8_t mainParameters[NUM_KIT_SLOTS][END_OF_SOUND_PARAMETERS];
 //uint8_t abs_pot_Parameter_position[NUM_PARAMS];
 uint8_t activeParameters[NUM_PARAMS];
 //uint8_t morphParameters[END_OF_SOUND_PARAMETERS];/**< a second array for sound x-fade to another preset*/
-uint8_t *morphParameters;
+//uint8_t *morphParameters;
 //-----------------------------------------------------------------
 void copyNameToEditBuffer(uint8_t presetNr, uint8_t nameType)
 {
@@ -716,7 +783,7 @@ void copyNameToEditBuffer(uint8_t presetNr, uint8_t nameType)
 //-----------------------------------------------------------------
 void copyEditBufferToName(uint8_t presetNr, uint8_t nameType)
 {
-	for(uint8_t i=0;i<8;i++)
+	for(int i=0;i<8;i++)
 	{
 		savefileNames[presetNr][nameType][i] = characterOrder[(uint8_t)nameEditBuffer[i]];
 	}
@@ -772,7 +839,9 @@ void menu_init()
 	led_setActiveVoice(0);
 
 	//light up voice mode LED
+
 	led_setMode2(0);
+
 
 	//display start menu page
 	menu_repaintAll();
@@ -998,7 +1067,7 @@ void menu_tick()
 			led_setMode2(SELECT_MODE_VOICE);
 			//set menu to voice page mode
 			menu_switchPage(menu_getActiveVoice());
-			led_setActiveSelectButton(menu_getSubPage());
+			led_setActiveSelectButton(menu_getSubPage()+1);
 			menu_resetActiveParameter();
 		}
 	}
@@ -1041,7 +1110,7 @@ void menu_repaintAll()
 //-----------------------------------------------------------------
 static void menu_repaintSimplePage()
 {
-
+#if !EURORACK_MODULE
 	if(copyClear_showClearMenu == 1)
 	{
 		strcpy(&editDisplayBuffer[0][0], "clear [");
@@ -1072,7 +1141,9 @@ static void menu_repaintSimplePage()
 
 
 	}
-	else if(menu_activePage == PATTERN_LOAD_PAGE)
+	else
+#endif
+		if(menu_activePage == PATTERN_LOAD_PAGE)
 	{
 		strcpy(&editDisplayBuffer[0][0], "Select Pattern");
 		strcpy(&editDisplayBuffer[1][0], "Current: ");
@@ -1097,6 +1168,7 @@ static void menu_repaintSimplePage()
 		strcpy(&editDisplayBuffer[0][0], "Save Kit");
 		strcpy(&editDisplayBuffer[1][0], "success!");
 	}
+#if !EURORACK_MODULE
 	else if(menu_activePage == MENU_LAST_STEP_PAGE)
 	{
 		strcpy(&editDisplayBuffer[0][0], "Last Step ");
@@ -1123,6 +1195,8 @@ static void menu_repaintSimplePage()
 
 
 	}
+#endif
+#if !EURORACK_MODULE
 	else if(menu_activePage == SONG_MODE_PAGE)
 	{
 		//show list of chained patterns
@@ -1215,6 +1289,7 @@ static void menu_repaintSimplePage()
 		}
 
 	}
+#endif
 }
 //-----------------------------------------------------------------
 static void menu_repaintLoadSavePage()
@@ -1235,24 +1310,30 @@ static void menu_repaintLoadSavePage()
 	case SAVE_TYPE_KIT:
 		toptxt=PSTR("Kit     ");
 		break;
+#if !EURORACK_MODULE
 	case SAVE_TYPE_PATTERN:
 		toptxt=PSTR("Pattern ");
 		break;
+#endif
 	case SAVE_TYPE_MORPH:
 		toptxt=PSTR("MorphKit");
 		break;
+#if !EURORACK_MODULE
 	case SAVE_TYPE_SONG:
 		toptxt=PSTR("Song    ");
 		break;
+#endif
 	case SAVE_TYPE_GLO:
 		toptxt=PSTR("Settings");
 		break;
+#if !EURORACK_MODULE
 	case SAVE_TYPE_PROJECT:
 		toptxt=PSTR("Project ");
 		break;
 	case SAVE_TYPE_ALL:
 		toptxt=PSTR("All     ");
 		break;
+#endif
 	//case SAVE_TYPE_SAMPLES:     toptxt=PSTR("Samples "); break;
 	}
 
@@ -1392,7 +1473,19 @@ static void menu_repaintLoadSavePage()
 //-----------------------------------------------------------------
 static uint8_t has2ndPage(uint8_t menuPage)
 {
-	const uint8_t textType = pgm_read_byte(&menuPages[menu_activePage][menuPage].top1 + 4);
+	uint8_t textType;
+	//if in mod matrix, use modMatrixPages instead of menuPages
+	if(buttonHandler_getMode() == SELECT_MODE_MOD)
+	{
+		textType = pgm_read_byte(&modMatrixPages[menu_activePage][menuPage].top1 + 4);
+	}
+	else
+	{
+		// the active page
+		textType = pgm_read_byte(&menuPages[menu_activePage][menuPage].top1 + 4);
+	}
+
+//	const uint8_t textType = pgm_read_byte(&menuPages[menu_activePage][menuPage].top1 + 4);
 	if(textType != TEXT_EMPTY)
 	{
 		return 1;
@@ -1405,13 +1498,12 @@ static uint8_t checkScrollSign(uint8_t activePage, uint8_t activeParameter)
 {
 	const uint8_t is2ndPage = (uint8_t)(activeParameter>3);
 
-	//**GMENU show '*' when both left and right movement are possible in the global settings menu
-	// show > or < as appropriate
 #if 1
-	if(menu_activePage==MENU_MIDI_PAGE) {
+	if(buttonHandler_getMode() == SELECT_MODE_MOD)
+	{
 		if(is2ndPage) {
 			//if we are on 2nd screen, and there are more sub-pages after this show "*" to signify both ways are available
-			if((activePage < NUM_SUB_PAGES-1) && (pgm_read_byte(&menuPages[MENU_MIDI_PAGE][activePage+1].top1) != TEXT_EMPTY))
+			if((activePage < 2-1) && (pgm_read_byte(&modMatrixPages[MENU_MIDI_PAGE][activePage+1].top1) != TEXT_EMPTY))
 				return '*';
 			else // on 2nd screen, no sub-pages after this
 				return '<';
@@ -1429,28 +1521,57 @@ static uint8_t checkScrollSign(uint8_t activePage, uint8_t activeParameter)
 			}
 		}
 	}
-	else if(menu_activePage==SEQ_PAGE) {
-		if(is2ndPage) {
-			//if we are on 2nd screen, and there are more sub-pages after this show "*" to signify both ways are available
-			if((activePage < NUM_SUB_PAGES-1) && (pgm_read_byte(&menuPages[SEQ_PAGE][activePage+1].top1) != TEXT_EMPTY))
-				return '*';
-			else // on 2nd screen, no sub-pages after this
-				return '<';
-		} else { // on 1st screen
-			if(has2ndPage(activePage)) { // have a second screen
-				if(activePage > 0)  // on first screen and there are sub-pages before this and a second screen after
-					return '*';
-				else
-					return '>';
-			} else { // don't have a second screen
-				if(activePage > 0) // on first screen and have sub-pages before this but not second screen after
-					return '<';
-				else // on first screen, no sub-pages before... would not happen
-					return 0;
-			}
-		}
-	}
+	else
 #endif
+	{
+
+		//**GMENU show '*' when both left and right movement are possible in the global settings menu
+		// show > or < as appropriate
+	#if 1
+		if(menu_activePage==MENU_MIDI_PAGE) {
+			if(is2ndPage) {
+				//if we are on 2nd screen, and there are more sub-pages after this show "*" to signify both ways are available
+				if((activePage < NUM_SUB_PAGES-1) && (pgm_read_byte(&menuPages[MENU_MIDI_PAGE][activePage+1].top1) != TEXT_EMPTY))
+					return '*';
+				else // on 2nd screen, no sub-pages after this
+					return '<';
+			} else { // on 1st screen
+				if(has2ndPage(activePage)) { // have a second screen
+					if(activePage > 0)  // on first screen and there are sub-pages before this and a second screen after
+						return '*';
+					else
+						return '>';
+				} else { // don't have a second screen
+					if(activePage > 0) // on first screen and have sub-pages before this but not second screen after
+						return '<';
+					else // on first screen, no sub-pages before... would not happen
+						return 0;
+				}
+			}
+		}
+		else if(menu_activePage==SEQ_PAGE) {
+			if(is2ndPage) {
+				//if we are on 2nd screen, and there are more sub-pages after this show "*" to signify both ways are available
+				if((activePage < NUM_SUB_PAGES-1) && (pgm_read_byte(&menuPages[SEQ_PAGE][activePage+1].top1) != TEXT_EMPTY))
+					return '*';
+				else // on 2nd screen, no sub-pages after this
+					return '<';
+			} else { // on 1st screen
+				if(has2ndPage(activePage)) { // have a second screen
+					if(activePage > 0)  // on first screen and there are sub-pages before this and a second screen after
+						return '*';
+					else
+						return '>';
+				} else { // don't have a second screen
+					if(activePage > 0) // on first screen and have sub-pages before this but not second screen after
+						return '<';
+					else // on first screen, no sub-pages before... would not happen
+						return 0;
+				}
+			}
+		}
+#endif
+	}
 
 	// normal handling for other menus
 	if(has2ndPage(activePage))
@@ -1519,9 +1640,17 @@ void menu_repaintGeneric()
 	const uint8_t activePage		= (menuIndex&MASK_PAGE)>>PAGE_SHIFT; // this is the active sub page
 	uint8_t curParmVal;
 
-	// the active page
-	const Page *ap=&menuPages[menu_activePage][activePage];
-
+	const Page *ap;
+	//if in mod matrix, use modMatrixPages instead of menuPages
+	if(buttonHandler_getMode() == SELECT_MODE_MOD)
+	{
+		ap=&modMatrixPages[menu_activePage][activePage];
+	}
+	else
+	{
+		// the active page
+		ap=&menuPages[menu_activePage][activePage];
+	}
 	if(editModeActive) //show single parameter with full name
 	{
 		//get address from top1-4 from activeParameter (base adress top1 + offset)
@@ -1534,6 +1663,7 @@ void menu_repaintGeneric()
 		memset(&editDisplayBuffer[0][0],' ',16);
 		memset(&editDisplayBuffer[1][0],' ',16);
 
+#if !EURORACK_MODULE
 		if((parameter_dtypes[parNr] & 0xff) == DTYPE_AUTOM_TARGET)
 		{
 			//**AUTOM this is an index into modTargets now
@@ -1558,6 +1688,7 @@ void menu_repaintGeneric()
 		} // parameter type is automation target
 
 		else // parameter type is not automation target
+#endif
 		{
 			//Top row left -> category
 			strcpy(&editDisplayBuffer[0][0],
@@ -1569,6 +1700,7 @@ void menu_repaintGeneric()
 			//Bottom row -> parameter value (set below)
 			switch(parameter_dtypes[parNr] & 0xFF)
 			{
+			case DTYPE_TARGET_SELECTION_CV:
 			case DTYPE_TARGET_SELECTION_VELO: //switch(parameters_dtypes[parNr] & 0x0F)
 			case DTYPE_TARGET_SELECTION_LFO:
 				//**LFO **VELO edit mode - display the full target (Cat and long name)
@@ -1612,6 +1744,10 @@ void menu_repaintGeneric()
 
 				break;
 
+			case DTYPE_PM100:
+				numtostrps(&editDisplayBuffer[1][13],(int8_t)(curParmVal - 100));
+				break;
+
 			case DTYPE_NOTE_NAME: //switch(parameters_dtypes[parNr] & 0x0F)
 				// note names TODO we could create another dtype but we don't want to waste them
 				if(parNr >= PAR_MIDI_NOTE1 && parNr <= PAR_MIDI_NOTE7 && curParmVal==0)
@@ -1641,16 +1777,15 @@ void menu_repaintGeneric()
 						editDisplayBuffer[1][14] = 'X';
 						editDisplayBuffer[1][15] = 'T';
 					}
-          else if(curParmVal == 1)
-          {
-            editDisplayBuffer[1][13] = 'M';
-						editDisplayBuffer[1][14] = 'I';
-						editDisplayBuffer[1][15] = 'D';
-          }
 					else
 					{
 						numtostrpu(&editDisplayBuffer[1][13],(uint8_t)(curParmVal),' ');
 					}
+				}
+				if(parNr == PAR_MORPH_TARGET)
+				{
+					memcpy(&editDisplayBuffer[1][0], savefileNames[curParmVal][KIT_NAMES], 8);
+					numtostrpu(&editDisplayBuffer[1][13],(uint8_t)(curParmVal),' ');
 				}
 				else
 				{
@@ -1690,7 +1825,7 @@ void menu_repaintGeneric()
 		// bottom values
 
 		// some place to store the parameter value as text
-		char valueAsText[3];
+		char valueAsText[4];
 
 		for(uint8_t i=0;i<4;i++) { // for each of the four columns of values
 			const uint16_t parNr = pgm_read_word(&ap->bot1 + i +is2ndPage);
@@ -1703,15 +1838,18 @@ void menu_repaintGeneric()
 			} else { //not if(parNr==PAR_NONE)
 
 				switch(parameter_dtypes[parNr] & 0xFF) {
+				case DTYPE_TARGET_SELECTION_CV:
 				case DTYPE_TARGET_SELECTION_VELO: //switch(parameters[parNr].dtype&0x0F)
 				case DTYPE_TARGET_SELECTION_LFO: //switch(parameters[parNr].dtype&0x0F)
 					//**LFO **VELO non-edit mode display short name with no numeric prefix
 					menu_displayModTargetShort(curParmVal,valueAsText,0 /*dont include voice number */);
 					break;
+					/*
 				case DTYPE_AUTOM_TARGET: //switch(parameters[parNr].dtype&0x0F)
-					//**AUTOM - determine the name to display for non-edit mode
-					menu_displayModTargetShort(curParmVal,valueAsText,1 /*include voice number */);
+					//AUTOM - determine the name to display for non-edit mode
+					menu_displayModTargetShort(curParmVal,valueAsText,1 //include voice number );
 					break;
+					*/
 				case DTYPE_PM63: //switch(parameters[parNr].dtype&0x0F)
 					// -63 to 64
 					if( (parNr == PAR_COARSE1) || (parNr == PAR_COARSE2) || (parNr == PAR_COARSE3) || (parNr == PAR_COARSE4) || (parNr == PAR_COARSE5) || (parNr == PAR_COARSE6)  || (parNr == PAR_FM_FREQ1) || (parNr == PAR_FM_FREQ2) || (parNr == PAR_FM_FREQ3) || (parNr == PAR_MOD_OSC_F1_CYM)  || (parNr == PAR_MOD_OSC_F2_CYM) || (parNr == PAR_MOD_OSC_F1) || (parNr == PAR_MOD_OSC_F2) )
@@ -1722,6 +1860,10 @@ void menu_repaintGeneric()
 					{
 						numtostrps(valueAsText,(int8_t)(curParmVal - 63));
 					}
+					break;
+
+				case DTYPE_PM100:
+					numtostrps(valueAsText,(int8_t)(curParmVal - 100));
 					break;
 
 				case DTYPE_NOTE_NAME: //switch(parameters[parNr].dtype&0x0F)
@@ -1776,12 +1918,6 @@ void menu_repaintGeneric()
 							valueAsText[1] = 'X';
 							valueAsText[2] = 'T';
 						}
-            else if(curParmVal == 1)
-						{
-							valueAsText[0] = 'M';
-							valueAsText[1] = 'I';
-							valueAsText[2] = 'D';
-						}
 						else
 						{
 							numtostrpu(valueAsText,curParmVal,' ');
@@ -1807,6 +1943,19 @@ void menu_repaintGeneric()
 }
 
 //-----------------------------------------------------------------
+void menu_debugPrint(char* c)
+{
+	// just clear the whole thing
+	memset(&editDisplayBuffer[0][0],' ',16);
+	memset(&editDisplayBuffer[1][0],' ',16);
+
+	//Top row left -> category
+	strcpy(&editDisplayBuffer[0][0], c);
+
+
+	display_needs_refresh = 1;
+}
+//-----------------------------------------------------------------
 // repaint the screen
 void menu_repaint()
 {
@@ -1819,9 +1968,45 @@ void menu_repaint()
 		menu_repaintLoadSavePage();
 
 	}
-	else if((menu_activePage >= PATTERN_LOAD_PAGE  && menu_activePage <= SONG_MODE_PAGE) || (copyClear_showClearMenu == 1))
+	else if((menu_activePage >= PATTERN_LOAD_PAGE  && menu_activePage <= SONG_MODE_PAGE))
 	{
 		menu_repaintSimplePage();
+	}
+	else if(buttonHandler_getDrumButton())
+	{
+		strcpy(&editDisplayBuffer[0][0], "Selected Drum ");
+
+		strcpy(&editDisplayBuffer[1][0], "Voice: ");
+		switch(menu_activeVoice)
+		{
+		case 0:
+		case 1:
+		case 2:
+			sprintf(&editDisplayBuffer[1][7], "Drum %d", menu_activeVoice+1);
+			break;
+
+		case 3:
+			sprintf(&editDisplayBuffer[1][7], "Snare");
+			break;
+
+		case 4:
+			sprintf(&editDisplayBuffer[1][7], "Clp/Cym");
+			break;
+
+		case 5:
+			sprintf(&editDisplayBuffer[1][7], "Cl HH");
+			break;
+
+		case 6:
+			sprintf(&editDisplayBuffer[1][7], "Op HH");
+			break;
+
+		default:
+			numtostrps(&editDisplayBuffer[1][7],menu_activeVoice+1);
+			break;
+
+		}
+
 	}
 	else {
 		menu_repaintGeneric();
@@ -2032,46 +2217,25 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 					copyEditBufferToName(menu_selectedPresetNr[menu_saveOptions.category] ,menu_saveOptions.nameBuffer );
 					switch(menu_saveOptions.category)
 					{
+#if !EURORACK_MODULE
 						case SAVE_TYPE_SONG:
 							//nothing to do here
 							break;
 						case SAVE_TYPE_PATTERN:
-
-
-
 							preset_savePatternRAM(menu_selectedPresetNr[SAVE_TYPE_PATTERN]);
-
-							//save to tmp folder
-										#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-											HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
-										#else
-
-										#endif
-											preset_savePatternSD(menu_selectedPresetNr[SAVE_TYPE_PATTERN]);
-										#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-													HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-										#else
-
-										#endif
 							break;
-
+#endif
 						case SAVE_TYPE_KIT:
-
-
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
 							preset_saveDrumsetRam(menu_selectedPresetNr[SAVE_TYPE_KIT],0);
-
-							//save to tmp folder
-							#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-								HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
-							#else
-
-							#endif
-														preset_saveDrumsetSD(menu_selectedPresetNr[SAVE_TYPE_KIT],0);
-							#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-										HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-							#else
-
-							#endif
+#if EURORACK_MODULE
+							preset_saveDrumsetSD(menu_selectedPresetNr[SAVE_TYPE_KIT],0);
+#endif
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
 
 							menu_loadedPresetNr[CURRENT_KIT] = menu_selectedPresetNr[SAVE_TYPE_KIT];
 							menu_activePage = KIT_SAVE_PAGE_OK;
@@ -2082,6 +2246,12 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 
 						case SAVE_TYPE_MORPH:
 							preset_saveDrumsetRam(menu_selectedPresetNr[SAVE_TYPE_MORPH],1);
+							preset_saveDrumsetSD(menu_selectedPresetNr[SAVE_TYPE_MORPH],1);
+
+							//menu_loadedPresetNr[CURRENT_KIT] = menu_selectedPresetNr[SAVE_TYPE_KIT];
+							menu_activePage = KIT_SAVE_PAGE_OK;
+							sucessTimer = systick_ticks;
+							menu_repaint();
 							break;
 
 						case SAVE_TYPE_GLO:
@@ -2091,7 +2261,7 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 							if(res != FR_OK) menu_showSdError(res);
 						}
 							break;
-
+#if !EURORACK_MODULE
 						case SAVE_TYPE_PROJECT:
 						{
 							FRESULT res;
@@ -2110,14 +2280,17 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 						}
 							break;
 
+
 						case SAVE_TYPE_ALL:
 							//preset_saveProject(menu_currentPresetNr[SAVE_TYPE_ALL],1);
 							break;
+#endif
 					}
 					menu_resetSaveParameters();
 					break;
 
 				case SAVE_STATE_CHANGE_NAME_DIALOG_Y:
+#if !EURORACK_MODULE
 					if(menu_saveOptions.category == SAVE_TYPE_PATTERN)
 					{
 						for(uint8_t i=0;i<NUM_PATTERN;i++)
@@ -2130,6 +2303,7 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 						menu_repaint();
 					}
 					else
+#endif
 					{
 						//click -> edit name
 						menu_saveOptions.state = SAVE_STATE_EDIT_NAME1;
@@ -2141,22 +2315,25 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 								type = CURRENT_KIT;
 								break;
 
+#if !EURORACK_MODULE
 							case SAVE_TYPE_SONG:
 								type = CURRENT_SONG;
 								break;
-
+#endif
 							case SAVE_TYPE_MORPH:
 								type = CURRENT_MORPH;
 								break;
-
+#if !EURORACK_MODULE
 							case SAVE_TYPE_PROJECT:
 								type = CURRENT_PROJECT;
 								break;
-
+#endif
 
 							default:
+#if !EURORACK_MODULE
 							case SAVE_TYPE_PATTERN:
 							case SAVE_TYPE_ALL:
+#endif
 							case SAVE_TYPE_GLO:
 
 								break;
@@ -2190,19 +2367,28 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 
 				case SAVE_TYPE_KIT:
 #if 1
-
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
 					preset_loadDrumsetRam(menu_selectedPresetNr[menu_saveOptions.category],0, 0);
 					menu_TargetVoiceGapIndex = getModTargetGapIndex(activeParameters[PAR_TARGET_LFO1 + menu_activeVoice]);
 
 					menu_loadedPresetNr[CURRENT_KIT] = menu_selectedPresetNr[menu_saveOptions.category];
-					//update autosave kit
+
 					preset_touchTimer(PRESET_KIT_TIMER);
+
+
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
 					//store selected kit in current pattern
 #if USE_PATTERN_EDIT_BUFFER
 					patternBackupBuffer.kitNr = menu_loadedPresetNr[CURRENT_KIT];
 
 #else
+#if !EURORACK_MODULE
 					seq_patternSet.kitNr[seq_activePattern] = menu_loadedPresetNr[CURRENT_KIT];
+#endif
 #endif
 
 #else
@@ -2214,21 +2400,28 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 
 				case SAVE_TYPE_MORPH:
 #if 1
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
 					preset_loadDrumsetRam(menu_selectedPresetNr[menu_saveOptions.category],1, 0);
 					activeParameters[PAR_MORPH_KIT_DEST] = menu_selectedPresetNr[menu_saveOptions.category];
 					menu_loadedPresetNr[CURRENT_MORPH] = menu_selectedPresetNr[menu_saveOptions.category];
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
 #else
 					//load to morph buffer
 					preset_loadDrumset(menu_selectedPresetNr[menu_saveOptions.category],1);
 #endif
 					break;
-
+#if !EURORACK_MODULE
 				case SAVE_TYPE_SONG:
 					//just set pointer to other song
 					seq_activeSong = seq_songData[menu_selectedPresetNr[menu_saveOptions.category]];
 					menu_loadedPresetNr[CURRENT_SONG] = menu_selectedPresetNr[menu_saveOptions.category];
 					break;
-
+#endif
+#if !EURORACK_MODULE
 				case SAVE_TYPE_PATTERN:
 					//if(preset_loadPatternSD(menu_currentPresetNr[SAVE_TYPE_PATTERN]))
 						//menu_resetSaveParameters();
@@ -2251,16 +2444,17 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 							break;
 					}
 					break;
+#endif
 
 
-
+#if !EURORACK_MODULE
 				case SAVE_TYPE_PROJECT:
 				{
 
 					FRESULT res;
 
 
-					res = preset_loadProject(menu_selectedPresetNr[SAVE_TYPE_PROJECT], 1);
+					res = preset_loadProject(menu_selectedPresetNr[SAVE_TYPE_PROJECT]);
 
 					if(res == FR_NO_FILE)
 					{
@@ -2278,6 +2472,7 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 					}
 				}
 					break;
+#endif
 /*
 				case SAVE_TYPE_ALL:
 					preset_loadAll(menu_currentPresetNr[SAVE_TYPE_ALL],1);
@@ -2370,7 +2565,7 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 					END_DISABLE_CONV_WARNING
 				}
 			} else if(inc>0) {
-				if(menu_selectedPresetNr[menu_saveOptions.category]<=62) {
+				if(menu_selectedPresetNr[menu_saveOptions.category]<NUM_KIT_SLOTS-1) {
 					DISABLE_CONV_WARNING
 					menu_selectedPresetNr[menu_saveOptions.category] += inc;
 					END_DISABLE_CONV_WARNING
@@ -2505,6 +2700,7 @@ void menu_handleLoadSaveMenu(int8_t inc, uint8_t btnClicked)
 
 }
 
+#if !EURORACK_MODULE
 void menu_handleSongMenu(int8_t inc, uint8_t btnClicked)
 {
 	if(editModeActive)
@@ -2537,7 +2733,7 @@ void menu_handleSongMenu(int8_t inc, uint8_t btnClicked)
 	//else menu_repaint();
 
 }
-
+#endif
 // given a menu id returns the number of entries
 static uint8_t getMaxEntriesForMenu(uint8_t menuId)
 {
@@ -2605,6 +2801,12 @@ static uint8_t getMaxEntriesForMenu(uint8_t menuId)
 	case MENU_STEP_SHIFT:
 			return stepShiftNames[0][0];
 
+	case MENU_CV_SRC:
+			return cvSrcNames[0][0];
+
+	case MENU_CV_SAVE:
+		return cvSaveNames[0][0];
+
 	default:
 		return 0;
 	}
@@ -2622,7 +2824,6 @@ static void getMenuItemNameForValue(const uint8_t menuId, const uint8_t curParmV
 	case MENU_AUDIO_OUT:
 		p = outputNames[curParmVal + 1];
 		break;
-
 	case MENU_AUDIO_OUT_FX:
 		p = outputNamesFx[curParmVal + 1];
 		break;
@@ -2713,6 +2914,14 @@ static void getMenuItemNameForValue(const uint8_t menuId, const uint8_t curParmV
 		p=stepShiftNames[curParmVal+1];
 		break;
 
+	case MENU_CV_SRC:
+		p=cvSrcNames[curParmVal+1];
+		break;
+
+	case MENU_CV_SAVE:
+		p=cvSaveNames[curParmVal+1];
+			break;
+
 
 	default:
 		p=menuText_dash;
@@ -2734,12 +2943,15 @@ void menu_parseEncoder(int8_t inc, uint8_t button)
 		btnClicked=button;
 		if(btnClicked)
 		{
+
+#if !EURORACK_MODULE
 			if (copyClear_Mode == MODE_CLEAR)
 			{
 				//execute
 				copyClear_executeClear();
 			}
 			else
+#endif
 			{
 			// toggle edit mode
 				if(!screensaver_Active)
@@ -2749,12 +2961,10 @@ void menu_parseEncoder(int8_t inc, uint8_t button)
 		lastEncoderButton = button;
 		if(!screensaver_Active)
 			menu_repaintAll();
-
 	} else if(inc==0)
 		return; // nothing has changed. do nothing
 
 	screensaver_touch();
-
 
 	//invert encoder
 	//inc = (int8_t)(inc * -1);
@@ -2762,10 +2972,13 @@ void menu_parseEncoder(int8_t inc, uint8_t button)
 	if(menu_activePage == LOAD_PAGE || menu_activePage == SAVE_PAGE) {
 		menu_handleLoadSaveMenu(inc, btnClicked);
 	}
+#if !EURORACK_MODULE
 	else if(menu_activePage == SONG_MODE_PAGE)
 	{
 		menu_handleSongMenu(inc, btnClicked);
 	}
+#endif
+#if !EURORACK_MODULE
 	else if (menu_activePage == MENU_LAST_STEP_PAGE)
 	{
 		uint8_t mode = buttonHandler_getMode();
@@ -2794,8 +3007,10 @@ void menu_parseEncoder(int8_t inc, uint8_t button)
 		}
 
 	}
+#endif
 	else if(inc!=0) {
 		//============================= handle encoder change ==============================
+#if !EURORACK_MODULE
 		if(copyClear_isClearModeActive()) {
 			//encoder selects clear target
 			uint8_t target = copyClear_getClearTarget();
@@ -2811,7 +3026,9 @@ void menu_parseEncoder(int8_t inc, uint8_t button)
 			copyClear_setClearTarget(target);
 			return;
 
-		} else if(editModeActive) {
+		} else
+#endif
+			if(editModeActive) {
 			// edit mode is active so change the value of the current parameter
 			menu_encoderChangeParameter(inc);
 			//re-enable editMode, since switch sub page turns it off while switching fx menu
@@ -2834,13 +3051,22 @@ void menu_parseEncoder(int8_t inc, uint8_t button)
 // given a delta, will apply that to the current parameter
 static void menu_encoderChangeParameter(int8_t inc)
 {
+
 	preset_touchTimer(PRESET_KIT_TIMER);
 
 	const uint8_t activeParameter	= menuIndex & MASK_PARAMETER;
 	const uint8_t activePage		= (menuIndex&MASK_PAGE)>>PAGE_SHIFT;
 
 	//get address from top1-8 from activeParameter (base adress top1 + offset)
-	uint16_t paramNr		= pgm_read_word(&menuPages[menu_activePage][activePage].bot1 + activeParameter);
+	uint16_t paramNr;
+	if(buttonHandler_getMode() == SELECT_MODE_MOD)
+	{
+		paramNr		= pgm_read_word(&modMatrixPages[menu_activePage][activePage].bot1 + activeParameter);
+	}
+	else
+	{
+		paramNr		= pgm_read_word(&menuPages[menu_activePage][activePage].bot1 + activeParameter);
+	}
 	//uint8_t *paramValue = &mainParameters[paramNr];
 	uint8_t *paramValue;
 
@@ -2947,14 +3173,57 @@ static void menu_encoderChangeParameter(int8_t inc)
 	}
 		break;
 
+	case DTYPE_TARGET_SELECTION_CV:
+	{
+		//**CV encoder value limit to start and end of range for this voice
+		// get voice, and figure valid range, translate to param number before sending
+		//uint8_t cvNr=(uint8_t)(paramNr - PAR_CV_DEST_1);
+		uint16_t cvNr=(paramNr - PAR_CV_DEST_1);
+		uint8_t voiceNr = cvNr / 3;
+#if NUM_MOD_SLOTS != 18
+#error voice calculation needs to be adapted to  NUM_MOD_SLOTS number!!!
+#endif
+
+
+		if(*paramValue < pgm_read_byte(&modTargetVoiceOffsets[voiceNr].start)) {
+			if(inc < 0) // going down, allow 0
+				*paramValue=0;
+			else // going up fix to start
+				*paramValue = pgm_read_byte(&modTargetVoiceOffsets[voiceNr].start);
+		} else if (*paramValue > pgm_read_byte(&modTargetVoiceOffsets[voiceNr].end)) {
+			*paramValue = pgm_read_byte(&modTargetVoiceOffsets[voiceNr].end);
+		}
+
+		// determine the parameter id to send across
+		uint8_t value = (uint8_t)pgm_read_word(&modTargets[*paramValue].param);
+#if 0
+		uint8_t upper,lower;
+		/*
+		 *  upper: rightmost bit is 1 if the parameter we are targeting is in the "above 127" range
+		 *         next 6 bits are the voice number (0 to 5) of which voice is being dealt with here
+		 *  lower: the (0-127) value representing which parameter is being modulated
+		 */
+		upper = (uint8_t)( (uint8_t)((value&0x80)>>7) | ((voiceNr&0x3f)<<1) );
+		lower = value&0x7f;
+		frontPanel_sendData(CC_VELO_TARGET,upper,lower);
+#else
+		modNode_setDestination(&cvModulators[cvNr], value);
+
+#endif
+
+		//return;
+	}
+		break;
+/*
 	case DTYPE_AUTOM_TARGET: {//parameter_dtypes[paramNr] & 0x0F
 		const uint8_t nmt=getNumModTargets();
-		//**AUTOM - limit to valid range for encoder
+		//AUTOM - limit to valid range for encoder
 		if(*paramValue >= nmt)
 			*paramValue = (uint8_t)(nmt-1);
 		break;
-	}
 
+	}
+*/
 
 	case DTYPE_0B255:
 		//if(*paramValue > 255)
@@ -2969,6 +3238,8 @@ static void menu_encoderChangeParameter(int8_t inc)
 		else if(*paramValue > 16)
 			*paramValue = 16;
 		break;
+
+
 
 	case DTYPE_1B64:
 		if(*paramValue < 1)
@@ -3009,6 +3280,11 @@ static void menu_encoderChangeParameter(int8_t inc)
 			*paramValue = 100;
 		break;
 
+	case DTYPE_PM100:
+		if(*paramValue > 200)
+			*paramValue = 200;
+		break;
+
 	case DTYPE_PM63:
 	case DTYPE_0B127:
 		if(*paramValue > 127)
@@ -3021,8 +3297,13 @@ static void menu_encoderChangeParameter(int8_t inc)
 	//send parameter change to uart tx
 	if(paramNr < 128) // => Sound Parameter
 		frontPanel_sendData(MIDI_CC,(uint8_t)paramNr,*paramValue);
-	else if(paramNr > 127 && (paramNr < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
+	//else if(paramNr > 127 && (paramNr < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
+	else if(paramNr > 127 && (paramNr <= 255)) // => Sound Parameter above 127
 		frontPanel_sendData(CC_2,(uint8_t)(paramNr-128),*paramValue);
+	else if (paramNr>=255 && (paramNr < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 255
+	{
+		frontPanel_sendData(CC3,(uint8_t)(paramNr-255),*paramValue);
+	}
 	else // non sound parameters (ie current step data, etc)
 		menu_parseGlobalParam(paramNr,activeParameters[paramNr]);
 
@@ -3052,7 +3333,8 @@ checkvalid:
 		if(activeParameter == 4) { // move to 2nd section of sub-page
 
 		} else if(activeParameter == 8) { // moved past end of 2nd sub-page
-			if((menu_activePage==MENU_MIDI_PAGE) || (menu_activePage==SEQ_PAGE)){ // in global menu, we can move to next sub-page
+
+			if((menu_activePage==MENU_MIDI_PAGE) || (menu_activePage==SEQ_PAGE) || (buttonHandler_getMode() == SELECT_MODE_MOD)){ // in global menu, we can move to next sub-page
 
 				activeParameter=0; // set to par 0 of next sub page
 				activePage++; // and change page
@@ -3065,19 +3347,30 @@ checkvalid:
 		if(activeParameter == 3) { // move to first section of sub-page
 
 		} else if(activeParameter==-1) { // if we went past 0
-			if((menu_activePage==MENU_MIDI_PAGE) || (menu_activePage==SEQ_PAGE)) { // in global menu, we can move to previous sub-page
+			if((menu_activePage==MENU_MIDI_PAGE) || (menu_activePage==SEQ_PAGE) || (buttonHandler_getMode() == SELECT_MODE_MOD)){ // in global menu, we can move to previous sub-page
 
 				activeParameter=7; // put us on the last param of the previous sub-page
 				activePage--; // and change page
 				if(activePage < 0)
-					activePage=NUM_SUB_PAGES-1; //wrap around to last page (would only happen if we fill all 8. unlikely)
+				{
+					//do not wrap to last page
+					activeParameter = 0;
+					activePage=0;//NUM_SUB_PAGES-1; //wrap around to last page (would only happen if we fill all 8. unlikely)
+				}
 			} else
 				return; // move past first param on section 1. not allowed in most modes
 		}
 	}
 
 	// read the new param
-	param = pgm_read_byte(&menuPages[menu_activePage][activePage].top1 + activeParameter);
+	if(buttonHandler_getMode() == SELECT_MODE_MOD)
+	{
+		param = pgm_read_byte(&modMatrixPages[menu_activePage][activePage].top1 + activeParameter);
+	}
+	else
+	{
+		param = pgm_read_byte(&menuPages[menu_activePage][activePage].top1 + activeParameter);
+	}
 	if(param == TEXT_SKIP) {
 		if(allowedSkips--) // skip this one and check the next
 			goto checkvalid;
@@ -3104,6 +3397,7 @@ void menu_setLoadSaveCategory(uint8_t cat)
 		case SAVE_TYPE_MORPH:
 			menu_saveOptions.nameBuffer = KIT_NAMES;
 			break;
+#if !EURORACK_MODULE
 		case SAVE_TYPE_PATTERN:
 			menu_saveOptions.nameBuffer = PATTERN_NAMES;
 			menu_saveOptions.state = SAVE_STATE_CHANGE_NAME_DIALOG_N;
@@ -3116,8 +3410,11 @@ void menu_setLoadSaveCategory(uint8_t cat)
 		case SAVE_TYPE_PROJECT:
 			menu_saveOptions.nameBuffer = PROJECT_NAMES;
 			break;
+#endif
 		case SAVE_TYPE_GLO:
+#if !EURORACK_MODULE
 		case SAVE_TYPE_ALL:
+#endif
 			menu_saveOptions.nameBuffer = UNUSED_NAMES;
 			break;
 		//case SAVE_TYPE_SAMPLES:     toptxt=PSTR("Samples "); break;
@@ -3174,7 +3471,16 @@ void menu_switchSubPage(uint8_t subPageNr, uint8_t toggle)
 			}
 		} else { // we are on 2nd screen
 
-			if((menu_activePage==MENU_MIDI_PAGE) || (menu_activePage==SEQ_PAGE)){
+			if(buttonHandler_getMode() == SELECT_MODE_MOD)
+			{
+				if(activePage < NUM_SUB_PAGES-1 &&
+				   pgm_read_byte(&modMatrixPages[menu_activePage][activePage+1].top1) != TEXT_EMPTY) {
+					activePage++;
+				} else {
+					activePage=0;
+				}
+			}
+			else if((menu_activePage==MENU_MIDI_PAGE) || (menu_activePage==SEQ_PAGE)){
 				// in global mode, we move to next page if possible (or wrap to first)
 				if(activePage < NUM_SUB_PAGES-1 &&
 				   pgm_read_byte(&menuPages[menu_activePage][activePage+1].top1) != TEXT_EMPTY) {
@@ -3183,15 +3489,35 @@ void menu_switchSubPage(uint8_t subPageNr, uint8_t toggle)
 					activePage=0;
 				}
 			}
+
 			activeParameter=0;
 		}
 	} else { // move to different sub page
+
+#if MOD_MATRIX_4_PAGE
+		if(buttonHandler_getMode() == SELECT_MODE_MOD)
+		{
+			if(toggle)
+			{
+
+				if((activeParameter < 4)  && (has2ndPage(activePage))) {
+					activeParameter=4;
+				} else {
+					activePage=0;
+					activeParameter=0;
+				}
+			}
+		}
+		else
+#endif
+		{
 		// we are moving to a different (specific) subpage
 		activePage=subPageNr;
 		if(activeParameter > 3 && has2ndPage(activePage))
 			activeParameter = 4;
 		else
 			activeParameter = 0;
+		}
 	}
 
 	menuIndex = (uint8_t)( (activePage << PAGE_SHIFT) | activeParameter);
@@ -3228,7 +3554,9 @@ void menu_switchPage(uint8_t pageNr)
 	*/
 
 	//clear all sequencer buttons
+#if !EURORACK_MODULE
 	led_clearSequencerLeds();
+#endif
 
 	switch(pageNr) {
 	case MENU_MIDI_PAGE:
@@ -3253,10 +3581,12 @@ void menu_switchPage(uint8_t pageNr)
 		break;
 
 	case FX_MODE_PAGE:
+
+		menu_switchSubPage(fxBus.fxType, 1 );
 		editModeActive = 0;
 		menu_activePage=FX_MODE_PAGE;
 		break;
-
+#if !EURORACK_MODULE
 	case SONG_MODE_PAGE:
 		editModeActive = 0;
 		menu_activePage=SONG_MODE_PAGE;
@@ -3299,7 +3629,7 @@ void menu_switchPage(uint8_t pageNr)
 		led_updateSeqLeds();
 	}
 		break;
-
+#endif
 	case PERF_PAGE:
 	{
 		uint8_t toggle = (menu_activePage == PERF_PAGE);
@@ -3378,8 +3708,9 @@ void menu_switchPage(uint8_t pageNr)
 		frontPanel_sendData(LED_CC,LED_QUERY_SEQ_TRACK,value);
 #else
 
-
+#if !EURORACK_MODULE
 		led_updateSeqLeds();
+#endif
 #endif
 		}
 		break;
@@ -3390,11 +3721,12 @@ void menu_switchPage(uint8_t pageNr)
 	if(pageNr==PERF_PAGE)
 	{
 		//light up mute leds
-		buttonHandler_showMuteLEDs();
+	//	buttonHandler_showMuteLEDs();
 	} else
 	{
-		led_setActiveVoiceLeds((uint8_t)(1<<(menu_getActiveVoice())));
-		menu_muteModeActive = 0;
+
+		//led_setActiveVoiceLeds((uint8_t)(1<<(menu_getActiveVoice())));
+		//menu_muteModeActive = 0;
 	}
 
 	//go to 1st parameter on sub page
@@ -3424,6 +3756,10 @@ void menu_parseGlobalParam(uint16_t paramNr, uint8_t value)
 	//case PAR_MIDI_MODE:
 	//	frontPanel_sendData(SEQ_CC,SEQ_MIDI_MODE,parameter_values[PAR_MIDI_MODE]);
 	//	break;
+
+	case PAR_MORPH_TARGET:
+		preset_morph(preset_morphValue, 1);
+		break;
 
 	case PAR_MIDI_CHAN_7:
 		paramNr -= 5; //because they are not after one another in the param list
@@ -3512,11 +3848,11 @@ void menu_parseGlobalParam(uint16_t paramNr, uint8_t value)
 	case PAR_MORPH:
 	{
 		//value += (value==127)*1;
-		preset_morph(value);
+		preset_morph(value, 1);
 	}
 	break;
 
-	case PAR_FETCH:
+	case PAR_CV_SAVE:
 
 		break;
 
@@ -3573,7 +3909,7 @@ void menu_parseGlobalParam(uint16_t paramNr, uint8_t value)
 
 
 
-
+#if !EURORACK_MODULE
 	case PAR_EUKLID_LENGTH: {
 		// set the length of the currently active track
 		uint8_t length = (uint8_t)(value-1);
@@ -3628,6 +3964,7 @@ void menu_parseGlobalParam(uint16_t paramNr, uint8_t value)
 		led_updateSeqLeds();
 	}
 	break;
+#endif
 /*
 	case PAR_PATTERN_BEAT:
 		frontPanel_sendData(SEQ_CC,SEQ_SET_PAT_BEAT,value);
@@ -3690,6 +4027,7 @@ void menu_parseGlobalParam(uint16_t paramNr, uint8_t value)
 	}
 }
 //-----------------------------------------------------------------
+#if !EURORACK_MODULE
 static void menu_processSpecialCaseValues(uint16_t paramNr/*, const uint8_t *value*/)
 {
 	//To see the generated pattern we have to update the step view
@@ -3700,6 +4038,7 @@ static void menu_processSpecialCaseValues(uint16_t paramNr/*, const uint8_t *val
 		led_clearSequencerLeds();
 	}
 }
+#endif
 //-----------------------------------------------------------------
 static uint8_t limitPotValue(int8_t diff, uint16_t paramNr)
 {
@@ -3732,6 +4071,7 @@ static uint8_t limitPotValue(int8_t diff, uint16_t paramNr)
 
 	switch(parameter_dtypes[paramNr] & 0xFF)
 	{
+	case DTYPE_TARGET_SELECTION_CV:
 	case DTYPE_TARGET_SELECTION_VELO:
 	case DTYPE_TARGET_SELECTION_LFO: {
 
@@ -3757,16 +4097,16 @@ static uint8_t limitPotValue(int8_t diff, uint16_t paramNr)
 			return (uint8_t)((s-1)+rng); // set to an offset beginning at start of range
 
 #else
-		// TODO not implemented yet: limit the velocity/LFO target to the range of the voice (see #if 0 above)
+#pragma message "noch machen!"
 #endif
 	}
 		break;
-
+/*
 	case DTYPE_AUTOM_TARGET:
-		//**AUTOM - scale to our range for pot value
+		//AUTOM - scale to our range for pot value
 		if(newValue >= (getNumModTargets()-1)) newValue =  (getNumModTargets()-1);
 		//return (uint8_t)((getNumModTargets()-1) * frac);
-
+*/
 
 	case DTYPE_0B255:
 		//return value;
@@ -3806,6 +4146,10 @@ static uint8_t limitPotValue(int8_t diff, uint16_t paramNr)
 		if(newValue > (numEntries-1)) newValue = (numEntries-1);
 	}
 
+		break;
+
+	case DTYPE_PM100:
+		if(newValue > 200) newValue = 200;
 		break;
 
 	case DTYPE_0B100:
@@ -3903,15 +4247,19 @@ uint8_t menu_getDisplayParameterType(uint8_t pos)
 	const uint8_t activePage		= (menuIndex&MASK_PAGE)>>PAGE_SHIFT;
 	const uint8_t activeParameter	= menuIndex & MASK_PARAMETER;
 	const uint8_t isOn2ndPage		= ( activeParameter > 3) * 4;
-	uint16_t paramNr				= pgm_read_word(&menuPages[menu_activePage][activePage].bot1 +
-			pos + isOn2ndPage);
+
+	uint16_t paramNr;
+	if(buttonHandler_getMode() == SELECT_MODE_MOD)
+	{
+		paramNr				= pgm_read_word(&modMatrixPages[menu_activePage][activePage].bot1 +	pos + isOn2ndPage);
+	}
+	else
+	{
+		paramNr				= pgm_read_word(&menuPages[menu_activePage][activePage].bot1 +	pos + isOn2ndPage);
+	}
+
 
 	return parameter_dtypes[paramNr] & 0xFF;
-}
-
-uint8_t getMenuIndx(void)
-{
-  return menuIndex;
 }
 //-----------------------------------------------------------------
 uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
@@ -3922,8 +4270,17 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 	const uint8_t activePage		= (menuIndex&MASK_PAGE)>>PAGE_SHIFT;
 	const uint8_t activeParameter	= menuIndex & MASK_PARAMETER;
 	const uint8_t isOn2ndPage		= ( activeParameter > 3) * 4;
-	uint16_t paramNr				= pgm_read_word(&menuPages[menu_activePage][activePage].bot1 +
-										potNr + isOn2ndPage);
+
+	uint16_t paramNr;
+	if(buttonHandler_getMode() == SELECT_MODE_MOD)
+	{
+		paramNr				= pgm_read_word(&modMatrixPages[menu_activePage][activePage].bot1 +	potNr + isOn2ndPage);
+	}
+	else
+	{
+		paramNr				= pgm_read_word(&menuPages[menu_activePage][activePage].bot1 +	potNr + isOn2ndPage);
+	}
+
 
 	//-------------------------------------------------
 
@@ -3949,172 +4306,26 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 	//parameter fetch. given the value of the pot, and the parameter number
 	// fetch the actual numeric value that the parameter should be set to
 	uint8_t dtypeValue = limitPotValue(diff, paramNr);//getDtypeValue(potValue,paramNr);
-
+#if !EURORACK_MODULE
 	menu_processSpecialCaseValues(paramNr/*,&dtypeValue*/);
+#endif
 
-  static uint8_t overwriteBufNr = 0;
-
-  ////////////////////////////
-
-
-  // if(buttonHandler_getArmedAutomationStep() != NO_STEP_SELECTED)
-	// {
-  //   static needToOverride = 0;
-  //   static overrideNr = 0;
-  //   for (int i = 0; i < NUM_AUTOMATION_PAR; i++)
-  //   {
-  //     if(buttonHandler_originalParameter[i] == 0 && (buttonHandler_resetLock[i] == 0)) // Space in buf
-  //     {
-  //       buttonHandler_originalParameter[i] = paramNr;
-  //       buttonHandler_originalValue[i] = activeParameters[paramNr];
-  //       seq_setActiveAutomationTrack(i);
-  //       buttonHandler_resetLock[i] = 1;
-  //       break;
-  //     }
-  //     else if (buttonHandler_originalParameter[i] == paramNr)
-  //     {
-  //       seq_setActiveAutomationTrack(i);
-  //       buttonHandler_resetLock[i] = 1;
-  //       break;
-  //     }
-
-  //     if (i == NUM_AUTOMATION_PAR - 1)
-  //     {
-  //       needToOverride = 1;
-  //     }
-  //   }
-
-  //   if (needToOverride)
-  //   {
-  //     seq_setActiveAutomationTrack(overrideNr);
-  //     buttonHandler_resetLock[overrideNr] = 1;
-  //     seq_clearAutomation(menu_getActiveVoice(), seq_activePattern, overrideNr);
-  //     activeParameters[buttonHandler_originalParameter[overrideNr]] = buttonHandler_originalValue[overrideNr];
-  //     if (buttonHandler_originalParameter[overrideNr] < 128) // => Sound Parameter
-  //     {
-  //       frontPanel_sendData(MIDI_CC,
-  //           (uint8_t) (buttonHandler_originalParameter[overrideNr]),
-  //           buttonHandler_originalValue[overrideNr]);
-  //     } 
-  //     else if (buttonHandler_originalParameter[overrideNr] >= 128 && (buttonHandler_originalParameter[overrideNr] < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
-  //     {
-  //       frontPanel_sendData(CC_2,
-  //       (uint8_t) (buttonHandler_originalParameter[overrideNr] - 128),
-  //       buttonHandler_originalValue[overrideNr]);
-  //     } 
-  //     else
-  //     {
-  //       menu_parseGlobalParam(buttonHandler_originalParameter[overrideNr],
-  //       activeParameters[buttonHandler_originalParameter[overrideNr]]);
-  //     }
-
-  //     menu_repaintAll();
-
-  //     buttonHandler_originalParameter[overrideNr] = paramNr;
-  //     buttonHandler_originalValue[overrideNr] = activeParameters[paramNr];
-
-  //     overrideNr++;
-  //     if (overrideNr == NUM_AUTOMATION_PAR - 1) overrideNr = 0;
-  //   }
-  // }
-
-
-  ////////////////////////////
-	// make changes temporary while an automation step is armed - save original value
-	if(buttonHandler_getArmedAutomationStep() != NO_STEP_SELECTED)
+#if !EURORACK_MODULE
+	//make changes temporary while an automation step is armed - save original value
+	if((buttonHandler_resetLock==0) && buttonHandler_getArmedAutomationStep() != NO_STEP_SELECTED)
 	{
-    if(buttonHandler_originalParameter[0] == 0 && (buttonHandler_resetLock1 == 0)) // Space in buf 1
-    {
-      buttonHandler_originalParameter[0] = paramNr;
-      buttonHandler_originalValue[0] = activeParameters[paramNr];
-      seq_setActiveAutomationTrack(0);
-      buttonHandler_resetLock1 = 1;
-    }
-    else if (buttonHandler_originalParameter[0] == paramNr)
-    {
-      seq_setActiveAutomationTrack(0);
-      buttonHandler_resetLock1 = 1;
-    }
-    else if (buttonHandler_originalParameter[1] == 0 && (buttonHandler_resetLock2 == 0)) // No space in buf 1, but space in buf 2
-    {
-      buttonHandler_originalParameter[1] = paramNr;
-      buttonHandler_originalValue[1] = activeParameters[paramNr];
-      seq_setActiveAutomationTrack(1);
-      buttonHandler_resetLock2 = 1;
-    }
-    else if (buttonHandler_originalParameter[1] == paramNr)
-    {
-      seq_setActiveAutomationTrack(1);
-      buttonHandler_resetLock2 = 1;
-    }
-    else if (buttonHandler_originalParameter[0] != 0 && // New param but both DESTINATION buffers taken
-             buttonHandler_originalParameter[1] != 0)
-    {
-      if (overwriteBufNr == 0)
-      {
-        overwriteBufNr = 1; // Next overwrite on buf 1
-        seq_setActiveAutomationTrack(0);
-        buttonHandler_resetLock1 = 1;
-        seq_clearAutomation(0, seq_activePattern, 0);
-        activeParameters[buttonHandler_originalParameter[0]] = buttonHandler_originalValue[0];
-        if (buttonHandler_originalParameter[0] < 128) // => Sound Parameter
-        {
-          frontPanel_sendData(MIDI_CC,
-              (uint8_t) (buttonHandler_originalParameter[0]),
-              buttonHandler_originalValue[0]);
-        } 
-        else if (buttonHandler_originalParameter[0] >= 128 && (buttonHandler_originalParameter[0] < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
-        {
-          frontPanel_sendData(CC_2,
-          (uint8_t) (buttonHandler_originalParameter[0] - 128),
-          buttonHandler_originalValue[0]);
-        } 
-        else
-        {
-          menu_parseGlobalParam(buttonHandler_originalParameter[0],
-          activeParameters[buttonHandler_originalParameter[0]]);
-        }
-
-        menu_repaintAll();
-
-        buttonHandler_originalParameter[0] = paramNr;
-        buttonHandler_originalValue[0] = activeParameters[paramNr];
-      }
-      else if (overwriteBufNr == 1)
-      {
-        overwriteBufNr = 0; // Next overwrite on buf 1
-        seq_setActiveAutomationTrack(1);
-        buttonHandler_resetLock2 = 1;
-        seq_clearAutomation(1, seq_activePattern, 1);
-        activeParameters[buttonHandler_originalParameter[1]] = buttonHandler_originalValue[1];
-        if (buttonHandler_originalParameter[1] < 128) // => Sound Parameter
-        {
-          frontPanel_sendData(MIDI_CC,
-              (uint8_t) (buttonHandler_originalParameter[1]),
-              buttonHandler_originalValue[1]);
-        } 
-        else if (buttonHandler_originalParameter[1] >= 128 && (buttonHandler_originalParameter[1] < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
-        {
-          frontPanel_sendData(CC_2,
-          (uint8_t) (buttonHandler_originalParameter[1] - 128),
-          buttonHandler_originalValue[1]);
-        } 
-        else
-        {
-          menu_parseGlobalParam(buttonHandler_originalParameter[1],
-          activeParameters[buttonHandler_originalParameter[1]]);
-        }
-
-        menu_repaintAll();
-
-        buttonHandler_originalParameter[1] = paramNr;
-        buttonHandler_originalValue[1] = activeParameters[paramNr];
-      }
-    }
-  }
-    /////////////////////////////
-
-	
+		if(paramNr >= END_OF_SOUND_PARAMETERS)
+		{
+			buttonHandler_originalValue = activeParameters[paramNr];
+		}
+		else
+		{
+			buttonHandler_originalValue = activeParameters[paramNr];
+		}
+		buttonHandler_originalParameter = paramNr;
+		buttonHandler_resetLock = 1;
+	}
+#endif
 
 	//update parameter value to the new value
 	//mainParameters[paramNr] = dtypeValue;
@@ -4129,8 +4340,10 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 
 	switch(parameter_dtypes[paramNr] & 0xFF)
 	{
+
 	case DTYPE_TARGET_SELECTION_VELO:
 	{
+	#if OLD_LFO_ROUTING
 		//**Velo - limit param start and end to range for the target voice
 		// this is a value from 1 to 6, so we adjust to be 0 based
 		uint8_t value = dtypeValue;
@@ -4157,11 +4370,48 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 		*/
 
 		modNode_setDestination(&velocityModulators[(uint8_t)(paramNr - PAR_VEL_DEST_1)], value);
-	}
+	#endif
+		}
+		break;
+
+	case DTYPE_TARGET_SELECTION_CV:
+	{
+			//**limit param start and end to range for the target voice
+			// this is a value from 1 to 6, so we adjust to be 0 based
+			uint16_t value = dtypeValue;
+			uint16_t cvNr=(paramNr - PAR_CV_DEST_1);
+			uint8_t voiceNr = cvNr / 3;
+#if NUM_MOD_SLOTS != 18
+#error voice calculation needs to be adapted to  NUM_MOD_SLOTS number!!!
+#endif
+			if(dtypeValue < pgm_read_byte(&modTargetVoiceOffsets[voiceNr].start)) {
+				if(diff < 0) // going down, allow 0
+					value=0;
+				else // going up fix to start
+					value = pgm_read_byte(&modTargetVoiceOffsets[voiceNr].start);
+			} else if (dtypeValue > pgm_read_byte(&modTargetVoiceOffsets[voiceNr].end)) {
+				value = pgm_read_byte(&modTargetVoiceOffsets[voiceNr].end);
+			}
+
+			activeParameters[paramNr] = value;
+			//**VELO knob value range. convert to param before sending
+			// the value we have is an index into modTargets, we need a parameter
+			value = pgm_read_word(&modTargets[value].param);
+
+			/*
+			uint8_t upper,lower;
+			upper = (uint8_t)(((value&0x80)>>7) | ((((uint8_t)(paramNr - PAR_VEL_DEST_1))&0x3f)<<1));
+			lower = value&0x7f;
+			frontPanel_sendData(CC_VELO_TARGET,upper,lower);
+			*/
+			modNode_setDestination(&cvModulators[cvNr], value);
+			//modNode_setDestination(&velocityModulators[(uint8_t)(paramNr - PAR_VEL_DEST_1)], value);
+		}
 		break;
 
 	case DTYPE_VOICE_LFO:
 	{
+#if OLD_LFO_ROUTING
 		// **LFOTARGFIX - ensure that the lfo mod target is pointing to the same type of modulation
 		// on the new voice
 		const uint8_t newTargVal=getModTargetIdxFromGapIdx((uint8_t)(dtypeValue-1),menu_TargetVoiceGapIndex);
@@ -4172,16 +4422,33 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 		// determine the real param value given the index into modTargets
 		const uint8_t value =  (uint8_t)pgm_read_word(&modTargets[newTargVal].param);
 
+#if 0
 		uint8_t upper,lower;
 		upper = (uint8_t)(((value&0x80)>>7) | ((((uint8_t)(paramNr - PAR_VOICE_LFO1))&0x3f)<<1));
 		lower = value&0x7f;
 		frontPanel_sendData(CC_LFO_TARGET,upper,lower);
+#else
+		const uint8_t lfoNr = (uint8_t)(paramNr - PAR_VOICE_LFO1);
+		switch(lfoNr)
+		{
+		case 0:
+		case 1:
+		case 2:	modNode_setDestination(&voiceArray[lfoNr].lfo.modTarget, value);break;
+
+		case 3:	modNode_setDestination(&snareVoice.lfo.modTarget,value);		break;
+		case 4:	modNode_setDestination(&cymbalVoice.lfo.modTarget, value);		break;
+		case 5:	modNode_setDestination(&hatVoice.lfo.modTarget, value);			break;
+		default:
+			break;
+		}
+#endif
+#endif
 	}
 		break;
 	case DTYPE_TARGET_SELECTION_LFO:
 	{
 
-
+#if OLD_LFO_ROUTING
  		//**LFO - limit param start and end to range for the target voice (not the lfo number)
 		// this is a value from 1 to 6, so we adjust to be 0 based
 		uint8_t value = dtypeValue;
@@ -4204,40 +4471,71 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 		//**LFO convert to param value and send
 		// determine the real param value given the index into modTargets
 		value = (uint8_t)pgm_read_word(&modTargets[value].param);
+
+#if 0
 		uint8_t upper,lower;
 		upper = (uint8_t)(((value&0x80)>>7) | ((((uint8_t)(paramNr - PAR_TARGET_LFO1))&0x3f)<<1));
 		lower = value&0x7f;
 		frontPanel_sendData(CC_LFO_TARGET,upper,lower);
+
+#else
+
+			const uint8_t lfoNr = (uint8_t)(paramNr - PAR_TARGET_LFO1);
+			switch(lfoNr)
+			{
+			case 0:
+			case 1:
+			case 2:	modNode_setDestination(&voiceArray[lfoNr].lfo.modTarget, value);break;
+
+			case 3:	modNode_setDestination(&snareVoice.lfo.modTarget,value);		break;
+			case 4:	modNode_setDestination(&cymbalVoice.lfo.modTarget, value);		break;
+			case 5:	modNode_setDestination(&hatVoice.lfo.modTarget, value);			break;
+			default:
+				break;
+			}
+#endif
+#endif
+
 	}
 		break;
 
 	default: // all other sound parameters are send as CC or CC2. anything else is handled specially
 	{
+
 		//-----------------
-				uint8_t morph;
+		uint8_t morph;
 
-				//Do not morph audio routing or globals
-				if((paramNr < END_OF_SOUND_PARAMETERS))
-				{
-					if((paramNr >= PAR_AUDIO_OUT1) && (paramNr <= PAR_AUDIO_OUT6)) //morph_index++;
-					{
-						//always use source kit (morph = 0) for audio routing
-						morph = 0;
-					}
-					else
-					{
-						morph = activeParameters[PAR_MORPH];
-						//morph = preset_morphValue;
-						dtypeValue = preset_getMorphValue(paramNr, morph);
-						//dtypeValue = interpolate(activeParameters[paramNr],mainParameters[activeParameters[PAR_MORPH_TARGET]][paramNr],morph);
-					}
-				}
+		//Do not morph audio routing or globals
+		if((paramNr < END_OF_SOUND_PARAMETERS))
+		{
+			if((paramNr >= PAR_AUDIO_OUT1) && (paramNr <= PAR_AUDIO_OUT6)) //morph_index++;
+			{
+				//always use source kit (morph = 0) for audio routing
+				morph = 0;
+			}
+			else
+			{
+				morph = activeParameters[PAR_MORPH];
+				//morph = preset_morphValue;
+				dtypeValue = preset_getMorphValue(paramNr, morph);
+				//dtypeValue = interpolate(activeParameters[paramNr],mainParameters[activeParameters[PAR_MORPH_TARGET]][paramNr],morph);
+			}
+		}
 
-				//-----------------
+		//-----------------
+
+
 		if(paramNr<128) // => Sound Parameter below 128
 			frontPanel_sendData(MIDI_CC,(uint8_t)paramNr,dtypeValue);
-		else if(paramNr>=128 && (paramNr < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
+		//else if(paramNr>=128 && (paramNr < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
+		else if(paramNr>=128 && (paramNr < 255)) // => Sound Parameter above 127
 			frontPanel_sendData(CC_2,(uint8_t)(paramNr-128),dtypeValue);
+
+		else if (paramNr>=255 && (paramNr < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 255
+		{
+			frontPanel_sendData(CC3,(uint8_t)(paramNr-255),dtypeValue);
+
+		}
 		else
 			menu_parseGlobalParam(paramNr,dtypeValue);
 		break;
@@ -4249,6 +4547,7 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 
 //-----------------------------------------------------------------
 // TODO this looks to be unused. should it be removed?
+#if 0
 void menu_sendAllParameters()
 {
 	uint16_t i;
@@ -4273,6 +4572,7 @@ void menu_sendAllParameters()
 			DWT_Delay_us(1);
 	}		
 }
+#endif
 //----------------------------------------------------------------
 uint8_t menu_getActivePage()
 {
@@ -4291,10 +4591,12 @@ void menu_setActiveVoice(uint8_t voiceNr)
 	menu_activeVoice = voiceNr;
 };
 //----------------------------------------------------------------
+#if !EURORACK_MODULE
 uint8_t menu_areMuteLedsShown()
 {
 	return menu_muteModeActive;
 }
+#endif
 //----------------------------------------------------------------
 
 // given a 0-127 number will return a midi note name

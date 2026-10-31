@@ -29,8 +29,10 @@ void led_setActivePage(uint8_t pageNr);
 void led_setActiveVoiceLeds(uint8_t pattern);
 void led_setActiveVoice(uint8_t voiceNr);
 
-void led_setActiveSelectButton(uint8_t butNr);
+void led_setActiveVoiceLedsTemp(uint8_t voiceNr);
 
+void led_setActiveSelectButton(uint8_t butNr);
+void led_clearLeds_1To8();
 
 /** set the state of all select mode 2 leds*/
 void led_setMode2Leds(uint8_t value);
@@ -49,11 +51,12 @@ void led_toggle(uint8_t ledNr);
 void led_toggleTemp(uint8_t ledNr);
 /** reset the led state to its original value (undo for temp operations)*/
 void led_reset(uint8_t ledNr);
-
+#if !EURORACK_MODULE
 //update BarButtons in pattern Mode
 void led_initPatternSelectLeds();
 
 //update the sequencer leds with active steps
+
 void led_updateSeqLeds();
 
 void led_updateBarLeds();
@@ -66,16 +69,20 @@ void led_clearSequencerLeds9_16();
 void led_clearSequencerLeds1_8();
 
 void led_clearSelectLeds();
+#endif
 void led_clearVoiceLeds();
 
 void led_setMode2(uint8_t status);
+void led_setPage(uint8_t page);
 
-uint8_t led_idx2SelectLed(uint8_t idx);
+//uint8_t led_idx2SelectLed(uint8_t idx);
 
 /**toggles the currently active step from the chase light indicator*/
+#if !EURORACK_MODULE
 void led_setActive_step(uint8_t stepNr);
 
 void led_clearActive_step();
+#endif
 
 /**pulse a led.
 this function flashes the LED once.
@@ -94,58 +101,33 @@ void led_blinkHandler();
 void led_resetBlinkTimer();
 
 //some LED helper functions for non clustered groups in LXR V2
+#if !EURORACK_MODULE
 uint8_t led_idx2StepLed(uint8_t idx);
 uint8_t led_idx2SelectLed(uint8_t idx);
+#endif
 
 enum LedNumbers
 {
-	LED_PAGE_UP,
-	LED_VOICE1,
-	LED_VOICE2,
-	LED_VOICE3,
-	LED_VOICE4,
-	LED_VOICE5,
-	LED_VOICE6,
-	LED_VOICE7,
+	LED_EDIT,
+	LED_PERF,
+	LED_MOD,
+	LED_FX,
 
 
-	LED_PART_SELECT5,
-	LED_PART_SELECT6,
-	LED_PART_SELECT7,
-	LED_PART_SELECT8,
-	LED_STEP16,
-	LED_STEP15,
-	LED_STEP14,
-	LED_STEP13,
+	LED_1,
+	LED_2,
+	LED_3,
+	LED_4,
+	LED_5,
+	LED_6,
+	LED_7,
+	LED_8,
 
-	LED_PART_SELECT1 ,
-	LED_PART_SELECT2,
-	LED_PART_SELECT3,
-	LED_PART_SELECT4,
-	LED_STEP12,
-	LED_STEP11,
-	LED_STEP10,
-	LED_STEP9,
-
-	LED_MODE1,
-	LED_MODE2,
-	LED_MODE3,
-	LED_MODE4,
-	LED_STEP8,
-	LED_STEP7,
-	LED_STEP6,
-	LED_STEP5,
-	
 	LED_SHIFT,
-	LED_START_STOP,
-	LED_REC,
-	LED_COPY,
-	LED_STEP4,
-	LED_STEP3,
-	LED_STEP2,
-	LED_STEP1,
+	LED_SAVE_LOAD,
 
-	LED_PAGE_DOWN
+
+
 
 };
 

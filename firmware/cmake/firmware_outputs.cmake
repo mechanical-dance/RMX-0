@@ -151,15 +151,24 @@ function(lxr_add_combined_image name)
     set_target_properties(${name} PROPERTIES LXR_IMAGE_HEX ${hex})
 endfunction()
 
-# lxr_add_update_info(<custom target> IMAGE <path to .img> DEPENDS <targets>...)
+# lxr_add_update_info(<custom target> IMAGE <path to .img> DEPENDS <targets>...
+#                     [IMAGE_PATTERN <glob>] [DEVICE <name>])
 #
 # Prints where the SD-card update image is and how to install it at the end of
-# every build (also when nothing had to be rebuilt). Does nothing without
-# Python 3, because then no update image is generated.
+# every build (also when nothing had to be rebuilt). IMAGE_PATTERN is the file
+# name the bootloader searches for (default LXR*.img), DEVICE how the product is
+# called in the text (default LXR). Does nothing without Python 3, because then
+# no update image is generated.
 function(lxr_add_update_info name)
-    cmake_parse_arguments(ARG "" "IMAGE" "DEPENDS" ${ARGN})
+    cmake_parse_arguments(ARG "" "IMAGE;IMAGE_PATTERN;DEVICE" "DEPENDS" ${ARGN})
     if(NOT Python3_EXECUTABLE)
         return()
+    endif()
+    if(NOT ARG_IMAGE_PATTERN)
+        set(ARG_IMAGE_PATTERN "LXR*.img")
+    endif()
+    if(NOT ARG_DEVICE)
+        set(ARG_DEVICE "LXR")
     endif()
 
     file(TO_NATIVE_PATH "${ARG_IMAGE}" image)
@@ -170,13 +179,13 @@ function(lxr_add_update_info name)
         "  Firmware update file:"
         "    ${image}"
         ""
-        "  To install it on the LXR:"
+        "  To install it on the ${ARG_DEVICE}:"
         "    1. Copy ${image_name} to the top folder of the SD card and"
-        "       delete any older LXR*.img files from the card."
-        "    2. Put the card in the LXR, hold down the encoder button and"
-        "       switch the LXR on. Keep holding the button until"
+        "       delete any older ${ARG_IMAGE_PATTERN} files from the card."
+        "    2. Put the card in the ${ARG_DEVICE}, hold down the encoder button and"
+        "       switch the ${ARG_DEVICE} on. Keep holding the button until"
         "       'LXR Updater' appears on the display."
-        "    3. Wait for 'Update OK!'. The LXR then restarts by itself."
+        "    3. Wait for 'Update OK!'. The ${ARG_DEVICE} then restarts by itself."
         "======================================================================"
     )
     set(commands)

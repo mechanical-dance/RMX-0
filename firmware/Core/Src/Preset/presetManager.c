@@ -15,7 +15,7 @@
 #include <frontPanelParser_ui.h>
 #include "Preset/PresetManager.h"
 //#include "../Hardware/SD/ff.h"
-#include "ff.h"
+#include "../../Middlewares/Third_Party/FatFs/src/ff.h"
 #include <stdio.h>
 #include "menu/CcNr2Text.h"
 #include "menu/menu.h"
@@ -28,10 +28,11 @@
 #include "IO/DIO.h"
 
 #include "Soundengine/MIDI/MidiParser.h"
-#include "Soundengine/Sequencer/sequencer.h"
+//#include "Soundengine/Sequencer/sequencer.h"
 #include "Soundengine/Soundengine.h"
 
-
+FRESULT preset_savePatternSD(uint8_t presetNr);
+//FRESULT preset_loadPatternSD(uint8_t presetNr);
 
 
 //#include "../Hardware/timebase.h"
@@ -39,10 +40,13 @@
 //FATFS SDFatFS;		/* File system object for the logical drive */
 //FIL SDFile;		/* place to hold 1 file*/
 static uint8_t morph_state = 0; //flag for non blocking morph
-static uint8_t morph_index = 0;
+static uint16_t morph_index = 0;
 char savefileNames[NUM_KIT_SLOTS][NUM_SAVEFILE_NAMES][8];
 
 char currentFolder[13];
+
+//global morph parameter, set by PAR_MORPH and used by modulators
+uint8_t preset_morphValue;
 
 //char presetNameBuffer[8];
 //char currentName[8];
@@ -62,537 +66,16 @@ char currentFolder[13];
 #define FEXT_PROJ 	3
 #define FEXT_SONG 	4
 
-
-
-// fill buffer (length 9 total) with a filename. type is one of above
-// eg p001.snd
-static void preset_makeFileNameOld(char *buf, uint8_t num, uint8_t type);
-
-//load uses wildcard to find a name of the pattern 00-*.ext
-static FRESULT preset_makeFileNameLoad(char *buf, uint8_t num, uint8_t type);
-//save uses the kit name to create a filename eg 00-NAME.ext
-static void preset_makeFileNameSave(char *buf, uint8_t num, uint8_t type, char *name);
-
-//static void preset_makeFileNameTemp(char *buf, uint8_t num, uint8_t type);
-
+//####################################################################################
 
 #define PRESET_SAVE_TIME 2000
 
 uint32_t preset_kitTimer = 0;
-uint32_t preset_patTimer = 0;
+//uint32_t preset_patTimer = 0;
 
 uint8_t preset_kitDirty = 0;
-uint8_t preset_patDirty = 0;
+//uint8_t preset_patDirty = 0;
 
-void preset_initTmpFolder()
-{
-	char folderName[13];
-	sprintf(folderName, "/tmp");
-
-	FRESULT res;
-	FILINFO fno;
-
-	res = f_stat(folderName, &fno);
-	if(res == FR_NO_FILE)
-	{
-		res = f_mkdir(folderName);
-		if(res == FR_OK)
-		{
-			f_chdir(folderName);
-		}
-	}
-	else
-	{
-		f_chdir(folderName);
-	}
-}
-
-void preset_resetAllSaveTimers()
-{
-	preset_kitDirty = 0;
-	preset_patDirty = 0;
-}
-
-FRESULT loadTmpFolderFiles()
-{
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-
-	FRESULT res;
-	//check tmp folder for *.snd and *.pat files and load them to RAM
-	for(uint8_t i=0;i<NUM_KIT_SLOTS;i++)
-	{
-
-		//FR_NO_FILE just means an incomplete project and is no reason to abort!
-		res = preset_loadDrumsetSD(i, 0);
-		if ((res != FR_OK) && (res != FR_NO_FILE))
-		{
-			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
-			f_close((FIL*)&SDFile);
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-			return res;
-		}
-		res = preset_loadPatternSD(i);
-		if ((res != FR_OK) && (res != FR_NO_FILE))
-		{
-			f_close((FIL*)&SDFile);
-			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-			return res;
-		}
-		res = preset_loadSongSD(i);
-		if ((res != FR_OK) && (res != FR_NO_FILE))
-		{
-			f_close((FIL*)&SDFile);
-			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-			return res;
-		}
-	}
-
-	return FR_OK;
-}
-
-void preset_touchTimer(PresetTimer type)
-{
-	if(type==PRESET_KIT_TIMER)
-	{
-		preset_kitTimer = HAL_GetTick();
-		preset_kitDirty = 1;
-	}
-	else if(type==PRESET_PAT_TIMER)
-	{
-		preset_patTimer = HAL_GetTick();
-		preset_patDirty = 1;
-	}
-	else if(type==PRESET_STOP_PAT_TIMER)
-	{
-		//abort pattern save timer, since seq is running again...
-		preset_patDirty = 0;
-	}
-
-};
-
-
-FRESULT preset_saveTmpKit()
-{
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-	FRESULT res;
-	unsigned int bytesWritten;
-
-	//open the file
-	res = f_open((FIL*)&SDFile,"tmp.snd",FA_CREATE_ALWAYS | FA_WRITE);
-	if(res != FR_OK)
-	{
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-		return res;
-	}
-
-	//write current preset nr to file
-	res = f_write((FIL*)&SDFile,(void*)&menu_selectedPresetNr[SAVE_TYPE_KIT],1,&bytesWritten);
-	if(res != FR_OK)
-	{
-		f_close((FIL*)&SDFile);
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-		return res;
-	}
-	//write the preset data
-	f_write((FIL*)&SDFile,activeParameters,END_OF_SOUND_PARAMETERS,&bytesWritten);
-
-	//close the file
-	f_close((FIL*)&SDFile);
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-	return FR_OK;
-}
-
-FRESULT preset_LoadTmpKit()
-{
-	FRESULT res;
-	unsigned int bytesRead;
-	uint8_t kitNr = 0;
-
-	//open the file
-	res = f_open((FIL*)&SDFile,"tmp.snd",FA_OPEN_EXISTING | FA_READ);
-	if(res != FR_OK) return res;
-
-	//first the preset nr
-	res=f_read((FIL*)&SDFile,(void*)&kitNr,1,&bytesRead);
-	if(bytesRead != 1) {
-		res=FR_DISK_ERR;
-		goto closeFile;
-	}
-
-	menu_selectedPresetNr[SAVE_TYPE_KIT] = kitNr;
-
-
-	//read the file content
-		bytesRead=1;
-		int16_t i;
-		uint8_t *para;
-		bytesRead = 0;
-
-		para=activeParameters;
-
-		res=f_read((FIL*)&SDFile, para,END_OF_SOUND_PARAMETERS, &bytesRead);
-		if(res==FR_OK) {
-			// set to 0 for any that were not read from the file
-			if(END_OF_SOUND_PARAMETERS-bytesRead)
-				memset(para+bytesRead,0,END_OF_SOUND_PARAMETERS-bytesRead);
-
-			//special case mod targets. normalize.
-			const uint8_t nmt=getNumModTargets();
-			for(i=0;i<6;i++) {
-				// since I've changed the meaning of these, I'll ensure that it's valid for kits saved prior to the
-				// change
-				if(para[PAR_VEL_DEST_1+i] >= nmt )
-					para[PAR_VEL_DEST_1+i] = 0;
-				if(para[PAR_TARGET_LFO1+i] >= nmt )
-					para[PAR_TARGET_LFO1+i] = 0;
-			}
-		}
-
-
-	closeFile:
-		//close the file handle
-		f_close((FIL*)&SDFile);
-
-		// update the soundengine with the new parameters
-		if(res==FR_OK) {
-			preset_sendDrumsetParameters();
-			return FR_OK;
-		}
-
-		return res;
-}
-
-FRESULT preset_LoadTmpPat()
-{
-
-	uint8_t success=1; // start off succeeding
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-	//filename in 8.3  format
-		//uint8_t fileVersion = 1;
-		UINT bytesRead;
-		FRESULT res;
-
-
-
-		res = f_open((FIL*)&SDFile,"tmp.pat",FA_OPEN_EXISTING | FA_READ);
-		if(res != FR_OK)
-		{
-		#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-					HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-		#else
-
-		#endif
-				return res;
-		}
-
-		//read current preset nr
-		res = f_read((FIL*)&SDFile,(void*)&menu_playedPattern,1,&bytesRead);
-		if(bytesRead != 1)
-		{
-			success = 0;
-			goto closeFile;
-		}
-
-		if(menu_playedPattern >= NUM_PATTERN)
-		{
-			menu_playedPattern = 0;
-			success = 0;
-			goto closeFile;
-		}
-
-		menu_shownPattern = menu_playedPattern;
-		seq_activePattern = menu_playedPattern;
-		seq_pendingPattern = menu_playedPattern;
-		menu_selectedPresetNr[SAVE_TYPE_PATTERN] = menu_playedPattern;
-
-		frontPanel_sendData(SEQ_CC,SEQ_SET_SHOWN_PATTERN,menu_playedPattern);
-
-		seq_copyPatternToBackupBuffer(seq_activePattern);
-		//frontParser_shownPattern = menu_playedPattern;
-		uint8_t patternNr = menu_playedPattern;
-
-	//---------------- read pattern data -----------------------------
-
-		// note that the pattern length data is no longer stored in the same way.
-		// This means that loading old patterns with non-standard length, the length will be
-		// ignored and a standard length used. I think it's acceptable as long as users are aware of this.
-
-		uint8_t next=0;
-
-		// ---------- Load step data first
-
-		// load step data
-
-
-
-		for(uint8_t trk=0; trk<NUM_TRACKS;trk++)
-		{
-
-			f_read((FIL*)&SDFile,(void*)&seq_patternSet.seq_subStepPattern[patternNr][trk][0],sizeof(Step)*STEPS_PER_PATTERN,&bytesRead);
-
-			if(bytesRead!=sizeof(Step)*(STEPS_PER_PATTERN))
-			{
-				success=0;
-				break; // file error, or we ran out of file (eof)
-			}
-
-			//Pattern V3 and up => flam added
-			//if(dataVersion > 2)
-			{
-				f_read((FIL*)&SDFile,(void*)&seq_patternSet.seq_stepTiming[patternNr][trk][0],sizeof(uint8_t)*STEPS_PER_PATTERN,&bytesRead);
-
-				if(bytesRead!=sizeof(uint8_t)*(STEPS_PER_PATTERN))
-				{
-					success=0;
-					break; // file error, or we ran out of file (eof)
-				}
-			}
-
-		}
-
-
-
-		// ---------- load the main step data next
-		uint16_t mainStepData;
-
-
-			for(uint8_t trk=0; trk<NUM_TRACKS;trk++)
-			{
-				for(uint8_t bar=0;bar<NUM_BARS; bar++)
-				{
-					f_read((FIL*)&SDFile,(void*)&mainStepData,sizeof(uint16_t),&bytesRead);
-
-					if( bytesRead==sizeof(uint16_t)) {
-						seq_patternSet.seq_mainSteps[bar][patternNr][trk] = mainStepData;
-					}
-					 else {
-							success=0;
-							break;
-						}
-				}
-			}
-
-
-
-		// ------------ shuffle settings
-		if(success) {
-			//load the shuffle settings
-			f_read((FIL*)&SDFile,(void*)&seq_patternSet.shuffle[patternNr],sizeof(uint8_t),&bytesRead);
-			//and update on cortex
-			if(bytesRead)
-			{
-
-				//activeParameters[PAR_SHUFFLE] = seq_patternSet.shuffle[patternNr];
-				//frontPanel_sendData(SEQ_CC,SEQ_SHUFFLE,parameter_values[PAR_SHUFFLE]);
-
-				//seq_setShuffle(activeParameters[PAR_SHUFFLE]/127.f);
-			}
-			else {
-				success=0;
-			}
-		}
-
-		// ----------- Pattern/track lengths
-		// -- AS this might not exist in the saved data file, we still want success
-		if(success) {
-
-				for(uint8_t trk=0; trk<NUM_TRACKS;trk++)
-				{
-					f_read((FIL*)&SDFile,(void*)&next,sizeof(uint8_t),&bytesRead);
-					seq_patternSet.length[patternNr][trk] = next;
-				}
-
-			success=1; // just to document that we don't consider this a failure, we just didn't read the bytes for this
-		}
-
-		//if(dataVersion > 1)
-		{
-			f_read((FIL*)&SDFile,(void*)&seq_patternSet.kitNr[patternNr],sizeof(uint8_t),&bytesRead);
-			if(bytesRead == 0) success = 0;
-
-		}
-
-		if( success == 0)
-		{
-
-
-			f_close((FIL*)&SDFile);
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-			return FR_INT_ERR;
-		}
-
-		success=1;
-		//close the file handle
-
-
-
-	closeFile:
-		f_close((FIL*)&SDFile);
-
-		#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-					HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-		#else
-
-		#endif
-
-
-		// return success or failure
-		if(success) return FR_OK;
-		else return FR_INT_ERR;
-
-
-}
-
-FRESULT preset_saveTmpPat()
-{
-
-	//don't save invalid pattern
-	if(menu_playedPattern >= NUM_PATTERN) return FR_INVALID_PARAMETER;
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-
-	FRESULT res;
-	UINT bytesWritten;
-	uint8_t presetNr = menu_playedPattern;
-	//lcd_clear();
-	//lcd_home();
-	//lcd_string(PSTR("Saving pattern"));
-
-	//open the file
-	res = f_open((FIL*)&SDFile,"tmp.pat",FA_CREATE_ALWAYS | FA_WRITE);
-	if(res != FR_OK)
-	{
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-		return res;
-	}
-
-	//write current preset nr to file
-	res = f_write((FIL*)&SDFile,(void*)&menu_playedPattern,1,&bytesWritten);
-	if(res != FR_OK)
-	{
-		f_close((FIL*)&SDFile);
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-		return res;
-	}
-
-	//write pattern data
-	//preset_writePatternData(presetNr);
-#if 0
-#else
-
-		uint8_t length;
-
-		//---------------  write the step data (note, vol, prob, autom.) ---------------
-		for(uint8_t trk=0; trk<NUM_TRACKS;trk++)
-		{
-			f_write((FIL*)&SDFile,(const void*)&seq_patternSet.seq_subStepPattern[presetNr][trk][0],sizeof(Step)*STEPS_PER_PATTERN,&bytesWritten);
-
-			f_write((FIL*)&SDFile,(const void*)&seq_patternSet.seq_stepTiming[presetNr][trk][0],sizeof(uint8_t)*STEPS_PER_PATTERN,&bytesWritten);
-		}
-
-		//--------------- now the main step data ---------------
-		for(uint8_t trk=0; trk<NUM_TRACKS;trk++)
-		{
-			for(uint8_t bar=0;bar<NUM_BARS; bar++)
-			{
-				const uint16_t mainStepData = seq_patternSet.seq_mainSteps[bar][presetNr][trk];
-				f_write((FIL*)&SDFile,(const void*)&mainStepData,sizeof(uint16_t),&bytesWritten);
-			}
-		}
-
-		//----- shuffle setting ------
-
-
-		//f_write((FIL*)&SDFile,(const void*)&activeParameters[PAR_SHUFFLE],sizeof(uint8_t),&bytesWritten);
-		f_write((FIL*)&SDFile,(const void*)&seq_patternSet.shuffle[presetNr],sizeof(uint8_t),&bytesWritten);
-
-		//----- pattern/track lengths ------
-		// we reuse the same call from above (when saving main step data)
-		// but we only use the length info retrieved. We want to store it at the end
-		// to avoid breaking compatibility with save file
-
-
-		for(uint8_t trk=0; trk<NUM_TRACKS;trk++)
-		{
-				length = seq_patternSet.length[presetNr][trk] ;//seq_patternSet.seq_mainSteps[bar][pat][trk];
-				f_write((FIL*)&SDFile,(const void*)&length,sizeof(uint8_t),&bytesWritten);
-		}
-
-		//write associated kit nr
-		f_write((FIL*)&SDFile,&seq_patternSet.kitNr[presetNr],sizeof(uint8_t),&bytesWritten);
-
-#endif
-
-	//close the file
-	f_close((FIL*)&SDFile);
-
-	//reset the lcd
-//	menu_repaintAll();
-
-#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-#else
-
-#endif
-
-	return res;
-}
 
 /*------------------------------------------------------------/
 / Delete a sub-directory even if it contains any file
@@ -644,27 +127,196 @@ FRESULT delete_node (
     return fr;
 }
 
-FRESULT preset_clearTmpFolder()
+FRESULT preset_saveTmpKit()
 {
-	FILINFO fno;
-	FRESULT fr;
-	TCHAR buff[256];
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
+#else
 
-	f_chdir("/");
+#endif
+	FRESULT res;
+	unsigned int bytesWritten;
 
-	/* Directory to be deleted */
-	sprintf(buff, "/tmp");
+	//open the file
+	res = f_open((FIL*)&SDFile,"tmp.snd",FA_CREATE_ALWAYS | FA_WRITE);
+	if(res != FR_OK)
+	{
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#else
 
-	fr = delete_node(buff, sizeof buff / sizeof buff[0], &fno);
+#endif
+		return res;
+	}
 
-	preset_initTmpFolder();
+	//write current preset nr to file
+	res = f_write((FIL*)&SDFile,(void*)&menu_selectedPresetNr[SAVE_TYPE_KIT],1,&bytesWritten);
+	if(res != FR_OK)
+	{
+		f_close((FIL*)&SDFile);
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#else
 
-	return fr;
+#endif
+		return res;
+	}
+	//write the preset data
+	f_write((FIL*)&SDFile,activeParameters,END_OF_SOUND_PARAMETERS,&bytesWritten);
+
+
+
+
+	//close the file
+	f_close((FIL*)&SDFile);
+
+
+	//write performance data
+	res = f_open((FIL*)&SDFile,"perf.tmp",FA_CREATE_ALWAYS | FA_WRITE);
+	f_write((FIL*)&SDFile,&activeParameters[PAR_MORPH] ,1,&bytesWritten);
+	f_write((FIL*)&SDFile,&activeParameters[PAR_MORPH_TARGET] ,1,&bytesWritten);
+	f_close((FIL*)&SDFile);
+
+
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#else
+
+#endif
+
+
+
+
+	return FR_OK;
 }
+
+FRESULT preset_LoadTmpKit()
+{
+	FRESULT res;
+	unsigned int bytesRead;
+	uint8_t kitNr = 0;
+
+	//open the file
+	res = f_open((FIL*)&SDFile,"tmp.snd",FA_OPEN_EXISTING | FA_READ);
+	if(res != FR_OK) return res;
+
+	//first the preset nr
+	res=f_read((FIL*)&SDFile,(void*)&kitNr,1,&bytesRead);
+	if(bytesRead != 1) {
+		res=FR_DISK_ERR;
+		goto closeFile;
+	}
+
+	menu_selectedPresetNr[SAVE_TYPE_KIT] = kitNr;
+
+
+	//read the file content
+		bytesRead=1;
+		int16_t i;
+		uint8_t *para;
+		bytesRead = 0;
+
+		para=activeParameters;
+
+		res=f_read((FIL*)&SDFile, para,END_OF_SOUND_PARAMETERS, &bytesRead);
+		if(res==FR_OK) {
+			// set to 0 for any that were not read from the file
+			if(END_OF_SOUND_PARAMETERS-bytesRead)
+				memset(para+bytesRead,0,END_OF_SOUND_PARAMETERS-bytesRead);
+
+			//special case mod targets. normalize.
+			const uint8_t nmt=getNumModTargets();
+			for(i=0;i<6;i++) {
+				// since I've changed the meaning of these, I'll ensure that it's valid for kits saved prior to the
+				// change
+				if(para[PAR_VEL_DEST_1+i] >= nmt )
+					para[PAR_VEL_DEST_1+i] = 0;
+				if(para[PAR_TARGET_LFO1+i] >= nmt )
+					para[PAR_TARGET_LFO1+i] = 0;
+			}
+		}
+
+
+	//read performance page data
+
+
+
+
+	closeFile:
+		//close the file handle
+		f_close((FIL*)&SDFile);
+
+		//read performance data
+		f_open((FIL*)&SDFile,"perf.tmp",FA_OPEN_EXISTING | FA_READ);
+		f_read((FIL*)&SDFile, &para[PAR_MORPH],1, &bytesRead);
+		f_read((FIL*)&SDFile, &para[PAR_MORPH_TARGET],1, &bytesRead);
+		f_close((FIL*)&SDFile);
+
+		// update the soundengine with the new parameters
+		if(res==FR_OK) {
+			preset_sendDrumsetParameters();
+			return FR_OK;
+		}
+
+		return res;
+}
+
+
+
+
+void preset_initTmpFolder()
+{
+	/*
+	char folderName[13];
+	sprintf(folderName, "/tmp");
+
+	FRESULT res;
+	FILINFO fno;
+
+	res = f_stat(folderName, &fno);
+	if(res == FR_NO_FILE)
+	{
+		res = f_mkdir(folderName);
+		if(res == FR_OK)
+		{
+			f_chdir(folderName);
+		}
+	}
+	else
+	{
+		f_chdir(folderName);
+	}
+	*/
+}
+
+void preset_touchTimer(PresetTimer type)
+{
+	if(type==PRESET_KIT_TIMER)
+	{
+		preset_kitTimer = HAL_GetTick();
+		preset_kitDirty = 1;
+	}
+	/*
+	else if(type==PRESET_PAT_TIMER)
+	{
+		preset_patTimer = HAL_GetTick();
+		preset_patDirty = 1;
+	}
+	else if(type==PRESET_STOP_PAT_TIMER)
+	{
+		//abort pattern save timer, since seq is running again...
+		preset_patDirty = 0;
+	}
+	*/
+
+};
+
 
 
 void preset_processTimer()
 {
+
+#if !EURORACK_MODULE
 	if(preset_patDirty == 1)
 	{
 		if(HAL_GetTick()-preset_patTimer >= PRESET_SAVE_TIME )
@@ -673,7 +325,7 @@ void preset_processTimer()
 			preset_saveTmpPat();
 		}
 	}
-
+#endif
 	if(preset_kitDirty == 1)
 	{
 		if(HAL_GetTick()-preset_kitTimer >= PRESET_SAVE_TIME )
@@ -684,6 +336,90 @@ void preset_processTimer()
 	}
 }
 
+
+
+
+void preset_resetAllSaveTimers()
+{
+	preset_kitDirty = 0;
+//	preset_patDirty = 0;
+}
+
+
+FRESULT loadTmpFolderFiles()
+{
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
+#else
+
+#endif
+
+	FRESULT res;
+	//check tmp folder for *.snd and *.pat files and load them to RAM
+	for(uint8_t i=0;i<NUM_KIT_SLOTS;i++)
+	{
+
+		//FR_NO_FILE just means an incomplete project and is no reason to abort!
+		res = preset_loadDrumsetSD(i);
+		if ((res != FR_OK) && (res != FR_NO_FILE))
+		{
+			lcd_process_display_interrupt = 1;
+			preset_initTmpFolder();
+			f_close((FIL*)&SDFile);
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#else
+
+#endif
+			return res;
+		}
+
+#if !EURORACK_MODULE
+		res = preset_loadPatternSD(i);
+		if ((res != FR_OK) && (res != FR_NO_FILE))
+		{
+			f_close((FIL*)&SDFile);
+			lcd_process_display_interrupt = 1;
+			preset_initTmpFolder();
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#else
+
+#endif
+			return res;
+		}
+		res = preset_loadSongSD(i);
+		if ((res != FR_OK) && (res != FR_NO_FILE))
+		{
+			f_close((FIL*)&SDFile);
+			lcd_process_display_interrupt = 1;
+			preset_initTmpFolder();
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#else
+
+#endif
+			return res;
+		}
+#endif
+	}
+
+	return FR_OK;
+}
+//####################################################################################
+
+
+
+// fill buffer (length 9 total) with a filename. type is one of above
+// eg p001.snd
+static void preset_makeFileNameOld(char *buf, uint8_t num, uint8_t type);
+
+//load uses wildcard to find a name of the pattern 00-*.ext
+static FRESULT preset_makeFileNameLoad(char *buf, uint8_t num, uint8_t type);
+//save uses the kit name to create a filename eg 00-NAME.ext
+static void preset_makeFileNameSave(char *buf, uint8_t num, uint8_t type, char *name);
+
+//static void preset_makeFileNameTemp(char *buf, uint8_t num, uint8_t type);
 
 /*------------------------------------------------------------/
 / Remove all contents of a directory
@@ -773,7 +509,10 @@ void preset_init(uint8_t presetNr)
 
 	for(int i=8;i<END_OF_SOUND_PARAMETERS; i++)
 	{
-		para[i-8] = initKit[i];
+		if(i<INIT_KIT_SIZE)
+			para[i-8] = initKit[i];
+		else
+			para[i-8] = 0;
 	}
 
 	//special case mod targets. normalize.
@@ -804,7 +543,11 @@ static void preset_writeDrumsetData(uint8_t presetNr, uint8_t isMorph)
 	{
 		for(i=0;i<END_OF_SOUND_PARAMETERS;i++)
 		{
+			soundengine_process();
 			uint8_t value;
+
+
+#if OLD
 			//Mod targets are not morphed!!!
 			if( (i >= PAR_VEL_DEST_1) && (i <= PAR_VEL_DEST_6) )
 			{
@@ -819,12 +562,35 @@ static void preset_writeDrumsetData(uint8_t presetNr, uint8_t isMorph)
 			else 
 			{
 				value = preset_getMorphValue(i,activeParameters[PAR_MORPH]);
-			}					
+			}
+#else
+
+			//Do not morph audio routing
+			if((i >= PAR_AUDIO_OUT1) && (i <= PAR_AUDIO_OUT6)) //morph_index++;
+			{
+				//always use source kit (morph = 0) for audio routing
+				//morph = 0;
+				value = preset_getMorphValue(i, 0);
+			}
+			else
+			{
+				//morph = activeParameters[PAR_MORPH];
+				value = preset_getMorphValue(i, activeParameters[PAR_MORPH]);
+			}
+
+
+			//morph = preset_morphValue;
+
+			//const uint8_t val = interpolate(activeParameters[morph_index],morphParameters[morph_index],morph);
+
+			//value = interpolate(activeParameters[i],mainParameters[activeParameters[PAR_MORPH_TARGET]][i],activeParameters[PAR_MORPH]);
+#endif
 			f_write((FIL*)&SDFile,&value,1,&bytesWritten);
 		}
 	} else {
 		for(i=0;i<END_OF_SOUND_PARAMETERS;i++)
 		{
+			soundengine_process();
 			f_write((FIL*)&SDFile,&mainParameters[presetNr][i],1,&bytesWritten);
 		}
 	}
@@ -836,17 +602,27 @@ void preset_loadDrumsetRam(uint8_t presetNr, uint8_t isMorph, uint8_t sendImmedi
 	soundengine_process();
 	if(isMorph)
 	{
-		morphParameters = mainParameters[presetNr];
+		//morphParameters = mainParameters[presetNr];
 	}
 	else
 	{
 		//copy parameters to edit buffer
-		memcpy(activeParameters, mainParameters[presetNr], sizeof(uint8_t) * END_OF_SOUND_PARAMETERS);
+		if(activeParameters[PAR_CV_SAVE] == 0) //kit
+		{
+			memcpy(activeParameters, mainParameters[presetNr], sizeof(uint8_t) * END_OF_SOUND_PARAMETERS);
+		}
+		else
+		{
+			//load everything but CV routing
+			memcpy(activeParameters, mainParameters[presetNr], sizeof(uint8_t) * PAR_CV_DEST_1);
+
+
+		}
 		//if(activeParameters[PAR_PATTERN_MODE] = 1)
 		//load asociated morph kit as well
+		//morphParameters = mainParameters[activeParameters[PAR_MORPH_KIT_DEST]];
 
-		// morphParameters = mainParameters[activeParameters[PAR_MORPH_KIT_DEST]];
-
+		preset_saveLastUsedPresetNrToSD(presetNr);
 
 	}
 	soundengine_process();
@@ -868,7 +644,10 @@ void preset_saveDrumsetRam(uint8_t presetNr, uint8_t isMorph)
 	{
 		for(uint16_t i=0;i<END_OF_SOUND_PARAMETERS;i++)
 		{
+			soundengine_process();
 			uint8_t value;
+
+#if OLD
 			//Mod targets are not morphed!!!
 			if( (i >= PAR_VEL_DEST_1) && (i <= PAR_VEL_DEST_6) )
 			{
@@ -884,12 +663,34 @@ void preset_saveDrumsetRam(uint8_t presetNr, uint8_t isMorph)
 			{
 				value = preset_getMorphValue(i,activeParameters[PAR_MORPH]);
 			}
+
+#else
+			//Do not morph audio routing
+			if((i >= PAR_AUDIO_OUT1) && (i <= PAR_AUDIO_OUT6)) //morph_index++;
+			{
+				//always use source kit (morph = 0) for audio routing
+				//morph = 0;
+				//value = interpolate(activeParameters[i],mainParameters[activeParameters[PAR_MORPH_TARGET]][i],0);
+				value = preset_getMorphValue(i, 0);
+			}
+			else
+			{
+				//morph = activeParameters[PAR_MORPH];
+				value = preset_getMorphValue(i, activeParameters[PAR_MORPH]);
+				//value = interpolate(activeParameters[i],mainParameters[activeParameters[PAR_MORPH_TARGET]][i],activeParameters[PAR_MORPH]);
+			}
+
+
+
+#endif
+
 			//f_write((FIL*)&SDFile,&value,1,&bytesWritten);
 			mainParameters[presetNr][i] = value;
 		}
 	}
 	else
 	{
+		soundengine_process();
 		//copy edit buffer to parameter array
 		memcpy(mainParameters[presetNr], activeParameters, sizeof(uint8_t) * END_OF_SOUND_PARAMETERS);
 	}
@@ -897,24 +698,46 @@ void preset_saveDrumsetRam(uint8_t presetNr, uint8_t isMorph)
 //----------------------------------------------------
 FRESULT preset_saveDrumsetSD(uint8_t presetNr, uint8_t isMorph)
 {
+#if !CALC_SAMPLES_IN_INTERRUPT
+	soundengine_process();
+#endif
 #if USE_SD_CARD
 	FRESULT res;
 	unsigned int bytesWritten;
 	//filename in 8.3  format
 	char filename[13];
+
+	// look for file with the same slot nr but different name
+	// if present, delete
+	res = preset_makeFileNameLoad(filename,presetNr,FEXT_SOUND);
+	if(res == FR_OK)
+	{
+		res = f_unlink(filename);
+	}
+
+
+	//now process with new name
 	preset_makeFileNameSave(filename,presetNr,FEXT_SOUND, savefileNames[presetNr][KIT_NAMES]);
 	//sprintf(filename,"p%03d.snd",presetNr);
+#if !CALC_SAMPLES_IN_INTERRUPT
+	soundengine_process();
+#endif
 
 
 
 	//open the file
 	res = f_open((FIL*)&SDFile,filename,FA_CREATE_ALWAYS | FA_WRITE);
 	if(res != FR_OK) return res;
-	
+#if !CALC_SAMPLES_IN_INTERRUPT
+	soundengine_process();
+#endif
 	//write preset name to file
 
 	res = f_write((FIL*)&SDFile,(void*)savefileNames[presetNr][KIT_NAMES],8,&bytesWritten);
 	if(res != FR_OK) return res;
+#if !CALC_SAMPLES_IN_INTERRUPT
+	soundengine_process();
+#endif
 	//write the preset data
 	preset_writeDrumsetData(presetNr, isMorph);
 	
@@ -1047,7 +870,7 @@ void preset_loadDefaultGlobals()
 	activeParameters[PAR_MIDI_NOTE7] = 48;
 
 
-	activeParameters[PAR_FETCH] = 0;
+	activeParameters[PAR_CV_SAVE] = 0;
 	activeParameters[PAR_FOLLOW] = 0;
 
 	activeParameters[PAR_QUANTISATION] = 0;
@@ -1076,14 +899,14 @@ void preset_createGlobals()
 	preset_saveGlobals();
 }
 //----------------------------------------------------
-FRESULT preset_loadLastUsedProjectNrFromSD(uint8_t* projNr)
+FRESULT preset_loadLastUsedPresetNrFromSD(uint8_t* presetNr)
 {
     FRESULT res;
 
-    *projNr = 0;
+    *presetNr = 0;
     unsigned int bytesRead;
 
-    res = f_open((FIL*)&SDFile,"/proj.idx",FA_OPEN_EXISTING | FA_READ);
+    res = f_open((FIL*)&SDFile,"/state.idx",FA_OPEN_EXISTING | FA_READ);
     if(res != FR_OK)
     {
     	//close the file handle
@@ -1091,7 +914,7 @@ FRESULT preset_loadLastUsedProjectNrFromSD(uint8_t* projNr)
     	return res;
     }
 
-    res=f_read((FIL*)&SDFile, projNr,1, &bytesRead);
+    res=f_read((FIL*)&SDFile, presetNr,1, &bytesRead);
 	//close the file handle
 	f_close((FIL*)&SDFile);
 
@@ -1099,13 +922,13 @@ FRESULT preset_loadLastUsedProjectNrFromSD(uint8_t* projNr)
 	return res;
 }
 //----------------------------------------------------
-FRESULT preset_saveLastUsedProjectNrToSD(uint8_t projNr)
+FRESULT preset_saveLastUsedPresetNrToSD(uint8_t presetNr)
 {
 #if USE_SD_CARD
     FRESULT res;
 
 	//open the file
-	res = f_open((FIL*)&SDFile,"/proj.idx",FA_CREATE_ALWAYS | FA_WRITE);
+	res = f_open((FIL*)&SDFile,"/state.idx",FA_CREATE_ALWAYS | FA_WRITE);
 	if(res != FR_OK)
 	{
 		//close the file handle
@@ -1114,7 +937,7 @@ FRESULT preset_saveLastUsedProjectNrToSD(uint8_t projNr)
 	}
 
 	unsigned int bytesWritten;
-	res = f_write((FIL*)&SDFile,&projNr,1,&bytesWritten);
+	res = f_write((FIL*)&SDFile,&presetNr,1,&bytesWritten);
 	if(res != FR_OK)
 	{
 		//close the file handle
@@ -1133,7 +956,7 @@ FRESULT preset_saveLastUsedProjectNrToSD(uint8_t projNr)
 //----------------------------------------------------
 // read the data into either the main parameters or the morph parameters.
 // fix some values, and set values to 0 that were not read in
-static FRESULT preset_readDrumsetData(uint8_t presetNr, uint8_t isMorph)
+static FRESULT preset_readDrumsetData(uint8_t presetNr)
 {
 	
 #if USE_SD_CARD		
@@ -1143,11 +966,7 @@ static FRESULT preset_readDrumsetData(uint8_t presetNr, uint8_t isMorph)
 	uint8_t *para;
 	bytesRead = 0;
 	
-	// TODO check: using this function for morph may be wrong
-	if(isMorph)
-		para=morphParameters;
-	else
-		para=mainParameters[presetNr];
+	para=mainParameters[presetNr];
 
 	FRESULT res=f_read((FIL*)&SDFile, para,END_OF_SOUND_PARAMETERS, &bytesRead);
 	if(res==FR_OK) {
@@ -1165,6 +984,8 @@ static FRESULT preset_readDrumsetData(uint8_t presetNr, uint8_t isMorph)
 			if(para[PAR_TARGET_LFO1+i] >= nmt )
 				para[PAR_TARGET_LFO1+i] = 0;
 		}
+
+
 	}
 
 	return res;
@@ -1173,7 +994,7 @@ static FRESULT preset_readDrumsetData(uint8_t presetNr, uint8_t isMorph)
 }
 
 //----------------------------------------------------
-FRESULT preset_loadDrumsetSD(uint8_t presetNr, uint8_t isMorph)
+FRESULT preset_loadDrumsetSD(uint8_t presetNr)
 {
 	//activePresetNr = presetNr;
 #if USE_SD_CARD
@@ -1196,13 +1017,24 @@ FRESULT preset_loadDrumsetSD(uint8_t presetNr, uint8_t isMorph)
 	FRESULT res = f_open((FIL*)&SDFile,filename,FA_OPEN_EXISTING | FA_READ);
 	*/
 	FRESULT res = preset_makeFileNameLoad(filename,presetNr,FEXT_SOUND);
+	if(res==FR_OK)
+	{
+		res = f_open((FIL*)&SDFile,filename,FA_OPEN_EXISTING | FA_READ);
+	}
+
 	if(res!=FR_OK)
 	{
 		//try old filename
 		preset_makeFileNameOld(filename,presetNr,FEXT_SOUND);
 		res = f_open((FIL*)&SDFile,filename,FA_OPEN_EXISTING | FA_READ);
 		if(res!=FR_OK)
-			goto error; //file open error... maybe the file does not exist?
+		{
+			//file does not exist... load init preset
+			preset_init(presetNr);
+			//sprintf((void*)savefileNames[presetNr][KIT_NAMES], "Empty");
+			return FR_OK;
+			//goto error; //file open error... maybe the file does not exist?
+		}
 	}
 
 #if !CALC_SAMPLES_IN_INTERRUPT
@@ -1227,7 +1059,7 @@ FRESULT preset_loadDrumsetSD(uint8_t presetNr, uint8_t isMorph)
 	soundengine_calcNextSampleBlock();
 #endif
 	//then the data
-	res=preset_readDrumsetData(presetNr, isMorph);
+	res=preset_readDrumsetData(presetNr);
 #if !CALC_SAMPLES_IN_INTERRUPT
 	//to prevent audio dropouts
 	soundengine_calcNextSampleBlock();
@@ -1238,10 +1070,9 @@ closeFile:
 
 	// update the soundengine with the new parameters
 	if(res==FR_OK) {
-		preset_sendDrumsetParameters();
+		//preset_sendDrumsetParameters();
 		return FR_OK;
 	}
-error:
 	return res;
 #else
 	frontPanel_sendData(PRESET,PRESET_LOAD,presetNr);
@@ -1262,13 +1093,14 @@ static uint8_t interpolate(uint8_t a, uint8_t b, uint8_t x)
 //----------------------------------------------------
 IN_ITCM_RAM void preset_sendDrumsetParametersImmediate()
 {
+	uint8_t i;
 		//special case mod targets
-		for(uint8_t i=0;i<6;i++)
+		for(i=0;i<NUM_MOD_SLOTS;i++)
 		{
 			//**VELO load drumkit. translate to param value before sending
 			// parameter_values[PAR_VEL_DEST_1+i] is an index into modTargets, we need to send
 			// a parameter number
-			uint8_t value = (uint8_t)pgm_read_word(&modTargets[activeParameters[PAR_VEL_DEST_1+i]].param);
+			uint16_t value = pgm_read_word(&modTargets[activeParameters[PAR_VEL_DEST_1+i]].param);
 			uint8_t upper,lower;
 			upper = (uint8_t)(((value&0x80)>>7) | (((i)&0x3f)<<1));
 			lower = value&0x7f;
@@ -1279,14 +1111,18 @@ IN_ITCM_RAM void preset_sendDrumsetParametersImmediate()
 				activeParameters[PAR_VOICE_LFO1+i]=1;
 
 			// **LFO par_target_lfo will be an index into modTargets, but we need a parameter number to send
-			value = (uint8_t)pgm_read_word(&modTargets[activeParameters[PAR_TARGET_LFO1+i]].param);
+			value = pgm_read_word(&modTargets[activeParameters[PAR_TARGET_LFO1+i]].param);
 
 			upper = (uint8_t)(((value&0x80)>>7) | (((i)&0x3f)<<1));
 			lower = value&0x7f;
 			frontPanel_sendData(CC_LFO_TARGET,upper,lower);
+
+			//CV
+			value = pgm_read_word(&modTargets[activeParameters[PAR_CV_DEST_1+i]].param);
+			modNode_setDestination(&cvModulators[i], value);
 		}
 
-		static MidiMsg msg = {0};
+		static MidiMsg msg = {0,0,0, {0,0,0}};
 		//pre-send fx type to prevent clicks
 		/*
 		msg.status = CC_2;
@@ -1326,21 +1162,25 @@ IN_ITCM_RAM void preset_sendDrumsetParametersImmediate()
 				msg.data2 = val;
 
 				msg.data1 += 1;
-				msg.data1 &= 0x7f;
+			//	msg.data1 &= 0x7f;
 				midiParser_ccHandler(msg,1, 0, 0.f);
 
 
 			}
-			else
+			else if (morph_index <= 255 )
 			{
 				msg.status = CC_2;
 				msg.data1 = paramNumber-128; //stupid offset only in CC not CC2
 				msg.data2 = val;
 
 			//	msg.data1 += 1;
-				msg.data1 &= 0x7f;
+			//	msg.data1 &= 0x7f;
 				midiParser_ccHandler(msg,1, 0, 0.f);
 
+			}
+			else
+			{
+	#pragma message "nothing over 255 is morphed (mod matrix stuff)"
 			}
 			soundengine_process();
 		}
@@ -1351,12 +1191,12 @@ void preset_sendDrumsetParameters()
 {
 	uint8_t i;
 	//special case mod targets
-	for(i=0;i<6;i++)
+	for(i=0;i<NUM_MOD_SLOTS;i++)
 	{
 		//**VELO load drumkit. translate to param value before sending
 		// parameter_values[PAR_VEL_DEST_1+i] is an index into modTargets, we need to send
 		// a parameter number
-		uint8_t value = (uint8_t)pgm_read_word(&modTargets[activeParameters[PAR_VEL_DEST_1+i]].param);
+		uint16_t value = pgm_read_word(&modTargets[activeParameters[PAR_VEL_DEST_1+i]].param);
 		uint8_t upper,lower;
 		upper = (uint8_t)(((value&0x80)>>7) | (((i)&0x3f)<<1));
 		lower = value&0x7f;
@@ -1367,16 +1207,21 @@ void preset_sendDrumsetParameters()
 			activeParameters[PAR_VOICE_LFO1+i]=1;
 
 		// **LFO par_target_lfo will be an index into modTargets, but we need a parameter number to send
-		value = (uint8_t)pgm_read_word(&modTargets[activeParameters[PAR_TARGET_LFO1+i]].param);
+		value = pgm_read_word(&modTargets[activeParameters[PAR_TARGET_LFO1+i]].param);
 
 		upper = (uint8_t)(((value&0x80)>>7) | (((i)&0x3f)<<1));
 		lower = value&0x7f;
 		frontPanel_sendData(CC_LFO_TARGET,upper,lower);
+
+
+		//CV
+		value = pgm_read_word(&modTargets[activeParameters[PAR_CV_DEST_1+i]].param);
+		modNode_setDestination(&cvModulators[i], value);
 	}
 
 	// todo will this morph (and fuck up) our modulation targets?
 	// send parameters (possibly combined with morph parameters) to back
-	preset_morph(activeParameters[PAR_MORPH]);
+	preset_morph(activeParameters[PAR_MORPH], 1);
 
 
 
@@ -1576,6 +1421,7 @@ void preset_queryMainStepDataFromSeq(uint16_t stepNr, uint16_t *mainStepData, ui
 };
 
 //----------------------------------------------------
+#if !EURORACK_MODULE
 static void preset_writePatternData(uint8_t patternNr)
 {
 #if 0
@@ -1832,7 +1678,7 @@ static uint8_t preset_readPatternData(uint8_t patternNr, uint8_t dataVersion)
 	}
 
 	// ----------- Pattern/track lengths
-	// -- AS this might not exist in the saved data file, we still want success
+	// this might not exist in the saved data file, we still want success
 	if(success) {
 
 
@@ -1947,7 +1793,7 @@ static uint8_t preset_readPatternData(uint8_t patternNr, uint8_t dataVersion)
 	}
 
 	// ----------- Pattern/track lengths
-	// -- AS this might not exist in the saved data file, we still want success
+	// this might not exist in the saved data file, we still want success
 	if(success) {
 
 			for(uint8_t trk=0; trk<NUM_TRACKS;trk++)
@@ -2123,6 +1969,7 @@ FRESULT preset_loadPatternRAM(uint8_t presetNr)
 	//I'm unused since there is no Pattern Load page, it just uses the pattern change/select page instead
 	return FR_OK;
 }
+#endif
 //----------------------------------------------------
 //called periodically to process non blocking morph
 void preset_morph_tick()
@@ -2142,13 +1989,15 @@ void preset_morph_tick()
 		}
 		else
 		{
-			morph = activeParameters[PAR_MORPH];
+			//morph = activeParameters[PAR_MORPH];
+			morph = preset_morphValue;
 		}
 
-		static MidiMsg msg = {0};
+		static MidiMsg msg = {0,0,0, {0,0,0}};
 
 
-		const uint8_t val = interpolate(activeParameters[morph_index],morphParameters[morph_index],morph);
+		//const uint8_t val = interpolate(activeParameters[morph_index],morphParameters[morph_index],morph);
+		const uint8_t val = interpolate(activeParameters[morph_index],mainParameters[activeParameters[PAR_MORPH_TARGET]][morph_index],morph);
 
 
 		if(morph_index < 128)
@@ -2167,21 +2016,25 @@ void preset_morph_tick()
 			msg.data2 = val;
 
 			msg.data1 += 1;
-			msg.data1 &= 0x7f;
+		//	msg.data1 &= 0x7f;
 			midiParser_ccHandler(msg,1, 0, 0.f);
 
 
 		}
-		else
+		else if (morph_index <= 255 )
 		{
 			msg.status = CC_2;
 			msg.data1 = morph_index-128; //stupid offset only in CC not CC2
 			msg.data2 = val;
 
 		//	msg.data1 += 1;
-			msg.data1 &= 0x7f;
+		//	msg.data1 &= 0x7f;
 			midiParser_ccHandler(msg,1, 0, 0.f);
 
+		}
+		else
+		{
+#pragma message "nothing over 255 is morphed (mod matrix stuff)"
 		}
 
 
@@ -2198,12 +2051,24 @@ void preset_morph_tick()
 // and morph parameters and send the data to the back
 // if the morph value is 0 it will just send the parameter values
 // to the back
-void preset_morph(uint8_t morph)
+void preset_morph(uint8_t morph, uint8_t forceResetIndex)
 {
 #if 1
+
+	if(forceResetIndex)
+	{
+		morph_index = 0; //reset index
+	}
+	else if(morph_index >= END_OF_SOUND_PARAMETERS)
+	{
+		//for modulation node controlled morph we can't always reset the index, or it will stay around 0 and never go up
+		//so we just reset it when the morph is finished already
+		morph_index = 0; //reset index
+	}
 	//initialize new morph
+	preset_morphValue = morph;
 	morph_state = 1; //start morph
-	morph_index = 0; //reset index
+
 #else
 	int i;
 	//TODO so far only sound parameters are interpolated, no LFOs etc
@@ -2239,10 +2104,10 @@ void preset_morph(uint8_t morph)
 //----------------------------------------------------
 uint8_t preset_getMorphValue(uint16_t index, uint8_t morph)
 {
-	return interpolate(activeParameters[index],morphParameters[index],morph);
+	return interpolate(activeParameters[index],mainParameters[activeParameters[PAR_MORPH_TARGET]][index],morph);
 };
 //----------------------------------------------------
-
+#if !EURORACK_MODULE
 FRESULT preset_createProject(uint8_t presetNr)
 {
 
@@ -2262,6 +2127,7 @@ FRESULT preset_createProject(uint8_t presetNr)
 
 	preset_loadDefaultGlobals();
 	//give active song pointer a proper value
+#if !EURORACK_MODULE
 	seq_activeSong = seq_songData[0];
 
 	memset(seq_songData, SONG_END, sizeof(uint8_t) * MAX_SONG_LENGTH * NUM_KIT_SLOTS);
@@ -2279,10 +2145,8 @@ FRESULT preset_createProject(uint8_t presetNr)
 		seq_clearPattern(i); // will clear all tracks in the pattern
 		preset_init(i); //set all kits to init sound
 	}
-
+#endif
 	sprintf(savefileNames[presetNr][PROJECT_NAMES], "Init");
-
-	preset_clearTmpFolder();
 
 	return FR_OK;
 }
@@ -2297,8 +2161,9 @@ FRESULT preset_saveProject(uint8_t presetNr)
 	FILINFO fno;
 
 	preset_saveDrumsetRam(menu_selectedPresetNr[SAVE_TYPE_KIT], 0);
+#if !EURORACK_MODULE
 	preset_savePatternRAM(seq_activePattern);
-
+#endif
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2337,14 +2202,11 @@ FRESULT preset_saveProject(uint8_t presetNr)
 		else
 		{
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
 
 #endif
-
-
 			return res;
 		}
 	}
@@ -2354,13 +2216,11 @@ FRESULT preset_saveProject(uint8_t presetNr)
 		if(res != FR_OK)
 		{
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
 
 #endif
-
 			return res;
 		}
 
@@ -2368,13 +2228,11 @@ FRESULT preset_saveProject(uint8_t presetNr)
 		if(res != FR_OK)
 		{
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
 
 #endif
-
 			return res;
 		};
 	}
@@ -2391,13 +2249,11 @@ FRESULT preset_saveProject(uint8_t presetNr)
 	res = f_open((FIL*)&SDFile,"prj.nfo",FA_CREATE_ALWAYS | FA_WRITE);
 	if(res != FR_OK) {
 		lcd_process_display_interrupt = 1;
-		preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
 
 #endif
-
 		return res;
 	}
 	unsigned int bytesWritten;
@@ -2405,13 +2261,11 @@ FRESULT preset_saveProject(uint8_t presetNr)
 	res = f_write((FIL*)&SDFile,(void*)savefileNames[presetNr][PROJECT_NAMES],8,&bytesWritten);
 	if(res != FR_OK) {
 		lcd_process_display_interrupt = 1;
-		preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
 
 #endif
-
 		return res;
 	}
 	//close the file
@@ -2430,20 +2284,17 @@ FRESULT preset_saveProject(uint8_t presetNr)
 		res = preset_saveDrumsetSD(i, 0);
 		if(res != FR_OK) {
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
 
 #endif
-
 			return res;
 		}
 	//	soundengine_process();
 		res = preset_savePatternSD(i);
 		if(res != FR_OK) {
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2455,7 +2306,6 @@ FRESULT preset_saveProject(uint8_t presetNr)
 		res = preset_saveSongSD(i);
 		if(res != FR_OK) {
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2466,14 +2316,13 @@ FRESULT preset_saveProject(uint8_t presetNr)
 	}
 
 	lcd_process_display_interrupt = 1;
-	preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
 
 #endif
 
-			preset_clearTmpFolder();
+
 
 	return FR_OK;
 
@@ -2552,8 +2401,9 @@ FRESULT preset_saveProject(uint8_t presetNr)
 #endif
 #endif
 }
-
+#endif
 //----------------------------------------------------
+#if !EURORACK_MODULE
 FRESULT preset_loadSongSD(uint8_t songNr)
 {
 	FRESULT res;
@@ -2667,11 +2517,10 @@ void preset_loadProjectNames(uint8_t projectNr)
 		}
 
 		f_close((FIL*)&SDFile);
-		preset_initTmpFolder();
 
 }
 //----------------------------------------------------
-FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
+FRESULT preset_loadProject(uint8_t presetNr)
 {
 	FRESULT res;
 	FILINFO fno;
@@ -2685,11 +2534,6 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 #else
 
 #endif
-
-	if(clearTmp)
-	{
-		preset_clearTmpFolder();
-	}
 	/*
 	MX_FATFS_ReInit();
 	f_mount(0, (TCHAR const*)SDPath, 0); //un-mount
@@ -2722,7 +2566,6 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 		else
 		{
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2737,7 +2580,6 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 		if (res != FR_OK)
 		{
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2759,7 +2601,6 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 	if (res != FR_OK)
 	{
 		lcd_process_display_interrupt = 1;
-		preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2773,7 +2614,6 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 	if (res != FR_OK)
 	{
 		lcd_process_display_interrupt = 1;
-		preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2820,7 +2660,6 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 		if ((res != FR_OK) && (res != FR_NO_FILE))
 		{
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 			f_close((FIL*)&SDFile);
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
@@ -2834,7 +2673,6 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 		{
 			f_close((FIL*)&SDFile);
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2847,7 +2685,6 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 		{
 			f_close((FIL*)&SDFile);
 			lcd_process_display_interrupt = 1;
-			preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -2884,13 +2721,12 @@ FRESULT preset_loadProject(uint8_t presetNr, uint8_t clearTmp)
 
 	}
 
-	preset_saveLastUsedProjectNrToSD(presetNr);
+	preset_saveLastUsedPresetNrToSD(presetNr);
 
 	//change pattern to pat 1
 	seq_setNextPattern(0);
 
 	lcd_process_display_interrupt = 1;
-	preset_initTmpFolder();
 #if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
 			HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
 #else
@@ -3010,6 +2846,7 @@ closeFile:
 #endif
 #endif
 }
+#endif
 //----------------------------------------------------
 
 static void preset_makeFileNameOld(char *buf, uint8_t num, uint8_t type)
@@ -3051,38 +2888,73 @@ static FRESULT preset_makeFileNameLoad(char *buf, uint8_t num, uint8_t type)
     FILINFO fno;    /* File information */
 
 	const char *ext;
-	numtostrpu_2Bytes(&buf[0],num,'0');
-	buf[2] = '-';
-	buf[3] = '*';
 
-	switch(type) {
-	case FEXT_SOUND:
-		ext=PSTR(".snd");
-		break;
-	case FEXT_PAT:
-		ext=PSTR(".pat");
-		break;
-	case FEXT_ALL:
-		ext=PSTR(".all");
-		break;
-	default:
-	case FEXT_PROJ:
-		ext=PSTR(".prj");
-		break;
 
-	case FEXT_SONG:
-		ext=PSTR(".sng");
-		break;
+	if(num>99)
+	{
+		numtostrpu(&buf[0],num,'0');
+		buf[3] = '-';
+		buf[4] = '*';
+
+		switch(type) {
+		case FEXT_SOUND:
+			ext=PSTR(".snd");
+			break;
+		case FEXT_PAT:
+			ext=PSTR(".pat");
+			break;
+		case FEXT_ALL:
+			ext=PSTR(".all");
+			break;
+		default:
+		case FEXT_PROJ:
+			ext=PSTR(".prj");
+			break;
+
+		case FEXT_SONG:
+			ext=PSTR(".sng");
+			break;
+		}
+		strcpy(&buf[5],ext);
+		buf[9] = 0;
+
 	}
-	strcpy(&buf[4],ext);
-	buf[8] = 0;
+	else
+	{
+		numtostrpu_2Bytes(&buf[0],num,'0');
+		buf[2] = '-';
+		buf[3] = '*';
+
+		switch(type) {
+		case FEXT_SOUND:
+			ext=PSTR(".snd");
+			break;
+		case FEXT_PAT:
+			ext=PSTR(".pat");
+			break;
+		case FEXT_ALL:
+			ext=PSTR(".all");
+			break;
+		default:
+		case FEXT_PROJ:
+			ext=PSTR(".prj");
+			break;
+
+		case FEXT_SONG:
+			ext=PSTR(".sng");
+			break;
+		}
+		strcpy(&buf[4],ext);
+		buf[8] = 0;
+	}
 
 
     fr = f_findfirst(&dj, &fno, "", buf);  /* Start to search for preset files */
     f_closedir(&dj);
     if(fr == FR_OK && fno.fname[0])
     {
-    	fr = f_open((FIL*)&SDFile,fno.fname,FA_OPEN_EXISTING | FA_READ);
+    	memcpy(buf, fno.fname, 13);
+    	//fr = f_open((FIL*)&SDFile,fno.fname,FA_OPEN_EXISTING | FA_READ);
     	return fr;
     }
 
@@ -3127,46 +2999,94 @@ static void preset_makeFileNameSave(char *buf, uint8_t num, uint8_t type, char *
 	clearIllegalCharacters(name , clearedName, 8);
 	//name scheme: 01-NAME.ext
 	const char *ext;
-	numtostrpu_2Bytes(&buf[0],num,'0');
-	buf[2] = '-';
 
-	//copy the first 5 characters of the name to the filename if not empty
-	uint8_t i=0;
-	for( ; i<5; i++)
+
+	if(num>99)
 	{
-		if(clearedName[i] != 0)
+		numtostrpu(&buf[0],num,'0');
+		buf[3] = '-';
+
+		//copy the first 4 characters of the name to the filename if not empty
+		uint8_t i=0;
+		for( ; i<4; i++)
 		{
-			if(clearedName[i] == ' ')
-				buf[3+i] = '_';
+			if(clearedName[i] != 0)
+			{
+				if(clearedName[i] == ' ')
+					buf[4+i] = '_';
+				else
+					buf[4+i] = clearedName[i];
+			}
 			else
-				buf[3+i] = clearedName[i];
+			{
+				break;
+			}
 		}
-		else
-		{
+
+		switch(type) {
+		case FEXT_SOUND:
+			ext=PSTR(".snd");
+			break;
+		case FEXT_PAT:
+			ext=PSTR(".pat");
+			break;
+		case FEXT_ALL:
+			ext=PSTR(".all");
+			break;
+		default:
+		case FEXT_PROJ:
+			ext=PSTR(".prj");
+			break;
+
+		case FEXT_SONG:
+			ext=PSTR(".sng");
 			break;
 		}
+		strcpy(&buf[4+i],ext);
 	}
+	else
+	{
+		numtostrpu_2Bytes(&buf[0],num,'0');
+		buf[2] = '-';
 
-	switch(type) {
-	case FEXT_SOUND:
-		ext=PSTR(".snd");
-		break;
-	case FEXT_PAT:
-		ext=PSTR(".pat");
-		break;
-	case FEXT_ALL:
-		ext=PSTR(".all");
-		break;
-	default:
-	case FEXT_PROJ:
-		ext=PSTR(".prj");
-		break;
+		//copy the first 5 characters of the name to the filename if not empty
+		uint8_t i=0;
+		for( ; i<5; i++)
+		{
+			if(clearedName[i] != 0)
+			{
+				if(clearedName[i] == ' ')
+					buf[3+i] = '_';
+				else
+					buf[3+i] = clearedName[i];
+			}
+			else
+			{
+				break;
+			}
+		}
 
-	case FEXT_SONG:
-		ext=PSTR(".sng");
-		break;
+		switch(type) {
+		case FEXT_SOUND:
+			ext=PSTR(".snd");
+			break;
+		case FEXT_PAT:
+			ext=PSTR(".pat");
+			break;
+		case FEXT_ALL:
+			ext=PSTR(".all");
+			break;
+		default:
+		case FEXT_PROJ:
+			ext=PSTR(".prj");
+			break;
+
+		case FEXT_SONG:
+			ext=PSTR(".sng");
+			break;
+		}
+		strcpy(&buf[3+i],ext);
 	}
-	strcpy(&buf[3+i],ext);
 }
 
 //----------------------------------------------------

@@ -16,8 +16,9 @@
 #include "buttonHandler.h"
 #include <string.h>
 #include "menu/menu.h"
+#include "main.h"
 #include "Soundengine/globals.h"
-#include "Soundengine/Sequencer/sequencer.h"
+//#include "Soundengine/Sequencer/sequencer.h"
 
 //since we need an array to store the start time we have to limit the number of simultanousely pulsable LEDs
 #define NUM_OF_PULSABLE_LEDS 8	//MAX 8 at the moment (because of led_pulsingLeds)
@@ -45,7 +46,7 @@ volatile uint8_t led_pulsingLeds;
 
 
 //volatile uint16_t led_nextBlinkTime[NUM_OF_BLINKABLE_LEDS];		/**< stores the time a LED was activated*/
-//uint32_t led_nextBlinkTime=0;
+uint32_t led_nextBlinkTime=0;
 volatile uint8_t led_blinkLedNumber[NUM_OF_BLINKABLE_LEDS];	/**< stores the corresponding LED number*/
 volatile uint8_t led_blinkingLeds;
 uint8_t led_blinkToggleState = 0;							//to synchronize all blinking LEDs
@@ -58,6 +59,8 @@ void led_init()
 	memset((void*)led_originalLedState,0,NUM_OUTS/8);
 };
 //--------------------------------------------
+
+#if !EURORACK_MODULE
 void led_clearSelectLeds()
 {
 	/*
@@ -73,7 +76,9 @@ void led_clearSelectLeds()
 	led_originalLedState[2] &= ~(0x0f);
 
 }
+#endif
 //--------------------------------------------
+#if !EURORACK_MODULE
 void led_initPatternSelectLeds()
 {
 	const uint8_t bank = menu_playedPattern/16;
@@ -122,14 +127,38 @@ void led_initPatternSelectLeds()
 	}
 
 };
+#endif
 //--------------------------------------------
-void led_clearVoiceLeds()
+void led_clearLeds_1To8()
 {
+#if !EURORACK_MODULE
 	uint8_t arrayPos = LED_VOICE1/8;
 	dout_outputData[arrayPos] &= 0x80;
 	led_originalLedState[arrayPos] &= 0x80;
+#else
+
+
+	dout_outputData[0] &= 0x0F;
+	led_originalLedState[0] &= 0x0F;
+
+	dout_outputData[1] &= 0xF0;
+	led_originalLedState[1] &= 0xF0;
+/*
+	LED_1_GPIO_Port->BSRR = LED_1_Pin << 16;
+	LED_2_GPIO_Port->BSRR = LED_2_Pin << 16;
+	LED_3_GPIO_Port->BSRR = LED_3_Pin << 16;
+	LED_4_GPIO_Port->BSRR = LED_4_Pin << 16;
+	LED_5_GPIO_Port->BSRR = LED_5_Pin << 16;
+	LED_6_GPIO_Port->BSRR = LED_6_Pin << 16;
+	LED_7_GPIO_Port->BSRR = LED_7_Pin << 16;
+	*/
+
+
+#endif
+
 }
 //--------------------------------------------
+#if !EURORACK_MODULE
 void led_setActivePage(uint8_t pageNr)
 {
 	uint8_t ledIdx = led_idx2SelectLed(pageNr);
@@ -148,6 +177,7 @@ void led_setActivePage(uint8_t pageNr)
 	//since this is not a temp. change, store in led_originalLedState as well
 	led_originalLedState[arrayPos] |= (uint8_t)(1<<bitPos);
 };
+#endif
 //-------------------------------------------
 uint8_t led_idx2SelectLed(uint8_t idx)
 {
@@ -155,50 +185,58 @@ uint8_t led_idx2SelectLed(uint8_t idx)
 	switch(idx)
 	{
 		case 0:
-			ledIdx = LED_PART_SELECT1;
+			ledIdx = LED_1;
 			break;
 		case 1:
-			ledIdx = LED_PART_SELECT2;
+			ledIdx = LED_2;
 			break;
 		case 2:
-			ledIdx = LED_PART_SELECT3;
+			ledIdx = LED_3;
 			break;
 		case 3:
-			ledIdx = LED_PART_SELECT4;
+			ledIdx = LED_4;
 			break;
 		case 4:
-			ledIdx = LED_PART_SELECT5;
+			ledIdx = LED_5;
 			break;
 		case 5:
-			ledIdx = LED_PART_SELECT6;
+			ledIdx = LED_6;
 			break;
 		case 6:
-			ledIdx = LED_PART_SELECT7;
+			ledIdx = LED_7;
 			break;
 		case 7:
-			ledIdx = LED_PART_SELECT8;
+			ledIdx = LED_8;
 			break;
 	}
+
+#if EURORACK_MODULE
+//	ledIdx++;
+#endif
 	return ledIdx;
 }
 //---------------------------------------------
+
 void led_setActiveSelectButton(uint8_t butNr)
 {
+
 	uint8_t ledIdx = led_idx2SelectLed(butNr);
 
 	//butNr = (uint8_t)(butNr + LED_PART_SELECT1);
 	const uint8_t arrayPos = ledIdx/8;
 	const uint8_t bitPos = ledIdx&0x7;
 	
-	led_clearSelectLeds();
+	led_clearLeds_1To8();
 	dout_outputData[arrayPos] |= (uint8_t)(1<<bitPos);
 
 	//since this is not a temp. change, store in led_originalLedState as well
 	led_originalLedState[arrayPos] |= (uint8_t)(1<<bitPos);
+
 };
 //---------------------------------------------
 void led_setActiveVoiceLeds(uint8_t pattern)
 {
+#if !EURORACK_MODULE
 	uint8_t arrayPos = LED_VOICE1/8;
 	//clear upper 7 bits
 	dout_outputData[arrayPos] &= 0x1;
@@ -207,10 +245,40 @@ void led_setActiveVoiceLeds(uint8_t pattern)
 	dout_outputData[arrayPos] =  (uint8_t)(dout_outputData[arrayPos] | ( (pattern<<1)&0xFE));
 	//since this is not a temp. change, store in led_originalLedState as well
 	led_originalLedState[arrayPos] =  (uint8_t)(led_originalLedState[arrayPos] | (pattern<<1&0xFE));
+#else
+	for(uint8_t i=0; i<= 6; i++)
+	{
+		if(pattern & 1<<i)
+		{
+			led_setValue(1, LED_2+i);
+		}
+		else
+		{
+			led_setValue(0, LED_2+i);
+		}
+	}
+
+#endif
+}
+//---------------------------------------------
+void led_setActiveVoiceLedsTemp(uint8_t voiceNr)
+{
+	for(uint8_t i=1; i<= 7;  i++)
+		{
+			if(voiceNr == i)
+			{
+				led_setValueTemp(1, LED_1+i);
+			}
+			else
+			{
+				led_setValueTemp(0,LED_1+i);
+			}
+		}
 }
 //---------------------------------------------
 void led_setActiveVoice(uint8_t voiceNr)
 {
+#if !EURORACK_MODULE
 	voiceNr =  (uint8_t)(voiceNr + LED_VOICE1);
 	uint8_t arrayPos = voiceNr/8;
 	uint8_t bitPos = voiceNr&0x7;
@@ -222,14 +290,26 @@ void led_setActiveVoice(uint8_t voiceNr)
 	dout_outputData[arrayPos] |= (uint8_t)(1<<bitPos);
 	//since this is not a temp. change, store in led_originalLedState as well
 	led_originalLedState[arrayPos] |= (uint8_t)(1<<bitPos);
+#else
+	for(uint8_t i=0; i<= 6;  i++)
+	{
+		if(voiceNr == i)
+		{
+			led_setValue(1, LED_1+i);
+		}
+		else
+		{
+			led_setValue(0,LED_1+i);
+		}
+	}
+#endif
 	
-	//reset mute mode
-	menu_muteModeActive = 0;
+
 };
 //---------------------------------------------
 void led_setValue(uint8_t val, uint8_t ledNr)
 {
-
+#if !EURORACK_MODULE
 	if(ledNr == LED_PAGE_DOWN)
 	{
 		if(val)
@@ -242,6 +322,7 @@ void led_setValue(uint8_t val, uint8_t ledNr)
 		}
 	}
 	else
+#endif
 	{
 		uint8_t arrayPos = ledNr/8;
 		uint8_t bitPos = ledNr&0x7;
@@ -257,7 +338,7 @@ void led_setValue(uint8_t val, uint8_t ledNr)
 
 		}
 	}
-	
+
 	return;
 }
 //-----------------------------------------------
@@ -318,6 +399,7 @@ void led_toggleTemp(uint8_t ledNr)
 	return;
 };
 //-----------------------------------------------------------------------------
+#if !EURORACK_MODULE
 uint8_t led_idx2StepLed(uint8_t idx)
 {
 	uint8_t ledNr;
@@ -326,28 +408,28 @@ uint8_t led_idx2StepLed(uint8_t idx)
 	{
 	    default:
 		case 0:
-			ledNr = LED_STEP1;
+			ledNr = LED_1;
 			break;
 		case 1:
-			ledNr = LED_STEP2;
+			ledNr = LED_2;
 			break;
 		case 2:
-			ledNr = LED_STEP3;
+			ledNr = LED_3;
 			break;
 		case 3:
-			ledNr = LED_STEP4;
+			ledNr = LED_4;
 			break;
 		case 4:
-			ledNr = LED_STEP5;
+			ledNr = LED_5;
 			break;
 		case 5:
-			ledNr = LED_STEP6;
+			ledNr = LED_6;
 			break;
 		case 6:
-			ledNr = LED_STEP7;
+			ledNr = LED_7;
 			break;
 		case 7:
-			ledNr = LED_STEP8;
+			ledNr = LED_8;
 			break;
 		case 8:
 			ledNr = LED_STEP9;
@@ -376,6 +458,7 @@ uint8_t led_idx2StepLed(uint8_t idx)
 	}
 	return ledNr;
 }
+
 //--------------------------------------------------
 void led_setActive_step(uint8_t stepNr)
 {
@@ -399,7 +482,9 @@ void led_clearActive_step()
 {
 	led_reset(led_currentStepLed);
 };
+#endif
 //-------------------------------------------------
+#if !EURORACK_MODULE
 void led_updateSeqLeds()
 {
 	//prevent steps showing up in manual trigger edit mode  (perf)
@@ -420,6 +505,7 @@ void led_updateSeqLeds()
 		led_updateBarLeds();
 	}
 }
+
 //-------------------------------------------------
 void led_updateBarLeds()
 {
@@ -476,9 +562,109 @@ void led_clearSequencerLeds1_8()
 		led_setValue(0,ledNr);
 	}
 };
+#endif
+//-------------------------------------------------
+void led_setPage(uint8_t page)
+{
+	switch(page)
+	{
+	case VOICE1_PAGE:
+		break;
+	case VOICE2_PAGE:
+		break;
+	case VOICE3_PAGE:
+		break;
+	case VOICE4_PAGE:
+		break;
+	case VOICE5_PAGE:
+		break;
+	case VOICE6_PAGE:
+		break;
+	case VOICE7_PAGE:
+		break;
+	case MENU_MIDI_PAGE: // this is the global settings page
+		break;
+	case LOAD_PAGE:
+		break;
+	case SAVE_PAGE:
+		break;
+	case PERF_PAGE:
+		break;
+	case SEQ_PAGE:
+		break;
+	case EUKLID_PAGE:
+		break;
+	case PATTERN_SETTINGS_PAGE:
+		break;
+	case RECORDING_PAGE:
+		break;
+	case FX_MODE_PAGE:
+		break;
+
+	default:break;
+
+	}
+}
+
 //-------------------------------------------------
 void led_setMode2(uint8_t status)
 {
+
+#if EURORACK_MODULE
+
+	led_setValue(0,LED_EDIT);
+	led_setValue(0,LED_PERF);
+	led_setValue(0,LED_MOD);
+	led_setValue(0,LED_FX);
+	led_setValue(0,LED_SAVE_LOAD);
+	led_setValue(0,LED_SHIFT);
+
+
+	led_setBlinkLed(LED_EDIT,0);
+	led_setBlinkLed(LED_PERF,0);
+	led_setBlinkLed(LED_MOD,0);
+	led_setBlinkLed(LED_FX,0);
+	led_setBlinkLed(LED_SAVE_LOAD, 0);
+	led_setBlinkLed(LED_SHIFT, 0);
+
+
+	switch(status)
+		{
+			case 0: //voice
+				led_setValue(1,LED_EDIT);
+			break;
+
+			case 1: //perf
+				led_setValue(1,LED_PERF);
+			break;
+
+			case 2: //perf
+				led_setValue(1,LED_MOD);
+			break;
+
+			case 3: //load
+				led_setValue(1,LED_SAVE_LOAD);
+			break;
+
+			case 4: //save
+				led_setBlinkLed(LED_SAVE_LOAD,1);
+			break;
+
+			case 5: //FX
+				led_setValue(1, LED_FX);
+			break;
+
+			case 6: //config
+				led_setBlinkLed(LED_SHIFT,1);
+				led_setBlinkLed(LED_SAVE_LOAD,1);
+			break;
+
+
+			default:
+			break;
+		}
+
+#else
 	led_setValue(0,LED_MODE1);
 	led_setValue(0,LED_MODE2);
 	led_setValue(0,LED_MODE3);
@@ -526,21 +712,50 @@ void led_setMode2(uint8_t status)
 		default:
 		break;
 	}
+#endif
 };
+
 //-------------------------------------------------------
 void led_setMode2Leds(uint8_t value)
 {
-
+#if !EURORACK_MODULE
 	led_clearSelectLeds();
 
 	dout_outputData[LED_PART_SELECT1/8] |= value;
 	led_originalLedState[LED_PART_SELECT1/8] |= value;
+#else
+	switch(value)
+	{
+	case 0:
+		led_setValue(1, LED_EDIT);
+		break;
+
+	case 1:
+		led_setValue(1, LED_PERF);
+		break;
+
+	case 2:
+		led_setValue(1, LED_MOD);
+		break;
+
+	case 3:
+		led_setValue(1, LED_FX);
+		break;
+
+	case 4: //config
+		led_setValue(1, LED_FX);
+		led_setValue(1, LED_MOD);
+		break;
+
+	default:break;
+	}
+#endif
 };
 //-------------------------------------------------------
 void led_pulseLed(uint8_t ledNr)
 {
 	//search for a free pulse slot
-	for(int i = 0; i < NUM_OF_PULSABLE_LEDS; i++)
+	for(int i=0;i<NUM_OF_PULSABLE_LEDS;i++)
 	{
 		if( !(led_pulsingLeds & (1<<i)))
 		{
@@ -551,7 +766,7 @@ void led_pulseLed(uint8_t ledNr)
 			//set slot to active
 			led_pulsingLeds |= (uint8_t)(1<<i);
 			//set light up time
-			led_pulseEndTime[i] = systick_ticks + LED_PULSE_TIME;
+			led_pulseEndTime[i] = systick_ticks  +LED_PULSE_TIME;
 			//turn on LED
 			led_toggleTemp(ledNr);
 			
@@ -619,11 +834,11 @@ void led_resetBlinkTimer()
 void led_blinkHandler()
 {
 
-	if(led_blinkPrescaler==0)
+	//if(led_blinkPrescaler==0)
 	//second condition is to prevent hanging LEDs if a systick overflow occurs
-	//if( (systick_ticks > led_nextBlinkTime) || ( (led_nextBlinkTime-systick_ticks) > LED_BLINK_TIME*2) )
+	if( (systick_ticks > led_nextBlinkTime) || ( (led_nextBlinkTime-systick_ticks) > LED_BLINK_TIME*2) )
 	{
-		//led_nextBlinkTime = systick_ticks + LED_BLINK_TIME;
+		led_nextBlinkTime = systick_ticks + LED_BLINK_TIME;
 		led_blinkToggleState = 1- led_blinkToggleState;
 		for(int i=0;i<NUM_OF_BLINKABLE_LEDS;i++)
 		{
@@ -639,8 +854,8 @@ void led_blinkHandler()
 		}
 
 	}
-	led_blinkPrescaler++;
-	if(led_blinkPrescaler>=2)led_blinkPrescaler=0;
+//	led_blinkPrescaler++;
+	//if(led_blinkPrescaler>=2)led_blinkPrescaler=0;
 }
 //-------------------------------------------------------
 void led_tickHandler()

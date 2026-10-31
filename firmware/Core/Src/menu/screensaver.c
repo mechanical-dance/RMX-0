@@ -72,7 +72,14 @@ void screensaver_touch()
 	if(screensaver_Active)
 	{
 		//while(sendDisplayBuffer() != 0); //wrong! we wan't to clean the screensaver pipeline, noit the normal menu one!
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
 		while(screensaver_process() != 0) soundengine_process();
+
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
 		//lcd_turnOn(1,0);
 		screensaver_Active = 0;
 		menu_repaintAll();

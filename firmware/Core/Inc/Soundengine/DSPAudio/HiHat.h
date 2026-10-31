@@ -69,9 +69,12 @@ typedef struct HiHatStruct
 	uint8_t isOpen;		//is 1 if urrent playing voice is open hihat, 0 for closed
 
 	float combinedVolume;
-	OnePoleFilter FaderVolumeFilter;
+	//OnePoleFilter FaderVolumeFilter;
 
 	float pwm;
+	float cvFreq;
+
+	float velocity; //last accent value
 
 } HiHatVoice;
 
@@ -79,7 +82,7 @@ extern HiHatVoice hatVoice;
 
 //initialize all the parameters to sane values
 void HiHat_init();
-
+void HiHat_setCv1VOct(float oct);
 void HiHat_trigger(uint8_t vel, uint8_t isOpen, const uint8_t note);
 void HiHat_updatePan();
 void HiHat_calcSyncBlock(int16_t* buf, const uint8_t size);

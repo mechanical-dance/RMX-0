@@ -29,9 +29,11 @@ uint16_t adc_buf_old[ADC_BUF_LEN];
 uint16_t adc2_buf[ADC2_BUF_LEN];
 uint16_t adc2_buf_old[ADC2_BUF_LEN];
 */
-
+#if EURORACK_MODULE
+float adc_CvValues[5];
+#else
 float adc_faderValues[6];
-
+#endif
 uint16_t adc_potValues[4];
 //uint16_t adc_potAvg[4];
 
@@ -206,16 +208,6 @@ void adc_checkPots()
 			uint8_t shiftAmount = 1;
 			if(paramDType == DTYPE_MENU) shiftAmount = 4;
 
-      uint8_t activePage		= (getMenuIndx()&MASK_PAGE)>>PAGE_SHIFT;
-      uint8_t activeParameter	= getMenuIndx() & MASK_PARAMETER;
-      uint8_t isOn2ndPage		= ( activeParameter > 3) * 4;
-      uint16_t paramNr				= pgm_read_word(&menuPages[menu_activePage][activePage].bot1 +
-        i + isOn2ndPage);
-      if (paramNr == PAR_BPM && (activeParameters[paramNr] == 0 || activeParameters[paramNr] == 1))
-      {
-        shiftAmount = 4;
-      }
-
 
 			adc_buf_old[i*2] = adc_buf[i*2];
 			//>> 1 to reduce resolution and increase pot travel
@@ -253,6 +245,38 @@ void adc_checkPots()
 #endif
 };
 //------------------------------------------------------------------------
+#if EURORACK_MODULE
+void adc_checkCv()
+{
+	uint8_t i = adc2_idx+8;
+
+
+
+	{
+		if( ((adc_buf[i]>>4) > ((adc_buf_old[i]>>4) + (HYSTERSIS/8))) ||
+			((adc_buf_old[i]>>4) > ((adc_buf[i]>>4) + (HYSTERSIS/8))))
+		{
+			//CVs are inverted by analogue frontend
+			float newValue = 1.f - ((adc_buf[i]>>4) / 4096.f);
+			adc_buf_old[i] = adc_buf[i];
+
+			//if (newValue !=  adc_faderValues[i] )
+			//{
+		//	if(newValue < 0.01f) newValue = 0.f;
+			adc_CvValues[i-8] = newValue;
+			//}
+		}
+	}
+
+	adc2_idx++;
+	if(adc2_idx>=5)adc2_idx=0;
+}
+
+float adc_getCvValue(uint8_t idx)
+{
+	return adc_CvValues[idx];
+}
+#else
 void adc_checkFaders()
 {
 #if USE_FADER_VOLUME
@@ -287,5 +311,6 @@ float adc_getFaderVolume(uint8_t idx)
 	return 1.f;
 #endif
 }
+#endif
 //------------------------------------------------------------------------
 

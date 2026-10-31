@@ -35,7 +35,7 @@ uint8_t frontPanel_sysexMode = 0;
 volatile uint8_t frontParser_newSeqDataAvailable = 0;
 volatile Step frontParser_stepData;
 //sysex buffer used to store 7 byte sysex chunks
-volatile static uint8_t frontParser_sysexBuffer[7];
+volatile uint8_t frontParser_sysexBuffer[7];
 
 uint8_t frontParser_nameIndex = 0;
 
@@ -91,13 +91,14 @@ void frontParser_parseNrpn(uint8_t value)
 		lower = value&0x7f;
 		frontPanel_sendData(CC_VELO_TARGET,upper,lower);
 
-	} else if ( (frontParser_nrpnNr >= NRPN_MUTE_1) && (frontParser_nrpnNr <= NRPN_MUTE_7) )
+	}/* else if ( (frontParser_nrpnNr >= NRPN_MUTE_1) && (frontParser_nrpnNr <= NRPN_MUTE_7) )
 	{
 		const uint8_t voice = (uint8_t)(frontParser_nrpnNr - NRPN_MUTE_1);
 		const uint8_t onOff = value;
 		buttonHandler_muteVoice(voice,onOff);
 		
 	}
+	*/
 }
 //------------------------------------------------------------
 void frontPanel_ccHandler()
@@ -110,15 +111,14 @@ void frontPanel_ccHandler()
 		menu_selectedPresetNr[0] = frontParser_midiMsg.data2;
 		//preset_loadDrumset(frontParser_midiMsg.data2, 0);
 		preset_loadDrumsetRam(frontParser_midiMsg.data2,0, 0);
-		preset_touchTimer(PRESET_KIT_TIMER);
 		menu_repaint();
 		return;
-	} else if(parNr == NRPN_DATA_ENTRY_COARSE-1) {
+	} else if(parNr == NRPN_DATA_ENTRY_COARSE) {
 			frontParser_parseNrpn(frontParser_midiMsg.data2);
-	} else if(parNr == NRPN_FINE-1) {
+	} else if(parNr == NRPN_FINE) {
 			frontParser_nrpnNr &= ~0x7f;
 			frontParser_nrpnNr |= frontParser_midiMsg.data2;
-	} else if(parNr == NRPN_COARSE-1) {
+	} else if(parNr == NRPN_COARSE) {
 			frontParser_nrpnNr &= 0x7f;
 			frontParser_nrpnNr |= frontParser_midiMsg.data2<<7;
 	}
@@ -415,7 +415,7 @@ void frontPanel_parseData(uint8_t data)
 						led_setValue(1,LED_PART_SELECT1+frontParser_midiMsg.data2);
 						break;
 						*/
-						
+#if !EURORACK_MODULE
 						case SEQ_CHANGE_PAT:
 						//pattern follow is always on
 						if(1) {
@@ -447,6 +447,7 @@ void frontPanel_parseData(uint8_t data)
 						menu_playedPattern = frontParser_midiMsg.data2;						
 						
 						//if( (buttonHandler_getMode() == SELECT_MODE_PERF) || (buttonHandler_getMode() == SELECT_MODE_PAT_GEN) )
+#if !EURORACK_MODULE
 						if( (buttonHandler_getMode() == SELECT_MODE_PATTERN) )
 						{
 							//only show pattern changes when on Pattern select page
@@ -458,7 +459,7 @@ void frontPanel_parseData(uint8_t data)
 							led_initPatternSelectLeds();
 							//led_setValue(1,LED_PART_SELECT1+frontParser_midiMsg.data2);
 						}			
-						
+#endif
 						
 						break;
 						case SEQ_RUN_STOP:
@@ -467,7 +468,7 @@ void frontPanel_parseData(uint8_t data)
 							// button to act properly
 							buttonHandler_setRunStopState(frontParser_midiMsg.data2);
 							break;
-						
+#endif
 
 
 
@@ -485,6 +486,7 @@ void frontPanel_parseData(uint8_t data)
 							break;
 					}
 				}
+#if !EURORACK_MODULE
 				else if(frontParser_midiMsg.status == LED_CC)
 				{
 					switch(frontParser_midiMsg.data1)
@@ -533,28 +535,28 @@ void frontPanel_parseData(uint8_t data)
 								switch(stepNr)
 								{
 									case 0:
-										led = LED_STEP1;
+										led = LED_1;
 										break;
 									case 1:
-										led = LED_STEP2;
+										led = LED_2;
 										break;
 									case 2:
-										led = LED_STEP3;
+										led = LED_3;
 										break;
 									case 3:
-										led = LED_STEP4;
+										led = LED_4;
 										break;
 									case 4:
-										led = LED_STEP5;
+										led = LED_5;
 										break;
 									case 5:
-										led = LED_STEP6;
+										led = LED_6;
 										break;
 									case 6:
-										led = LED_STEP7;
+										led = LED_7;
 										break;
 									case 7:
-										led = LED_STEP8;
+										led = LED_8;
 										break;
 									case 8:
 										led = LED_STEP9;
@@ -589,12 +591,13 @@ void frontPanel_parseData(uint8_t data)
 						
 						break;
 					}						
-				}								
+				}
+#endif
 				else if(frontParser_midiMsg.status == NOTE_ON)
 				{
 					if(frontParser_midiMsg.data1 > 6) return;
 					//only SELECT_MODE_VOICE and SELECT_MODE_MUTE
-					led_pulseLed((uint8_t)(LED_VOICE1+frontParser_midiMsg.data1));
+					led_pulseLed((uint8_t)(LED_1+frontParser_midiMsg.data1));
 				}
 
 			}				
@@ -627,9 +630,19 @@ void frontPanel_sendData(uint8_t status, uint8_t data1, uint8_t data2)
 		while(uart_putc(data2) == 0);
 	}
 #else
+
+#if EURORACK_MODULE
+	MidiMsg msg;
+	msg.status = status;
+	msg.data1 = data1;
+	msg.data2 = data2;
+	//message received. process the midi message
+	frontParser_handleMidiMessage(msg);
+#else
 	frontParser_parseUartData(status);
 	frontParser_parseUartData(data1);
 	frontParser_parseUartData(data2);
+#endif
 #endif
 };
 //------------------------------------------------------------

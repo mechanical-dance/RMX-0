@@ -23,6 +23,7 @@
 #include "stm32f7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "ledHandler.h"
 #include "main.h"
 #include "encoder.h"
 #include "menu/screensaver.h"
@@ -31,7 +32,7 @@
 #include "IO/adcPots.h"
 #include "menu/menu.h"
 #include "Soundengine/Soundengine.h"
-#include "Soundengine/MIDI/Uart.h"
+#include "Soundengine/TriggerProcessor.h"
 #include "lcd.h"
 /* USER CODE END Includes */
 
@@ -75,7 +76,6 @@ extern DMA_HandleTypeDef hdma_sdmmc1_tx;
 extern SD_HandleTypeDef hsd1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim14;
-extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -218,6 +218,24 @@ void SysTick_Handler(void)
 
 	  encoder_callback();
   /* USER CODE END SysTick_IRQn 1 */
+
+  /* Handle triggers based on collected flags from EXTI */
+
+  static uint8_t voiceToBeTriggered[6] = {0,0,0,0,0,0};
+
+  for (int i=0; i<6; i++) {
+
+    if(voiceToBeTriggered[i]) {
+      Trigger_resetVoiceTriggered(i);
+      const uint8_t vel = Trigger_getAccent(i);
+      voiceControl_noteOn(i , SEQ_DEFAULT_NOTE, vel);
+      voiceToBeTriggered[i] = 0;
+    }
+
+    if (Trigger_getVoiceTriggered(i)) {
+      voiceToBeTriggered[i] = 1;
+    }
+  }
 }
 
 /******************************************************************************/
@@ -267,11 +285,10 @@ void TIM2_IRQHandler(void)
 #if CALC_SAMPLES_IN_INTERRUPT
 //#ifndef DEBUG
 
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_SET);
+#if !EURORACK_MODULE
 	seq_tick();
+#endif
 	soundengine_calcNextSampleBlock();
-  uart_processMidi();
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET);
 
 
 	//process midi on midi port
@@ -298,7 +315,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void)
   /* USER CODE END TIM8_TRG_COM_TIM14_IRQn 0 */
   HAL_TIM_IRQHandler(&htim14);
   /* USER CODE BEGIN TIM8_TRG_COM_TIM14_IRQn 1 */
-
+ // soundengine_process();
   systick_ticks++;
   if(lcd_process_display_interrupt)
     {
@@ -316,6 +333,8 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void)
     {
   	menu_tick();
     }
+
+  led_blinkHandler(); //blink leds
 
 #if CALC_SAMPLES_IN_INTERRUPT
   //seq_tick();
@@ -368,20 +387,6 @@ void DMA2_Stream3_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles USB On The Go FS global interrupt.
-  */
-void OTG_FS_IRQHandler(void)
-{
-  /* USER CODE BEGIN OTG_FS_IRQn 0 */
-
-  /* USER CODE END OTG_FS_IRQn 0 */
-  HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
-  /* USER CODE BEGIN OTG_FS_IRQn 1 */
-
-  /* USER CODE END OTG_FS_IRQn 1 */
-}
-
-/**
   * @brief This function handles DMA2 stream6 global interrupt.
   */
 void DMA2_Stream6_IRQHandler(void)
@@ -398,4 +403,3 @@ void DMA2_Stream6_IRQHandler(void)
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

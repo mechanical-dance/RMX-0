@@ -22,7 +22,7 @@
 
 #define USE_FADER_VOLUME 1
 
-#define ADC_BUF_LEN 14
+#define ADC_BUF_LEN 13
 extern INDTCMZ uint16_t adc_buf[ADC_BUF_LEN];
 
 
@@ -39,11 +39,12 @@ extern uint16_t adc2_buf[ADC2_BUF_LEN];
 //check the connected potentiometers and parse their values
 void adc_checkPots();
 
+void adc_checkCv();
+float adc_getCvValue(uint8_t idx);
 
+//void adc_checkFaders();
 
-void adc_checkFaders();
-
-float adc_getFaderVolume(uint8_t idx);
+//float adc_getFaderVolume(uint8_t idx);
  
 
 

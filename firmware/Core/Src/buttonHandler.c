@@ -19,13 +19,15 @@
 #include <stdio.h>
 #include "IO/DIO.h"
 #include "menu/screensaver.h"
-#include "menu/copyClearTools.h"
+//#include "menu/copyClearTools.h"
 #include "config.h"
 #include "front.h"
 #include "Soundengine/globals.h"
-#include "Soundengine/Sequencer/sequencer.h"
+//#include "Soundengine/Sequencer/sequencer.h"
 #include "Preset/PresetManager.h"
 #include "Soundengine/FxBus.h"
+#include "Soundengine/MIDI/MidiVoiceControl.h"
+#include <Soundengine/TriggerProcessor.h>
 
 //used to remember the last active page when entering the sequencer mode
 //needed to return to the previously shown page when seq mode button is released
@@ -33,17 +35,17 @@
 static uint8_t lastActiveSubPage = 0;
 /** selected step for sequencer mode*/
 uint8_t buttonHandler_selectedStep = 0; //TODO is this the same as parameter PAR_ACTIVE_STEP
+#if !EURORACK_MODULE
 static uint8_t selectedStepLed = LED_STEP1;
 
-static uint32_t buttonHandler_buttonTimer = 0;
 
-#define TIMER_ACTION_OCCURED -2
-static int8_t buttonHandler_buttonTimerStepNr = NO_STEP_SELECTED;
-volatile uint16_t buttonHandler_originalParameter[2];//saves parameter number for step automation reset (stgep assign)
-uint8_t buttonHandler_originalValue[2];//saves the parameter value for reset
-uint8_t buttonHandler_resetLock1 = 0;
-uint8_t buttonHandler_resetLock2 = 0;
-// uint8_t buttonHandler_resetLock[NUM_AUTOMATION_PAR];
+static uint32_t buttonHandler_buttonTimer = 0;
+#endif
+//#define TIMER_ACTION_OCCURED -2
+//static int8_t buttonHandler_buttonTimerStepNr = NO_STEP_SELECTED;
+//uint16_t buttonHandler_originalParameter = 0;//saves parameter number for step automation reset (stgep assign)
+//uint8_t buttonHandler_originalValue = 0;//saves the parameter value for reset
+//uint8_t buttonHandler_resetLock = 0;
 
 volatile struct {
 	unsigned selectButtonMode :4; // 0-3 for unshifted, 4-7 for shifted + extra modes (like pattern select)
@@ -54,12 +56,13 @@ volatile struct {
 } buttonHandler_stateMemory;
 
 static uint8_t buttonHandler_mutedVoices = 0;
-volatile static int8_t buttonHandler_armedAutomationStep = NO_STEP_SELECTED;
+//static int8_t buttonHandler_armedAutomationStep = NO_STEP_SELECTED;
 
-#define ARM_AUTOMATION		0x40
-#define DISARM_AUTOMATION	0x00
+//#define ARM_AUTOMATION		0x40
+//#define DISARM_AUTOMATION	0x00
 
 //--------------------------------------------------------
+#if !EURORACK_MODULE
 static void buttonHandler_armTimerActionStep(int8_t stepNr) {
 #if 0
 	//check if sub or main step
@@ -84,186 +87,66 @@ static void buttonHandler_armTimerActionStep(int8_t stepNr) {
 		menu_getActiveVoice() | ARM_AUTOMATION);
 
 #endif
-
-  //////////////////////
-  // PatternSet* patSet = get_seq_patternSet_p();
-  // uint8_t parNr;
-  // for (int i = 0; i < NUM_AUTOMATION_PAR; i++)
-  // {
-  //   parNr = patSet->seq_subStepPattern[seq_activePattern][0][stepNr].paramNr[i] - 1;
-  //   if (parNr != 254)
-  //   {
-  //     buttonHandler_originalValue[i] = activeParameters[parNr];
-  //     activeParameters[parNr] = patSet->seq_subStepPattern[seq_activePattern][0][stepNr].paramVal[i];
-
-  //     buttonHandler_originalParameter[i] = parNr;
-  //     buttonHandler_resetLock[i] = 1;
-  //   }
-  // }
-
-  /////////////////////
-
-  PatternSet* patSet = get_seq_patternSet_p();
-  uint8_t parNr = patSet->seq_subStepPattern[seq_activePattern][0][stepNr].param1Nr - 1;
-
-  if (parNr != 254)
-  {
-    buttonHandler_originalValue[0] = activeParameters[parNr];
-    activeParameters[parNr] = patSet->seq_subStepPattern[seq_activePattern][0][stepNr].param1Val;
-
-    buttonHandler_originalParameter[0] = parNr;
-    buttonHandler_resetLock1 = 1;
-  }
-
-  parNr = patSet->seq_subStepPattern[seq_activePattern][0][stepNr].param2Nr - 1;
-
-  if (parNr != 254)
-  {
-    buttonHandler_originalValue[1] = activeParameters[parNr];
-    activeParameters[parNr] = patSet->seq_subStepPattern[seq_activePattern][0][stepNr].param2Val;
-  
-    buttonHandler_originalParameter[1] = parNr;
-    buttonHandler_resetLock2 = 1;
-  }
-  ///////////////
-
-  menu_repaintAll();
-
 }
 //--------------------------------------------------------
 static void buttonHandler_disarmTimerActionStep() {
-  ///////
-  // buttonHandler_armedAutomationStep != NO_STEP_SELECTED;
-  ///////
-	if (buttonHandler_armedAutomationStep != NO_STEP_SELECTED)
-  {
+	if (buttonHandler_armedAutomationStep != NO_STEP_SELECTED) {
+#if 0
+		const uint8_t isMainStep =
+				((buttonHandler_armedAutomationStep % 8) == 0);
+		if (isMainStep) {
+			const uint8_t mainStepNr =
+					(uint8_t) (buttonHandler_armedAutomationStep / 8);
+			led_setBlinkLed(led_idx2StepLed(mainStepNr), 0);
+		} else {
+			const uint8_t selectButtonNr =
+					(uint8_t) (buttonHandler_armedAutomationStep % 8);
+			led_setBlinkLed(led_idx2SelectLed(selectButtonNr), 0);
+		}
+#else
+		led_setBlinkLed(led_idx2SBUT_1tepLed(buttonHandler_armedAutomationStep%16), 0);
 
-    led_setBlinkLed(led_idx2StepLed(buttonHandler_armedAutomationStep%16), 0);
-    
-    /////////
-    // for (int i = 0; i < NUM_AUTOMATION_PAR; i++)
-    // {
-    //   if (buttonHandler_resetLock[i] == 1)
-    //   {
-    //     activeParameters[buttonHandler_originalParameter[i]] = buttonHandler_originalValue[i];
-    //     break;
-    //   }
-    // }
-    ///////
+#endif
+
 		//revert to original sound
 		//make changes temporary while an automation step is armed - revert to original value
-		if (buttonHandler_resetLock1 == 1) {
-			activeParameters[buttonHandler_originalParameter[0]] =
-					buttonHandler_originalValue[0];
-      // memcpy(activeParameters, buttonHandler_originalValue, NUM_PARAMS);
+		if (buttonHandler_resetLock == 1) {
+			activeParameters[buttonHandler_originalParameter] =
+					buttonHandler_originalValue;
 		}
-    if (buttonHandler_resetLock2 == 1) {
-      activeParameters[buttonHandler_originalParameter[1]] =
-          buttonHandler_originalValue[1];
-      // memcpy(activeParameters, buttonHandler_originalValue, NUM_PARAMS);
-		}
-    /////////
 
 		buttonHandler_armedAutomationStep = NO_STEP_SELECTED;
 		frontPanel_sendData(ARM_AUTOMATION_STEP, 0, DISARM_AUTOMATION);
 
-    /////////
-    // for (int i = 0; i < NUM_AUTOMATION_PAR; i++)
-    // {
-    //   if (buttonHandler_resetLock[i] == 1)
-    //   {
-    //     buttonHandler_resetLock[i] = 0;
-
-    //     if (buttonHandler_originalParameter[i] != 0)
-    //     {
-    //       //&revert to original value
-    //       if (buttonHandler_originalParameter[i] < 128) // => Sound Parameter
-    //       {
-    //         frontPanel_sendData(MIDI_CC,
-    //             (uint8_t) (buttonHandler_originalParameter[i]),
-    //             buttonHandler_originalValue[i]);
-    //       } 
-    //       else if (buttonHandler_originalParameter[i] >= 128 && (buttonHandler_originalParameter[i] < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
-    //       {
-    //         frontPanel_sendData(CC_2,
-    //         (uint8_t) (buttonHandler_originalParameter[i] - 128),
-    //         buttonHandler_originalValue[i]);
-    //       } 
-    //       else
-    //       {
-    //         menu_parseGlobalParam(buttonHandler_originalParameter[i],
-    //         activeParameters[buttonHandler_originalParameter[i]]);
-    //       }
-    //       menu_repaintAll();
-    //     }
-    //   }
-    // }
-
-    /////////
-    if (buttonHandler_resetLock1 == 1)
-    {
-      buttonHandler_resetLock1 = 0;
-
-      if (buttonHandler_originalParameter[0] != 0)
-      {
-        //&revert to original value
-        if (buttonHandler_originalParameter[0] < 128) // => Sound Parameter
-        {
-          frontPanel_sendData(MIDI_CC,
-              (uint8_t) (buttonHandler_originalParameter[0]),
-              buttonHandler_originalValue[0]);
-        } 
-        else if (buttonHandler_originalParameter[0] >= 128 && (buttonHandler_originalParameter[0] < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
-        {
-          frontPanel_sendData(CC_2,
-          (uint8_t) (buttonHandler_originalParameter[0] - 128),
-          buttonHandler_originalValue[0]);
-        } 
-        else
-        {
-          menu_parseGlobalParam(buttonHandler_originalParameter[0],
-          activeParameters[buttonHandler_originalParameter[0]]);
-        }
-        menu_repaintAll();
-      }
-    }
-
-    if (buttonHandler_resetLock2 == 1)
-    {
-      buttonHandler_resetLock2 = 0;
-
-      if (buttonHandler_originalParameter[1] != 0)
-      {
-        if (buttonHandler_originalParameter[1] < 128) // => Sound Parameter
-        {
-          frontPanel_sendData(MIDI_CC,
-          (uint8_t) (buttonHandler_originalParameter[1]),
-          buttonHandler_originalValue[1]);
-        }
-        else if (buttonHandler_originalParameter[1] >= 128 && (buttonHandler_originalParameter[1] < END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
-        {
-          frontPanel_sendData(CC_2,
-          (uint8_t) (buttonHandler_originalParameter[1] - 128),
-          buttonHandler_originalValue[1]);
-        }
-        else
-        {
-          menu_parseGlobalParam(buttonHandler_originalParameter[1],
-          activeParameters[buttonHandler_originalParameter[1]]);
-        }
-        menu_repaintAll();
-      }
+		if (buttonHandler_resetLock == 1) {
+			buttonHandler_resetLock = 0;
+			//&revert to original value
+			if (buttonHandler_originalParameter < 128) // => Sound Parameter
+					{
+				frontPanel_sendData(MIDI_CC,
+						(uint8_t) (buttonHandler_originalParameter),
+						buttonHandler_originalValue);
+			} else if (buttonHandler_originalParameter >= 128
+					&& (buttonHandler_originalParameter
+							< END_OF_SOUND_PARAMETERS)) // => Sound Parameter above 127
+					{
+				frontPanel_sendData(CC_2,
+						(uint8_t) (buttonHandler_originalParameter - 128),
+						buttonHandler_originalValue);
+			} else {
+				menu_parseGlobalParam(buttonHandler_originalParameter,
+						activeParameters[buttonHandler_originalParameter]);
+			}
+			menu_repaintAll();
 		}
 		return;
 	}
-
-  /////////
 
 	buttonHandler_armedAutomationStep = NO_STEP_SELECTED;
 	frontPanel_sendData(ARM_AUTOMATION_STEP, 0, DISARM_AUTOMATION);
 
 }
-
+;
 //--------------------------------------------------------
 int8_t buttonHandler_getArmedAutomationStep() {
 	return buttonHandler_armedAutomationStep;
@@ -285,6 +168,7 @@ static void buttonHandler_setTimeraction(uint8_t buttonNr) {
 	buttonHandler_buttonTimerStepNr = (int8_t) buttonNr;
 
 }
+#endif
 //--------------------------------------------------------
 /**returns 1 is the mode 2 select button is pressed*/
 /*
@@ -305,6 +189,7 @@ static void buttonHandler_setTimeraction(uint8_t buttonNr) {
 //--------------------------------------------------------
 //periodically called handler for timed actions
 //-> hold a step button for a long time to select/rec automation
+#if !EURORACK_MODULE
 void buttonHandler_tick() {
 	if ((systick_ticks > buttonHandler_buttonTimer)) {
 		if (buttonHandler_buttonTimerStepNr >= 0) //!=NO_STEP_SELECTED)
@@ -318,6 +203,7 @@ void buttonHandler_tick() {
 }
 
 //--------------------------------------------------------
+
 static void buttonHandler_updateSubSteps() {
 	led_clearSelectLeds();
 #if 0
@@ -330,6 +216,7 @@ static void buttonHandler_updateSubSteps() {
 	led_updateSeqLeds();
 #endif
 }
+
 //--------------------------------------------------------
 /*
  -> change display to show selected step options (volume, probability, note etc...)
@@ -347,7 +234,9 @@ static void buttonHandler_enterSeqModeStepMode() {
 
 	led_setBlinkLed(selectedStepLed, 1);
 }
+#endif
 //--------------------------------------------------------
+#if !EURORACK_MODULE
 /**returns 1 is the copy button is pressed*/
 uint8_t buttonHandler_getCopy() {
 	const uint8_t arrayPos = BUT_COPY / 8;
@@ -369,6 +258,7 @@ uint8_t buttonHandler_getShift() {
 	}
 	return 0;
 }
+
 //--------------------------------------------------------
 /**returns 1 is the Load button is pressed*/
 uint8_t buttonHandler_getLoad() {
@@ -391,15 +281,222 @@ uint8_t buttonHandler_getSave() {
 	}
 	return 0;
 }
+#else
+uint8_t buttonHandler_getDrumButton()
+{
+	return (Button_5_GPIO_Port->IDR & Button_5_Pin)!=0;
+}
+
+uint8_t buttonHandler_getManualButton()
+{
+	return (Button_3_GPIO_Port->IDR & Button_3_Pin)!=0;
+}
+
+uint8_t buttonHandler_getSaveButton()
+{
+	return (Button_4_GPIO_Port->IDR & Button_4_Pin)!=0;
+}
+
+
+uint8_t buttonHandler_getShiftButton ()
+{
+	return (Button_13_GPIO_Port->IDR & Button_13_Pin)!=0;
+}
+#endif
 //--------------------------------------------------------
 static void buttonHandler_handleModeButtons(uint8_t mode) {
 
+#if EURORACK_MODULE
+
+	if(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_MENU && mode != SELECT_MODE_MENU)
+	{
+		//we are leaving the config menu -> save globals
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
+		preset_saveGlobals();
+#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
+	HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
+#endif
+	}
+
+	//toggle for mod matrix only
+	uint8_t toggle = (buttonHandler_stateMemory.selectButtonMode  == mode);
+
+	if(mode==SELECT_MODE_LOAD)
+	{
+		//Load kit, Save kit, Save Morph
+		switch(buttonHandler_stateMemory.selectButtonMode)
+		{
+		default:
+		case SELECT_MODE_SAVE_MORPH:
+			mode = SELECT_MODE_LOAD;
+			break;
+
+		case SELECT_MODE_LOAD:
+			mode = SELECT_MODE_SAVE;
+			break;
+
+		case SELECT_MODE_SAVE:
+			mode = SELECT_MODE_SAVE_MORPH;
+			break;
+		}
+
+		//mode = buttonHandler_stateMemory.selectButtonMode == mode ? SELECT_MODE_SAVE : mode;
+	}
+
+	buttonHandler_stateMemory.selectButtonMode = (uint8_t) (mode & 0x07);
+	mode = buttonHandler_stateMemory.selectButtonMode;
+
+	led_clearAllBlinkLeds();
+
+	switch (mode) {
+
+	case SELECT_MODE_FX:
+		led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+
+		menu_switchPage(FX_MODE_PAGE);
+		led_clearLeds_1To8();
+		//led_setActiveSelectButton(menu_getSubPage());
+		menu_resetActiveParameter();
+		break;
+
+	//default voice edit mode (OSC; AEG, MOD etc)
+		case SELECT_MODE_VOICE:
+		{
+
+			//update the status LED
+			led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+			//set menu to voice page mode
+			menu_switchPage(menu_getActiveVoice());
+			led_setActiveSelectButton(menu_getSubPage()+1);
+			menu_resetActiveParameter();
+		}
+		break;
+
+
+		case SELECT_MODE_MOD:
+		{
+
+			//update the status LED
+			led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+
+			//menu special case since we use modMatrixPages!!!
+			toggle = toggle?(menu_activePage == menu_getActiveVoice()):0;
+			menu_activePage = menu_getActiveVoice();
+			menu_switchSubPage(0,toggle);
+			led_setActiveSelectButton(menu_getActiveVoice()+1);
+		}
+		break;
+
+		//manual trigger mode with performance params
+		//if pressed together with save/load => config
+		case SELECT_MODE_PERF: //manual
+		{
+			/*
+			if(buttonHandler_getSaveButton())
+			{
+				////voice + drum = config
+				buttonHandler_handleModeButtons(SELECT_MODE_MENU);
+				menu_resetActiveParameter();
+			}
+			else
+				*/
+			{
+				led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+				led_clearLeds_1To8();
+		//		led_initPatternSelectLeds();
+
+				//set menu to perf page
+				lastActiveSubPage = menu_getSubPage();
+				menu_switchPage(PERF_PAGE);
+				//menu_switchSubPage(0);
+				menu_repaintAll();
+			}
+		}
+		break;
+
+		//toggles between kit load/save page
+		//if pressed together with manual => config
+		case SELECT_MODE_LOAD:
+		{
+			if(buttonHandler_getShiftButton())
+			{
+				////shift + load = config
+				buttonHandler_handleModeButtons(SELECT_MODE_MENU);
+				menu_resetActiveParameter();
+			}
+			else
+			{
+				led_clearAllBlinkLeds();
+				led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+
+				menu_setLoadSaveCategory(SAVE_TYPE_KIT);
+				//update the status LED
+			//	led_setMode2(2);
+
+				//led_setValue(1);
+				//buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_LOAD;
+				menu_switchPage(LOAD_PAGE);
+			}
+		}
+		break;
+
+		case SELECT_MODE_SAVE:
+			if(buttonHandler_getShiftButton())
+			{
+				////shift + load = config
+				buttonHandler_handleModeButtons(SELECT_MODE_MENU);
+				menu_resetActiveParameter();
+			}
+			else
+			{
+				led_clearAllBlinkLeds();
+				led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+
+				menu_setLoadSaveCategory(SAVE_TYPE_KIT);
+				//update the status LED
+			//	led_setMode2(2);
+
+				//led_setBlinkLed(1, LED_LOAD_SAVE);
+				//buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_LOAD;
+				menu_switchPage(SAVE_PAGE);
+			}
+			break;
+
+		case SELECT_MODE_SAVE_MORPH:
+			if(buttonHandler_getShiftButton())
+			{
+				////shift + load = config
+				buttonHandler_handleModeButtons(SELECT_MODE_MENU);
+				menu_resetActiveParameter();
+			}
+			else
+			{
+				led_clearAllBlinkLeds();
+				led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+
+				menu_setLoadSaveCategory(SAVE_TYPE_MORPH);
+				menu_switchPage(SAVE_PAGE);
+			}
+			break;
+
+		case SELECT_MODE_MENU:
+			led_clearAllBlinkLeds();
+			led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+			menu_switchPage(MENU_MIDI_PAGE);
+			break;
+	}
+#else
 	if(mode != SELECT_MODE_SAVE && mode != SELECT_MODE_LOAD)
 	{
+#if !EURORACK_MODULE
 		if (buttonHandler_getShift()) {
 			//set the new mode
 			buttonHandler_stateMemory.selectButtonMode = (uint8_t) ((mode + 4) & 0x07);
-		} else {
+		} else
+#endif
+		{
 			//set the new mode
 			buttonHandler_stateMemory.selectButtonMode = (uint8_t) (mode & 0x07);
 		}
@@ -424,7 +521,9 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 		//update the status LED
 		led_setMode2(buttonHandler_stateMemory.selectButtonMode);
 
+#if !EURORACK_MODULE
 		led_clearSequencerLeds();
+#endif
 		led_clearSelectLeds();
 //		led_initPatternSelectLeds();
 
@@ -436,7 +535,7 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 
 	}
 		break;
-
+#if !EURORACK_MODULE
 	case SELECT_MODE_STEP: //Step
 		//update the status LED
 		led_setMode2(buttonHandler_stateMemory.selectButtonMode);
@@ -445,8 +544,10 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 		led_setActiveSelectButton(menu_getSubPage());
 		buttonHandler_enterSeqModeStepMode();
 		break;
+#endif
 	case SELECT_MODE_VOICE: //Edit/Voice
 
+#if !EURORACK_MODULE
 		if(menu_activePage < 7) //already in voice/edit mode
 		{
 			buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_STEP;
@@ -459,6 +560,7 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 
 		}
 		else
+#endif
 		{
 			//update the status LED
 			led_setMode2(buttonHandler_stateMemory.selectButtonMode);
@@ -470,18 +572,18 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 		break;
 
 	case SELECT_MODE_LOAD: //Load
-		led_setValue(1,LED_MODE3);
+		led_setValue(1,LED_LOAD_SAVE);
 		break;
 
 	case SELECT_MODE_SAVE: //Load
-		led_setValue(1,LED_MODE4);
+		led_setValue(1,LED_LOAD_SAVE);
 		break;
 
 	case SELECT_MODE_MENU: //Config Menu
 		//menu_switchPage(MENU_MIDI_PAGE);
 		break;
 
-
+#if !EURORACK_MODULE
 	case SELECT_MODE_PAT_GEN: //pat gen
 		//update the status LED
 		led_setMode2(buttonHandler_stateMemory.selectButtonMode);
@@ -491,14 +593,16 @@ static void buttonHandler_handleModeButtons(uint8_t mode) {
 
 
 		break;
-
+#endif
 	default:
 		//update the status LED
 		led_setMode2(buttonHandler_stateMemory.selectButtonMode);
 		break;
 	}
+#endif
 }
 //--------------------------------------------------------
+
 void buttonHandler_muteVoice(uint8_t voice, uint8_t isMuted) {
 	DISABLE_CONV_WARNING
 	if (isMuted) {
@@ -514,20 +618,23 @@ void buttonHandler_muteVoice(uint8_t voice, uint8_t isMuted) {
 	if (menu_muteModeActive) {
 		led_setActiveVoiceLeds((uint8_t) (~buttonHandler_mutedVoices));
 	}
-}
-;
+};
+
 //--------------------------------------------------------
 void buttonHandler_showMuteLEDs() {
 	led_setActiveVoiceLeds((uint8_t) (~buttonHandler_mutedVoices));
 	menu_muteModeActive = 1;
 }
+
 //--------------------------------------------------------
 static void buttonHandler_handleSelectButton(uint8_t buttonNr) {
-
+#if !EURORACK_MODULE
 	if (buttonHandler_getShift()) {
 
 		switch (buttonHandler_stateMemory.selectButtonMode) {
+#if !EURORACK_MODULE
 		case SELECT_MODE_STEP:
+#endif
 		case SELECT_MODE_VOICE: {
 
 			//nothing to do here... no more substeps
@@ -554,7 +661,9 @@ static void buttonHandler_handleSelectButton(uint8_t buttonNr) {
 			*/
 		}
 			break;
+#if !EURORACK_MODULE
 		case SELECT_MODE_PAT_GEN:
+#endif
 		case SELECT_MODE_PERF:
 			/*
 			//select shownPattern
@@ -581,9 +690,13 @@ static void buttonHandler_handleSelectButton(uint8_t buttonNr) {
 			break;
 
 		}
-	} else {
+	} else
+
+#endif
+	{
 		switch (buttonHandler_stateMemory.selectButtonMode) {
 
+#if !EURORACK_MODULE
 		case SELECT_MODE_STEP: {
 			/*
 			//select buttons represent sub steps
@@ -607,14 +720,15 @@ static void buttonHandler_handleSelectButton(uint8_t buttonNr) {
 
 		}
 			break;
+#endif
 
 		case SELECT_MODE_PERF:
 			//switch menu back to voice editing
-			menu_switchPage(menu_getActiveVoice());
+			//menu_switchPage(menu_getActiveVoice());
 		case SELECT_MODE_VOICE:
 
 			//change sub page -> osc, filter, mod etc...
-			menu_switchSubPage(buttonNr, 1);
+			menu_switchSubPage(buttonNr-1, 1);
 			//go to 1st parameter on sub page
 			menu_resetActiveParameter();
 			led_setActiveSelectButton(buttonNr);
@@ -675,16 +789,20 @@ static void buttonHandler_handleSelectButton(uint8_t buttonNr) {
 
 		case SELECT_MODE_FX:
 			//return to voice mode
-			buttonHandler_handleModeButtons(0);
-			buttonHandler_handleSelectButton(buttonNr);
+			//buttonHandler_handleModeButtons(0);
+			//buttonHandler_handleSelectButton(buttonNr);
 			break;
 
 		case SELECT_MODE_SAVE:
-		case SELECT_MODE_PAT_GEN:
-
 		case SELECT_MODE_MENU:
+
+
+
+#if !EURORACK_MODULE
+		case SELECT_MODE_PAT_GEN:
 		case SELECT_MODE_PATTERN:
 		case SELECT_MODE_SONG:
+#endif
 			break;
 
 		}
@@ -735,10 +853,11 @@ static void buttonHandler_leaveSeqMode() {
 }
 */
 //--------------------------------------------------------
-//uint8_t buttonHandler_getMutedVoices() {
-//	return buttonHandler_mutedVoices;
-//}
+uint8_t buttonHandler_getMutedVoices() {
+	return buttonHandler_mutedVoices;
+}
 //--------------------------------------------------------
+#if !EURORACK_MODULE
 static void buttonHandler_selectActiveStep(uint8_t ledNr, uint8_t seqButtonPressed) {
 
 	led_setBlinkLed(selectedStepLed, 0);
@@ -766,6 +885,7 @@ static void buttonHandler_selectActiveStep(uint8_t ledNr, uint8_t seqButtonPress
 	buttonHandler_updateSubSteps();
 }
 //--------------------------------------------------------
+
 static void buttonHandler_setRemoveStep(uint8_t ledNr, uint8_t seqButtonPressed) {
 	//led_toggle(ledNr); //handled by cortex
 	led_setValue(0, ledNr);
@@ -801,11 +921,9 @@ static void buttonHandler_setRemoveStep(uint8_t ledNr, uint8_t seqButtonPressed)
 		led_setValue(1,led_idx2StepLed(seqButtonPressed));
 	}
 #endif
-	//autosave changes
-	preset_touchTimer(PRESET_PAT_TIMER);
 
 }
-
+#endif
 //--------------------------------------------------------
 // **PATROT set track rotation to a value between 0 and 15
 // 0 means not rotated.
@@ -821,12 +939,13 @@ static void buttonHandler_setTrackRotation(uint8_t seqButtonPressed)
 }
 */
 //--------------------------------------------------------
+#if !EURORACK_MODULE
 static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 {
 
 
 	uint8_t ledNr = led_idx2StepLed(seqButtonPressed);
-
+#if !EURORACK_MODULE
 	if (buttonHandler_getShift()) {
 
 		switch(seqButtonPressed)
@@ -842,15 +961,11 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			//single instrument buttons
 			break;
 
-		case SEQ_KIT: //kit
-		case SEQ_MORPH: //morph
-
-			break;
 
 		case SEQ_FX:
 			buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_FX;
 			led_clearAllBlinkLeds();
-			led_setBlinkLed(LED_STEP15,1);
+			led_setBlinkLed(LED_8,1);
 			menu_switchPage(FX_MODE_PAGE);
 			menu_switchSubPage(fxBus.fxType, 1 );
 
@@ -859,12 +974,18 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			if(menu_getSubPage() != fxBus.fxType)
 				menu_switchSubPage(fxBus.fxType, 1);
 			break;
+#if !EURORACK_MODULE
+		case SEQ_KIT: //kit
+		case SEQ_MORPH: //morph
+
+			break;
 
 		case SEQ_SONG:
 			//--> enter song mode
 			buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_SONG;
 			menu_switchPage(SONG_MODE_PAGE);
 			break;
+
 		case SEQ_PATTERN: //Pattern
 
 			//--> pattern select mode
@@ -872,6 +993,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			menu_switchPage(PATTERN_LOAD_PAGE);
 
 			break;
+
 		case SEQ_PROJECT: //Performance
 
 			break;
@@ -892,7 +1014,6 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			//{
 				//reload kit to edit buffer
 				preset_loadDrumsetRam(menu_selectedPresetNr[SAVE_TYPE_KIT],0, 0);
-				preset_touchTimer(PRESET_KIT_TIMER);
 			//}
 		}
 			break;
@@ -903,8 +1024,8 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			led_setBlinkLed(LED_STEP12,1);
 			menu_switchPage(MENU_MIDI_PAGE);
 			break;
-
-
+#endif
+#if !EURORACK_MODULE
 		case SEQ_LAST_STEP:
 
 			//the blinking led is only
@@ -921,7 +1042,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			//else if(buttonHandler_stateMemory.selectButtonMode == SEQ_LAST_STEP_ALL) buttonHandler_stateMemory.selectButtonMode = SEQ_LAST_STEP_SINGLE_TRACK;
 			else buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_LAST_STEP_TRACK;
 			menu_switchPage(MENU_LAST_STEP_PAGE);
-
+#endif
 
 		default:
 			break;
@@ -943,6 +1064,8 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 		}
 		*/
 	}
+#endif
+#if !EURORACK_MODULE
 	else if(buttonHandler_getLoad())
 	{
 		switch(seqButtonPressed)
@@ -963,7 +1086,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				//update the status LED
 				led_setMode2(2);
 				led_clearAllBlinkLeds();
-				led_setBlinkLed(LED_STEP8,1);
+				led_setBlinkLed(LED_8,1);
 				buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_LOAD;
 				menu_switchPage(LOAD_PAGE);
 				break;
@@ -976,7 +1099,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_LOAD;
 				menu_switchPage(LOAD_PAGE);
 				break;
-
+#if !EURORACK_MODULE
 			case SEQ_PATTERN: //Pattern
 
 #if 1
@@ -1013,7 +1136,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_LOAD;
 				menu_switchPage(LOAD_PAGE);
 				break;
-
+#endif
 			case SEQ_CONFIG: //config
 
 				break;
@@ -1048,7 +1171,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				//update the status LED
 				led_setMode2(3);
 				led_clearAllBlinkLeds();
-				led_setBlinkLed(LED_STEP8,1);
+				led_setBlinkLed(LED_8,1);
 				buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_SAVE;
 				menu_switchPage(SAVE_PAGE);
 				break;
@@ -1068,7 +1191,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				menu_switchPage(PATTERN_SAVE_PAGE);
 				break;
 				*/
-
+#if !EURORACK_MODULE
 			case SEQ_PATTERN: //Pattern
 
 
@@ -1102,6 +1225,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_SAVE;
 				menu_switchPage(SAVE_PAGE);
 				break;
+#endif
 
 			case SEQ_CONFIG: //config
 
@@ -1111,6 +1235,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				break;
 		}
 	}
+#endif
 	else { // no key modifier pressed
 		switch (buttonHandler_stateMemory.selectButtonMode) {
 		case SELECT_MODE_VOICE:
@@ -1120,6 +1245,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			//buttonHandler_setTimeraction((uint8_t) (seqButtonPressed * 8));
 			buttonHandler_setTimeraction((uint8_t) (seqButtonPressed + menu_activeBar*16));
 			break;
+#if !EURORACK_MODULE
 		case SELECT_MODE_STEP:
 			led_clearAllBlinkLeds();
 			buttonHandler_selectActiveStep(ledNr, seqButtonPressed);
@@ -1132,6 +1258,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			break;
 
 		case SELECT_MODE_PATTERN:
+
 			if(menu_getActivePage() == PATTERN_SAVE_PAGE)
 			{
 
@@ -1147,23 +1274,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				}
 
 				seq_patternSet.shuffle[seqButtonPressed + 16 * menu_activePatternBank] = activeParameters[PAR_SHUFFLE];
-
-
-
 				preset_savePatternRAM(seqButtonPressed + 16 * menu_activePatternBank);
-
-				//save to tmp folder
-				#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-					HAL_TIM_Base_Start_IT(&htim2);	//calc sample interrupt - prio 1
-				#else
-
-				#endif
-					preset_savePatternSD(seqButtonPressed + 16 * menu_activePatternBank);
-				#if USE_INTERRUPT_ONLY_DURING_SAVE_PROJ
-							HAL_TIM_Base_Stop_IT(&htim2);	//calc sample interrupt - prio 1
-				#else
-
-				#endif
 
 
 				menu_selectedPresetNr[SAVE_TYPE_PATTERN] = seqButtonPressed + 16 * menu_activePatternBank;
@@ -1192,8 +1303,6 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 
 				frontPanel_sendData(SEQ_CC, SEQ_REQUEST_EUKLID_PARAMS,
 						menu_activePage/*menu_getActiveVoice()*/);
-				//update autosave pattern on manual pattern change
-				preset_touchTimer(PRESET_PAT_TIMER);
 
 	//-----------------------------------------------------------------
 
@@ -1208,7 +1317,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				frontPanel_sendData(SEQ_CC, SEQ_CHANGE_PAT, seqButtonPressed + 16 * menu_activePatternBank);
 			}
 			break;
-
+#endif
 
 		case SELECT_MODE_PERF: //--- buttons 1-8 initiate a manual roll
 			if (seqButtonPressed < 8) {
@@ -1233,11 +1342,13 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 			}
 			break;
 
+#if !EURORACK_MODULE
 		case SELECT_MODE_SONG:
 			//in song mode, seq buttons add patterns to song
 			seq_addPatternToSong(seqButtonPressed + 16 * menu_activePatternBank);
 			menu_repaintAll();
 			break;
+
 
 		case SELECT_MODE_LAST_STEP_ALL:
 			{
@@ -1275,7 +1386,7 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 				}
 			}
 			break;
-
+#endif
 			//--- unused (maybe lfo clock sync? ---
 		case SELECT_MODE_LOAD:
 		case SELECT_MODE_SAVE:
@@ -1284,7 +1395,9 @@ static void buttonHandler_seqButtonPressed(uint8_t seqButtonPressed)
 		}
 	} // is shift being held down
 }
+#endif
 //--------------------------------------------------------
+#if !EURORACK_MODULE
 static void buttonHandler_seqButtonReleased(uint8_t seqButtonPressed)
 {
 
@@ -1294,6 +1407,7 @@ static void buttonHandler_seqButtonReleased(uint8_t seqButtonPressed)
 	{
 
 	}
+
 	if (buttonHandler_getShift()) // shift click is fully handled in "pressed"
 	{
 
@@ -1315,7 +1429,9 @@ static void buttonHandler_seqButtonReleased(uint8_t seqButtonPressed)
 		}
 		return;
 	}
-	else if(buttonHandler_getLoad() || buttonHandler_getSave()) return;
+	else
+
+		if(buttonHandler_getLoad() || buttonHandler_getSave()) return;
 
 	// I don't think that the timer would be armed in this case
 	//{
@@ -1333,18 +1449,22 @@ static void buttonHandler_seqButtonReleased(uint8_t seqButtonPressed)
 	//} else {
 
 	switch (buttonHandler_stateMemory.selectButtonMode) {
+#if !EURORACK_MODULE
 	case SELECT_MODE_STEP:
 		//do nothing if timer action occurred - its already handled in the timer
 		if (buttonHandler_TimerActionOccured())
 			return;
 		break;
+#endif
 		//--- edit the pattern -> button sets and removes a step ---
 	case SELECT_MODE_VOICE:
 
 		//do nothing if timer action occured
 		if (buttonHandler_TimerActionOccured())
 			return;
+#if !EURORACK_MODULE
 		buttonHandler_setRemoveStep(ledNr, seqButtonPressed);
+#endif
 
 		break;
 	case SELECT_MODE_PERF:
@@ -1367,11 +1487,13 @@ static void buttonHandler_seqButtonReleased(uint8_t seqButtonPressed)
 
 	}
 }
-
+#endif
 //--------------------------------------------------------
 // one of the 8 part buttons is pressed
+#if !EURORACK_MODULE
 static void buttonHandler_selectButtonPressed(uint8_t partNr)
 {
+
 	//if in step mode, return to voice/edit mode
 	if(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_STEP)
 	{
@@ -1384,6 +1506,7 @@ static void buttonHandler_selectButtonPressed(uint8_t partNr)
 				led_setActiveSelectButton(menu_getSubPage());
 				menu_resetActiveParameter();
 	}
+
 	//-----
 /*
  * comment removes copy pattern function, can now be achieved with save pattern as when edit buffer is implemented for patterns
@@ -1414,42 +1537,68 @@ static void buttonHandler_selectButtonPressed(uint8_t partNr)
 		// if shift is held and a part button is held down, we will enter automation record mode
 		// for that sub-step on the currently selected step.
 		// if shift is not held, we just do normal handling
+#if !EURORACK_MODULE
 		if ( buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_VOICE && buttonHandler_getShift()) {
 			//TODO hier muss selektiert werden!
 			buttonHandler_setTimeraction((uint8_t)(buttonHandler_selectedStep * 8 + partNr));
-		} else {
+		} else
+#endif
+		{
 			buttonHandler_handleSelectButton(partNr);
 		}
 
 	}
 
 }
-
+#endif
 //--------------------------------------------------------
 // one of the 8 part buttons is released
+#if !EURORACK_MODULE
 static void buttonHandler_partButtonReleased(uint8_t partNr)
 {
+#if !EURORACK_MODULE
 	if (copyClear_Mode >= MODE_COPY_PATTERN) {
 
-	} else {
+	} else
+#endif
+		{
+#if !EURORACK_MODULE
 		//if(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_VOICE) return;
 		//do nothing if timer action occured
 		if (buttonHandler_TimerActionOccured())
 			return;
 
 		buttonHandler_buttonTimerStepNr = NO_STEP_SELECTED;
+
 		if (buttonHandler_getShift() && buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_VOICE) {
 			buttonHandler_handleSelectButton(partNr);
 		}
+#endif
 	}
-}
 
+}
+#endif
+
+void buttonHandler_voiceButtonReleased(uint8_t voiceNr)
+{
+
+	if (menu_activePage == PERF_PAGE)
+	{
+		if((voiceNr>=1) && (buttonHandler_getDrumButton() == 0))
+		{
+			//turn button led off
+			led_setValue(0, LED_1+voiceNr);
+		}
+	}
+
+}
 //--------------------------------------------------------
 // one of the 7 voice buttons pressed
-static void buttonHandler_voiceButtonPressed(uint8_t voiceNr)
+ void buttonHandler_voiceButtonPressed(uint8_t voiceNr)
 {
 
 	//if in step mode, return to voice/edit mode
+#if !EURORACK_MODULE
 	if(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_STEP)
 	{
 				led_clearAllBlinkLeds();
@@ -1484,12 +1633,18 @@ static void buttonHandler_voiceButtonPressed(uint8_t voiceNr)
 			copyClear_setSrc((int8_t)voiceNr, MODE_COPY_TRACK);
 			led_setBlinkLed((uint8_t) (LED_VOICE1 + voiceNr), 1);
 		}
-	} else {
+	} else
+#endif
+		{
 		// mode none or clear
 		// determine if we are in mute/unmute mode -
 		// in perf mode we are in mute mode unless shift is held
 		// in any other mode we are in mute mode when shift is held
+#if EURORACK_MODULE
+
+#else
 		uint8_t muteModeActive = buttonHandler_getShift();
+
 		if (menu_activePage == PERF_PAGE) {//(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_PERF) {
 			//invert mute functionality
 			muteModeActive = (uint8_t) (1 - muteModeActive);
@@ -1508,9 +1663,43 @@ static void buttonHandler_voiceButtonPressed(uint8_t voiceNr)
 			}
 
 		}
+
 		//############ mute mode is not active. regular handling ############
-		else {
-			if (menu_activePage == PERF_PAGE) {//(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_PERF) {
+		else
+		#endif
+		{
+			if (menu_activePage == PERF_PAGE) {
+
+				//(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_PERF) {
+
+#if EURORACK_MODULE
+				//trigger voice, when DRUM held mute/unmute voice
+				if(voiceNr>=1)
+				{
+					if(buttonHandler_getDrumButton())
+					{
+						//mute/unmute
+						if (buttonHandler_mutedVoices & (1 << (voiceNr-1))) {
+							//unmute tracks 0-7
+							buttonHandler_muteVoice(voiceNr-1, 0);
+							//frontPanel_sendData(SEQ_CC, SEQ_UNMUTE_TRACK, voiceNr-1);
+						} else {
+							//mute tracks 0-7
+							buttonHandler_muteVoice(voiceNr-1, 1);
+							//frontPanel_sendData(SEQ_CC, SEQ_MUTE_TRACK, voiceNr-1);
+						}
+					}
+					else
+					{
+						const uint8_t vel = Trigger_getAccent(voiceNr-1);
+						voiceControl_noteOn(voiceNr-1 , SEQ_DEFAULT_NOTE, vel);
+
+						//turn button led on
+						led_setValue(1, LED_1+voiceNr);
+					}
+				}
+
+#else
 				//shift-voice in perf mode -> unmute all tracks up to and including selected voice which are muted
 				for (uint8_t i = 0; i <= voiceNr; i++) {
 					if (buttonHandler_mutedVoices & (1 << i)) {
@@ -1521,9 +1710,12 @@ static void buttonHandler_voiceButtonPressed(uint8_t voiceNr)
 					}
 				}
 				buttonHandler_showMuteLEDs();
+#endif
+			}
 
-			} else { //select active voice
+			else if (buttonHandler_getDrumButton()){ //when drum button is held, select active voice
 
+#if !EURORACK_MODULE
 				//check active bars of new track and make sure the view does not end up in inactive part
 				uint8_t activeStep = seq_getStepIndex(voiceNr);
 				if(activeStep == 255)
@@ -1536,37 +1728,110 @@ static void buttonHandler_voiceButtonPressed(uint8_t voiceNr)
 				}
 				//we also update the bar/page buttons here
 				led_updateBarLeds();
-
+#endif
 
 				//the currently active button is lit
-				led_setActiveVoice(voiceNr);
+				led_setActiveVoiceLedsTemp(voiceNr);
 
 				//change voice page on display if in voice mode
-				if ((buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_VOICE) || (buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_PERF) /*|| (buttonHandler_stateMemory.selectButtonMode ==SELECT_MODE_STEP) */) {
-					menu_switchPage(voiceNr);
+				//if ((buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_VOICE) || (buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_PERF) /*|| (buttonHandler_stateMemory.selectButtonMode ==SELECT_MODE_STEP) */) {
+
+				/*//No more FX button on 8!
+				//hack to enable FX mode page on voice button 8
+				if(voiceNr == 7)
+				{
+
+					if(buttonHandler_stateMemory.selectButtonMode != SELECT_MODE_FX)
+					{
+						//if FX page is newly entered, reset view to page 1
+						menu_switchSubPage(0,0);
+					}
+					buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_FX;
+					//led_clearAllBlinkLeds();
+					//led_setBlinkLed(LED_8,1);
+					menu_switchPage(FX_MODE_PAGE);
+					menu_switchSubPage(fxBus.fxType, 1 );
+
+
+					//change visible parameters to selected FX type
+					if(menu_getSubPage() != fxBus.fxType)
+						menu_switchSubPage(fxBus.fxType, 1);
 				}
-				frontPanel_sendData(SEQ_CC, SEQ_SET_ACTIVE_TRACK, voiceNr);
+				else
+				*/
+				{
 
-				menu_setActiveVoice(voiceNr);
+					if( (buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_FX) ||(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_LOAD)||(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_SAVE))
+					{
+						buttonHandler_stateMemory.selectButtonMode = SELECT_MODE_VOICE;
+						led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+						menu_switchSubPage(0, 0);
+					}
 
-				frontPanel_sendData(SEQ_CC, SEQ_REQUEST_EUKLID_PARAMS, voiceNr);
+					menu_switchPage(voiceNr-1);
+				//}
+				frontPanel_sendData(SEQ_CC, SEQ_SET_ACTIVE_TRACK, voiceNr-1);
+
+				menu_setActiveVoice(voiceNr-1);
+				}
+
+			//	frontPanel_sendData(SEQ_CC, SEQ_REQUEST_EUKLID_PARAMS, voiceNr);
 				//request the pattern info for the selected pattern (bar cnt, next...)
 				//frontPanel_sendData(SEQ_CC,SEQ_REQUEST_PATTERN_PARAMS,buttonNr);
-
+#if !EURORACK_MODULE
 				led_updateSeqLeds();
+#endif
 
+#if !EURORACK_MODULE
 				if (buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_STEP) {
 					//reactivate sequencer mode
 					led_clearAllBlinkLeds();
 					buttonHandler_enterSeqModeStepMode();
 
 				}
+#endif
 
 
 
 
 
-			} // if buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_PERF)
+			}
+
+			else if ((menu_activePage >= VOICE1_PAGE) && (menu_activePage <= VOICE7_PAGE))  //voice mode
+			{
+				//SHIFT + DRUM to preview voices while in EDIT mode
+				if(buttonHandler_getShiftButton())
+				{
+					//trigger voice
+					if(voiceNr>=1)
+					{
+						const uint8_t vel = Trigger_getAccent(voiceNr-1);
+						voiceControl_noteOn(voiceNr-1 , SEQ_DEFAULT_NOTE, vel);
+
+						//turn button led on
+						led_pulseLed(LED_1+voiceNr);
+					}
+				}
+				else
+				{
+					if(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_MOD) return;
+					//select synth engine page (OSC; AEG etc)
+					led_setMode2(SELECT_MODE_VOICE); //just to make sure MOD LED is not lit due to hacky LFO page (shift+mod)
+					buttonHandler_handleSelectButton(voiceNr);
+				}
+			}
+
+
+
+			else if ((menu_activePage >= LOAD_PAGE) || (menu_activePage >= SAVE_PAGE))
+			{
+				//return to voice mode
+				buttonHandler_handleModeButtons(SELECT_MODE_VOICE);
+				//re-process the button
+				buttonHandler_voiceButtonPressed(voiceNr);
+
+			}
+
 		} // if (muteModeActive)
 	} // if (copyClear_Mode >= MODE_COPY_PATTERN)
 
@@ -1583,7 +1848,50 @@ void buttonHandler_buttonPressed(uint8_t buttonNr) {
 	switch(buttonNr)
 	{
 
+#if EURORACK_MODULE
 
+	case BUT_FX:
+		buttonHandler_handleModeButtons(SELECT_MODE_FX);
+		break;
+
+	case BUT_SHIFT:
+		led_setValue(1, LED_SHIFT);
+
+
+		break;
+
+
+
+	case BUT_1:
+
+		//if in performance mode -> show muted voices
+		if(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_PERF)
+		{
+			buttonHandler_showMuteLEDs();
+		}
+		else
+		{
+
+
+			//While held, use button 1-8 to select voice
+
+			//display "selected voice: %d"
+			led_setActiveVoiceLedsTemp(menu_getActiveVoice()+1);
+			led_setValue(1, LED_1);
+			menu_repaintAll();
+		}
+
+		break;
+
+	case BUT_2:
+	case BUT_3:
+	case BUT_4:
+	case BUT_5:
+	case BUT_6:
+	case BUT_7:
+	case BUT_8:
+		buttonHandler_voiceButtonPressed(buttonNr-BUT_1);
+#else
 	case BUT_VOICE_1:
 	case BUT_VOICE_2:
 	case BUT_VOICE_3:
@@ -1592,8 +1900,56 @@ void buttonHandler_buttonPressed(uint8_t buttonNr) {
 	case BUT_VOICE_6:
 	case BUT_VOICE_7:
 		buttonHandler_voiceButtonPressed(buttonNr-BUT_VOICE_1);
+#endif
+
 		break;
 
+	case BUT_EDIT :
+	case BUT_MOD :
+		if(buttonHandler_getShiftButton())
+		{
+			//activate normal voice edit mode to access page 8 with LFOs
+			buttonHandler_handleModeButtons((uint8_t) (0));
+			//go to edit mode page 8:1 to show LFOs
+			//update the status LED
+			led_setMode2(SELECT_MODE_MOD);
+
+			//menu special case since we use modMatrixPages!!!
+			menu_activePage = menu_getActiveVoice();
+			menu_switchSubPage(7,0);
+			led_setActiveSelectButton(menu_getActiveVoice()+1);
+		}
+		else
+		{
+			buttonHandler_handleModeButtons((uint8_t) (buttonNr - BUT_EDIT));
+		}
+		break;
+	case BUT_SAVE_LOAD :
+		buttonHandler_handleModeButtons((uint8_t) (SELECT_MODE_LOAD));
+		break;
+
+	case BUT_PERF :
+
+		buttonHandler_handleModeButtons((uint8_t) (buttonNr - BUT_EDIT));
+
+
+		/*
+		 *
+		 * DRUM SELECT MODE!
+		led_setValue(1, LED_PERF);
+
+		if(buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_FX)
+		{
+			led_setActiveVoiceLedsTemp(7);
+		}
+		else
+		{
+			led_setActiveVoiceLedsTemp((uint8_t)(menu_getActiveVoice()));
+		}
+		*/
+		break;
+
+#if !EURORACK_MODULE
 	case BUT_PAGE_UP:
 		if((buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_PATTERN) || (buttonHandler_stateMemory.selectButtonMode == SELECT_MODE_SONG))
 		{
@@ -1836,7 +2192,9 @@ void buttonHandler_buttonPressed(uint8_t buttonNr) {
 
 					break;
 				case SELECT_MODE_PERF:
+#if !EURORACK_MODULE
 				case SELECT_MODE_PAT_GEN:
+#endif
 
 					// Pattern changes will be done via SHIFT+PATTERN button, so do nothing here in V2
 
@@ -1880,9 +2238,10 @@ void buttonHandler_buttonPressed(uint8_t buttonNr) {
 					led_setBlinkLed(led_idx2SelectLed(menu_getViewedPattern()),	1);
 					*/
 					break;
-
+#if !EURORACK_MODULE
 				case SELECT_MODE_STEP:
 					//buttonHandler_leaveSeqModeStepMode();
+#endif
 					break;
 				default:
 					break;
@@ -1892,6 +2251,7 @@ void buttonHandler_buttonPressed(uint8_t buttonNr) {
 			buttonHandler_showMuteLEDs();
 
 		break;
+
 
 	case BUT_START_STOP:
 		if(buttonHandler_getShift())
@@ -1996,17 +2356,83 @@ void buttonHandler_buttonPressed(uint8_t buttonNr) {
 	case BUT_SEQ1:
 		buttonHandler_seqButtonPressed(0);
 		break;
-
+#endif
 	default:
 		break;
 	}
 }
 
 //--------------------------------------------------------
-void buttonHandler_buttonReleased(uint8_t buttonNr) {
+void buttonHandler_buttonReleased(uint8_t buttonNr)
+{
+
+	switch (buttonNr)
+	{
+	default:
 
 
+	case BUT_1:
+		led_setValue(0, LED_1);
+		//if in performance mode -> show muted voices
+		if(buttonHandler_getMode() == SELECT_MODE_PERF)
+		{
+			led_clearLeds_1To8();
 
+		}
+		if(buttonHandler_getMode() != SELECT_MODE_MOD)
+		{
+			//While held, use button 1-8 to select voice
+
+			led_reset(LED_1);
+			led_reset(LED_2);
+			led_reset(LED_3);
+			led_reset(LED_4);
+			led_reset(LED_5);
+			led_reset(LED_6);
+			led_reset(LED_7);
+			led_reset(LED_8);
+		}
+
+			menu_repaintAll();
+
+		break;
+
+	case BUT_2:
+	case BUT_3:
+	case BUT_4:
+	case BUT_5:
+	case BUT_6:
+	case BUT_7:
+	case BUT_8:
+		buttonHandler_voiceButtonReleased(buttonNr-BUT_1);
+
+		break;
+
+	case BUT_SHIFT:
+		led_setValue(0, LED_SHIFT);
+
+
+		break;
+
+	case BUT_PERF :
+		/*
+		// DRUM SELECT MODE HANDLER
+		led_setValue(0, LED_PERF);
+
+		//reset temp LED state from showing active voice to previous mode
+		led_reset(LED_1);
+		led_reset(LED_2);
+		led_reset(LED_3);
+		led_reset(LED_4);
+		led_reset(LED_5);
+		led_reset(LED_6);
+		led_reset(LED_7);
+		led_reset(LED_8);
+		*/
+		break;
+	}
+
+#if !EURORACK_MODULE
 	/*
 	if(buttonNr < BUT_SELECT1) { // BUT_SEQ* buttons
 		buttonHandler_seqButtonReleased(buttonNr);
@@ -2116,7 +2542,7 @@ void buttonHandler_buttonReleased(uint8_t buttonNr) {
 		}
 		break;
 
-
+#if !EURORACK_MODULE
 	case BUT_COPY:
 
 		if(buttonHandler_stateMemory.seqErasing) {
@@ -2133,7 +2559,7 @@ void buttonHandler_buttonReleased(uint8_t buttonNr) {
 
 
 		break;
-
+#endif
 	case BUT_SHIFT: // when this button is released, revert back to normal operating mode
 
 		if(buttonHandler_stateMemory.seqErasing) {
@@ -2143,20 +2569,22 @@ void buttonHandler_buttonReleased(uint8_t buttonNr) {
 						buttonHandler_stateMemory.seqErasing);
 		}
 
+#if !EURORACK_MODULE
 		if (copyClear_Mode == MODE_CLEAR) {
 			copyClear_armClearMenu(0);
 			copyClear_Mode = MODE_NONE;
 		}
+#endif
 		led_setValue(0, LED_SHIFT);
 
 		switch(buttonHandler_stateMemory.selectButtonMode) {
-
+#if !EURORACK_MODULE
 		case SELECT_MODE_LAST_STEP_ALL:
 		case SELECT_MODE_LAST_STEP_TRACK:
 			//return to normal mode
 		//	buttonHandler_handleModeButtons(SELECT_MODE_VOICE);
 			break;
-
+#endif
 		case SELECT_MODE_VOICE:
 		//	buttonHandler_leaveSeqMode();
 			break;
@@ -2168,6 +2596,7 @@ void buttonHandler_buttonReleased(uint8_t buttonNr) {
 			led_initPerformanceLeds();
 			*/
 			return;
+#if !EURORACK_MODULE
 		case SELECT_MODE_PAT_GEN:
 			/*
 			//led_clearAllBlinkLeds();
@@ -2179,6 +2608,7 @@ void buttonHandler_buttonReleased(uint8_t buttonNr) {
 		case SELECT_MODE_STEP:
 			//buttonHandler_enterSeqModeStepMode();
 			break;
+#endif
 		default:
 			break;
 		}
@@ -2195,6 +2625,7 @@ void buttonHandler_buttonReleased(uint8_t buttonNr) {
 	default:
 		break;
 	}
+#endif
 }
 
 //--------------------------------------------------------------
@@ -2218,20 +2649,22 @@ void buttonHandler_setMode(uint8_t mode)
 	buttonHandler_stateMemory.selectButtonMode = mode;
 }
 //--------------------------------------------------------------
-
+#if !EURORACK_MODULE
 void buttonHandler_setRunStopState(uint8_t running) {
 	// set the state
 	buttonHandler_stateMemory.seqRunning = (uint8_t) (running & 0x01);
 	// set the led
 	led_setValue(buttonHandler_stateMemory.seqRunning, LED_START_STOP);
 }
+#endif
 //--------------------------------------------------------------
 void buttonHandler_init()
 {
 	//update the status LED
-	led_setMode2(buttonHandler_stateMemory.selectButtonMode);
+	//led_setMode2(buttonHandler_stateMemory.selectButtonMode);
 	//set menu to voice page mode
 	menu_switchPage(menu_getActiveVoice());
-	led_setActiveSelectButton(menu_getSubPage());
+	led_setActiveSelectButton(menu_getSubPage()+1);
 	menu_resetActiveParameter();
+	buttonHandler_buttonPressed(BUT_2);
 }

@@ -16,7 +16,6 @@
 #ifndef UART_H_
 #define UART_H_
 
-#include <stdint.h>
 
 #include "main.h"
 //#include <avr/interrupt.h>
@@ -43,5 +42,6 @@ uint8_t uart_getc(uint8_t *data);
 uint8_t uart_waitAck();
 //check if there is some data received an parse it
 void uart_checkAndParse();
+
 
 #endif /* UART_H_ */

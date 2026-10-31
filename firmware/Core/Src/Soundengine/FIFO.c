@@ -13,8 +13,6 @@
 #include "Soundengine/FIFO.h"
 #include "string.h"
 
-#include <stdint.h>
-
 //-------------------------------------------------------------------------
 void fifo_init(Fifo* fifo)
 {

@@ -135,7 +135,7 @@ IN_ITCM_RAM void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 		   //now start next sample block calculation
 			 bCurrentSampleValid = 1-(dmaPtr&0x1);
 #if CALC_SAMPLES_IN_INTERRUPT
-			 __HAL_TIM_SetCounter(&htim2, 1450);
+			// __HAL_TIM_SetCounter(&htim2, 450);
 #endif
 #endif
 

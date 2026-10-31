@@ -13,10 +13,10 @@
 
 
 
+#include <Soundengine/TriggerProcessor.h>
 #include "Soundengine/DSPAudio/Snare.h"
 #include "Soundengine/DSPAudio/squareRootLut.h"
 #include "Soundengine/DSPAudio/modulationNode.h"
-#include "Soundengine/TriggerOut.h"
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "IO/adcPots.h"
 #include "Soundengine/FxBus.h"
@@ -33,13 +33,13 @@ void Snare_setPan(const uint8_t pan)
 //---------------------------------------------------
 void Snare_init()
 {
-	initOnePole(&snareVoice.FaderVolumeFilter);
-	setOnePoleCoef(&snareVoice.FaderVolumeFilter,0.1);
+//	initOnePole(&snareVoice.FaderVolumeFilter);
+//	setOnePoleCoef(&snareVoice.FaderVolumeFilter,0.1);
 
 	SnapEg_init(&snareVoice.snapEg);
 	Snare_setPan(0);
 	snareVoice.vol = 0.8f;
-
+	snareVoice.cvFreq = 0.5f;
 	//snareVoice.panModifier = 1.f;
 
 	snareVoice.noiseOsc.freq = 440;
@@ -48,12 +48,14 @@ void Snare_init()
 	snareVoice.noiseOsc.midiFreq = 70<<8 | 64;
 	snareVoice.noiseOsc.pitchMod = 1.0f;
 	snareVoice.noiseOsc.modNodeValue = 1;
+	snareVoice.noiseOsc.cvFreq = -1.f;
 
 	snareVoice.osc.freq = 440;
 	snareVoice.osc.waveform = 1;
 	snareVoice.osc.fmMod = 0;
 	snareVoice.osc.midiFreq = 70<<8 | 64;
 	snareVoice.osc.modNodeValue = 1;
+	snareVoice.osc.cvFreq = -1.f;
 
 	setDistortionShape(&snareVoice.distortion, 0.f);
 
@@ -79,12 +81,22 @@ void Snare_updatePan()
 	snareVoice.triggeredPanR = sqrtf(snareVoice.pan/127.f);
 }
 //---------------------------------------------------
+void Snare_setCv1VOct(float oct)
+{
+	snareVoice.osc.cvFreq		= oct;
+	snareVoice.noiseOsc.cvFreq	= oct;
+	snareVoice.transGen.cvFreq = oct;
+}
+//---------------------------------------------------
 void Snare_trigger(const uint8_t vel, const uint8_t note)
 {
 	lfo_retrigger(3);
 	//update velocity modulation
+#if OLD_LFO_ROUTING
 	modNode_updateValue(&velocityModulators[3],vel/127.f);
-
+#else
+	snareVoice.velocity = vel/127.f;
+#endif
 	float offset = 1;
 	if(snareVoice.transGen.waveform==1) //offset mode
 	{
@@ -165,13 +177,10 @@ void Snare_calcSyncBlock(int16_t* buf, const uint8_t size)
 #endif
 
 
-
-
 	//calc next osc sample
 	calcNextOscSampleBlock(&snareVoice.osc,oscBuf,size,(1.f-snareVoice.mix), snareVoice.pwm);
 	// apply filter to synthesized sound as well here if desired, or combine code for more efficiency
 	//SVF_calcBlockZDF(&snareVoice.filter,snareVoice.filterType,transBuf,size);
-
 
 	//calc transient sample
 	transient_calcBlock(&snareVoice.transGen,transBuf,size);
@@ -193,7 +202,7 @@ void Snare_calcSyncBlock(int16_t* buf, const uint8_t size)
 			//add transient sample
 			//tmp	= __QADD16(transBuf[j],(int16_t)tmp);
 			tmp	+= transBuf[j];
-			buf[j] =   snareVoice.combinedVolume  * tmp * calcOnePole( &snareVoice.FaderVolumeFilter, adc_getFaderVolume(3));
+			buf[j] =   snareVoice.combinedVolume  * tmp ;//* calcOnePole( &snareVoice.FaderVolumeFilter, adc_getFaderVolume(3));
 
 #else
 
@@ -218,7 +227,7 @@ void Snare_calcSyncBlock(int16_t* buf, const uint8_t size)
 			//add transient sample
 			//tmp	= __QADD16(transBuf[j],(int16_t)tmp);
 			tmp	+= transBuf[j];
-			buf[j] =  snareVoice.combinedVolume * tmp * calcOnePole( &snareVoice.FaderVolumeFilter, adc_getFaderVolume(3));
+			buf[j] =  snareVoice.combinedVolume * tmp ;//* calcOnePole( &snareVoice.FaderVolumeFilter, adc_getFaderVolume(3));
 #else
 			//add filter to buffer
 			buf[j] *= snareVoice.mix;

@@ -14,12 +14,13 @@
 
 #include "menu/menu.h"
 #include <Soundengine/MIDI/CortexParser.h>
+#include <Soundengine/TriggerProcessor.h>
 #include "Soundengine/MIDI/MidiMessages.h"
 #include "Soundengine/MIDI/MidiParser.h"
-#include "Soundengine/Sequencer/sequencer.h"
+//#include "Soundengine/Sequencer/sequencer.h"
 #include "Soundengine/MIDI/Uart.h"
 //#include "SD_Manager.h"
-#include "Soundengine/Sequencer/EuklidGenerator.h"
+//#include "Soundengine/Sequencer/EuklidGenerator.h"
 #include "Soundengine/config.h"
 #include "Soundengine/DSPAudio/mixer.h"
 
@@ -28,20 +29,18 @@
 #include "Soundengine/DSPAudio/HiHat.h"
 #include "Soundengine/DSPAudio/Snare.h"
 //#include "SomGenerator.h"
-#include "Soundengine/TriggerOut.h"
-
 #include "ledHandler.h"
 
-static void frontParser_handleMidiMessage();
-static void frontParser_handleSysexData(unsigned char data);
-static void frontParser_handleSeqCC();
+void frontParser_handleMidiMessage( MidiMsg msg);
+//static void frontParser_handleSysexData(unsigned char data);
+//static void frontParser_handleSeqCC();
 
 //a counter for the received bytes
 //each message is made up from 3 bytes (status 0xb0, parameter nr and parameter value)
  uint8_t frontParser_rxCnt=0;
 
 //the currently selected parameter
- MidiMsg cortex_midiMsg;
+ //MidiMsg cortex_midiMsg;
 
 //the currently active track on the fron panel (shown on the seq led buttons)
  uint8_t frontParser_activeFrontTrack=0;
@@ -51,7 +50,7 @@ static void frontParser_handleSeqCC();
 /** used to collect 2 7 bit messages and combine them to a 14 bit message*/
  uint16_t frontParser_twoByteData=0;
 
- static uint8_t frontParser_sysexBuffer[7];
+ //uint8_t frontParser_sysexBuffer[7];
 
 /** used to count incoming sequencer step data packages*/
  uint16_t frontParser_sysexSeqStepNr=0;
@@ -96,6 +95,7 @@ void frontParser_updateTrackLeds(const uint8_t trackNr, uint8_t patternNr)
 }
 */
 //------------------------------------------------------
+#if 0
 void frontParser_parseUartData(unsigned char data)
 {
 
@@ -142,9 +142,11 @@ void frontParser_parseUartData(unsigned char data)
 		}
 	}
 };
+#endif
 
 //------------------------------------------------------
 // This is called when we are in sysex mode and are receiving the sysex bytes
+#if 0
 static void frontParser_handleSysexData(unsigned char data)
 {
 	//SYSEX
@@ -191,6 +193,7 @@ static void frontParser_handleSysexData(unsigned char data)
 		break;
 #endif
 
+#if !EURORACK_MODULE
 	case SYSEX_REQUEST_STEP_DATA:
 		//we expect a 2 byte message containing a step nr
 		//which tells us which step data to send back
@@ -213,6 +216,7 @@ static void frontParser_handleSysexData(unsigned char data)
 		}
 
 		break;
+#endif
 #if 0
 	case SYSEX_RECEIVE_MAIN_STEP_DATA:
 		if(frontParser_rxCnt<2)
@@ -245,13 +249,14 @@ static void frontParser_handleSysexData(unsigned char data)
 			frontParser_rxCnt = 0;
 
 			//signal new pattern
-			// -- AS we do this below after receiving pattern length data
+			// we do this below after receiving pattern length data
 			//if( seq_isRunning()) {
 			//	seq_newPatternAvailable = 1;
 			//}
 		}
 		break;
 #endif
+#if !EURORACK_MODULE
 	case SYSEX_RECEIVE_PAT_LEN_DATA:
 		// same as above but we are receiving length data for each pattern
 		{
@@ -380,7 +385,7 @@ static void frontParser_handleSysexData(unsigned char data)
 			frontParser_sysexSeqStepNr++;
 		}
 		break;
-
+#endif
 	default:
 	case SYSEX_ACTIVE_MODE_NONE:
 		//we received a mode message -> set the active mode
@@ -390,20 +395,21 @@ static void frontParser_handleSysexData(unsigned char data)
 		break;
 	}
 }
+#endif
 //------------------------------------------------------
 // This is called when we've received a full midi message
-static void frontParser_handleMidiMessage()
+void frontParser_handleMidiMessage( MidiMsg msg)
 {
 
-	switch(cortex_midiMsg.status)
+	switch(msg.status)
 	{
 	//SEQ MESSAGES
 	case FRONT_SEQ_CC: // cortex_midiMsg.status
-		frontParser_handleSeqCC();
+		//frontParser_handleSeqCC();
 		break;
 
 	case SAMPLE_CC:
-		switch(cortex_midiMsg.data1)
+		switch(msg.data1)
 		{
 
 		case FRONT_SAMPLE_START_UPLOAD:
@@ -432,40 +438,50 @@ static void frontParser_handleMidiMessage()
 		// fix offset between front an cortex
 		// front params start at 1, cortex at 2 (because of midi in mod wheel==0x1
 		// correct parameter number offset
-		cortex_midiMsg.data1 += 1;
+		msg.data1 += 1;
 
 		//because hh slope on front is 127 and on cortex is 0 wrap data1 at 127
-		cortex_midiMsg.data1 &= 0x7f;
+		msg.data1 &= 0x7f;
 
 		//only perform the parameter change if it is not a param lock
+#if !EURORACK_MODULE
 		if(!seq_isAutomationStepArmed())
+#endif
 		{
-			midiParser_ccHandler(cortex_midiMsg,1, 0, 0.f);
+			midiParser_ccHandler(msg,1, 0, 0.f);
 		}
 
 		//record automation if record is turned on
+#if !EURORACK_MODULE
 		seq_recordAutomation(frontParser_activeTrack, cortex_midiMsg.data1, cortex_midiMsg.data2);
+#endif
 		break;
 
 	//CC2 above 127
+	case FRONT_CC_3:
+
 	case FRONT_CC_2: // cortex_midiMsg.status
 		{
 			//only perform the parameter change if it is not a param lock
+#if !EURORACK_MODULE
 			if(!seq_isAutomationStepArmed())
+#endif
 			{
-				midiParser_ccHandler(cortex_midiMsg,1, 0, 0.f);
+				midiParser_ccHandler(msg,1, 0, 0.f);
 			}
 
 			//record automation if record is turned on
+#if !EURORACK_MODULE
 			seq_recordAutomation(frontParser_activeTrack, cortex_midiMsg.data1+128, cortex_midiMsg.data2);
+#endif
 		}
 		break;
 
-
+#if OLD_LFO_ROUTING
 	case FRONT_CC_LFO_TARGET: //cortex_midiMsg.status
 	{
-		uint8_t upper = cortex_midiMsg.data1;
-		uint8_t lower = cortex_midiMsg.data2;
+		uint8_t upper = msg.data1;
+		uint8_t lower = msg.data2;
 		// **PATROT note that the only valid values for the following are listed in
 		// the modTargets array in the AVR code
 		uint8_t value = ((upper&0x01)<<7) | lower;
@@ -487,7 +503,8 @@ static void frontParser_handleMidiMessage()
 
 	}
 		break; // case FRONT_CC_LFO_TARGET
-
+#endif
+#if !EURORACK_MODULE
 	case FRONT_SET_P1_DEST: { // cortex_midiMsg.status
 		// **AUTOM add 1 to the value as our cortex parameters are off by 1 for the lower 127 params
 			uint8_t hi = cortex_midiMsg.data1;
@@ -585,6 +602,7 @@ static void frontParser_handleMidiMessage()
 
 		}
 		break;
+#endif
 /*
 	case FRONT_MAIN_STEP_CC: // cortex_midiMsg.status
 		{
@@ -627,11 +645,11 @@ static void frontParser_handleMidiMessage()
 		}
 		break;
 		*/
-
+#if OLD_LFO_ROUTING
 	case FRONT_CC_VELO_TARGET: // cortex_midiMsg.status
 		{
-			uint8_t upper = cortex_midiMsg.data1;
-			uint8_t lower = cortex_midiMsg.data2;
+			uint8_t upper = msg.data1;
+			uint8_t lower = msg.data2;
 			// **PATROT note that the only valid values for the following are listed in
 			// the modTargets array in the AVR code
 			uint8_t value = ((upper&0x01)<<7) | lower;
@@ -639,30 +657,26 @@ static void frontParser_handleMidiMessage()
 			modNode_setDestination(&velocityModulators[velModNr], value);
 		}
 		break;
-
+#endif
 	//VOICE option Messages
 	case VOICE_CC: // cortex_midiMsg.status
 		break;
 
 	//BPM MESSAGE
+#if !EURORACK_MODULE
 	case FRONT_SET_BPM: { // cortex_midiMsg.status
 			uint16_t bpm = cortex_midiMsg.data1 |(uint16_t)(cortex_midiMsg.data2<<7);
-			if(bpm == 0)
-      {
+			if(bpm == 0) {
 				seq_setExtSync(1);
 			}
-      else if (bpm == 1)
-      {
-        seq_setExtSync(2);
-      }
-			else 
-      {
+			else {
 				seq_setBpm(bpm);
 
 				seq_setExtSync(0);
 			}
 		}
 		break;
+#endif
 
 	//LED MESSAGES
 		/*
@@ -701,6 +715,7 @@ static void frontParser_handleMidiMessage()
 //------------------------------------------------------
 // Sequencer message handler
 // This is called when we have received a message with status FRONT_SEQ_CC
+#if !EURORACK_MODULE
 static void frontParser_handleSeqCC()
 {
 	switch(cortex_midiMsg.data1)
@@ -725,6 +740,7 @@ static void frontParser_handleSeqCC()
 		seq_patternSet.seq_patternSettings[frontParser_shownPattern].nextPattern = cortex_midiMsg.data2;
 		break;
 */
+
 	case FRONT_SEQ_REC_ON_OFF:
 		seq_setRecordingMode(cortex_midiMsg.data2);
 		break;
@@ -791,6 +807,7 @@ static void frontParser_handleSeqCC()
 			seq_clearTrack(cortex_midiMsg.data2, frontParser_shownPattern);
 		}
 		break;
+
 /*
 	case FRONT_SEQ_CLEAR_PATTERN:
 		 seq_clearPattern(cortex_midiMsg.data2);
@@ -812,7 +829,7 @@ static void frontParser_handleSeqCC()
 	case FRONT_SEQ_SOM_FREQ:
 		//som_setFreq(cortex_midiMsg.data2,frontParser_activeTrack);
 		break;
-
+#if !EURORACK_MODULE
 	case FRONT_SEQ_MIDI_CHAN:
 	{
 		uint8_t voice = cortex_midiMsg.data2 >> 4;
@@ -915,10 +932,11 @@ static void frontParser_handleSeqCC()
 	case FRONT_SEQ_SET_SHOWN_PATTERN:
 		frontParser_shownPattern = cortex_midiMsg.data2;
 		break;
+#endif
 	case FRONT_SEQ_SET_ACTIVE_TRACK:
 		frontParser_activeTrack = cortex_midiMsg.data2;
 		break;
-
+#if !EURORACK_MODULE
 	case FRONT_SEQ_REQUEST_STEP_PARAMS:{
 
 		const uint8_t data2 = cortex_midiMsg.data2;
@@ -1030,6 +1048,7 @@ static void frontParser_handleSeqCC()
 	case FRONT_SEQ_UNMUTE_TRACK:
 		seq_setMute(cortex_midiMsg.data2,0);
 		break;
+#endif
 	case FRONT_SEQ_MIDI_ROUTING:
 		midiParser_setRouting(cortex_midiMsg.data2);
 		break;
@@ -1037,11 +1056,13 @@ static void frontParser_handleSeqCC()
 	case FRONT_SEQ_MIDI_RX_FILTER:
 		midiParser_setFilter(cortex_midiMsg.data1==FRONT_SEQ_MIDI_TX_FILTER, cortex_midiMsg.data2);
 		break;
+#if !EURORACK_MODULE
 	case FRONT_SEQ_BAR_RESET_MODE:
 		// a setting of 0 is default (keep track of bars in song), a setting of 1 is
 		// to reset the bar counter when a manual pattern change occurs
 		seq_resetBarOnPatternChange = cortex_midiMsg.data2;
 		break;
+#endif
 	case FRONT_SEQ_TRIGGER_IN_PPQ:
 		switch(cortex_midiMsg.data2)
 		{
@@ -1129,3 +1150,4 @@ static void frontParser_handleSeqCC()
 		break;
 	}
 }
+#endif

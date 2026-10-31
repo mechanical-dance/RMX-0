@@ -74,6 +74,7 @@
 #define REAL_FS				(float)44140.f//((float)44002.7573529412f) 	// since the prescaler wont allow for accurate 44.1kHz
 #define REAL_FS2			(REAL_FS/2.f)
 													  	// this is the real sample rate our system is running
+
 //the number of drum voices (bd tom1 tom2)
 #define NUM_DRUM_VOICES 3
 

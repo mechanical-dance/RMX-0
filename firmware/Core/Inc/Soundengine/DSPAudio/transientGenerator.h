@@ -33,6 +33,7 @@ typedef struct TransientGeneratorStruct
 
 	//for midi
 	uint16_t	midiFreq;  //upper 8 bit coarse, lower 8 bit fine
+	float cvFreq;
 } TransientGenerator;
 
 

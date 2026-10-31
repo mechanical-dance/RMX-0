@@ -36,8 +36,12 @@
 extern uint8_t voiceStatus[NUM_DRUM_VOICES];
 //---------------------------------------------------
 //------------- Functions ---------------------------
+void voiceControl_processQueue();
 void voiceControl_noteOn(uint8_t voice, uint8_t note, uint8_t vel);
-void voiceControl_noteOff(uint8_t voice);//0xff == all voices
-uint8_t voiceControl_isVoicePlaying(uint8_t voice);
+//void voiceControl_noteOff(uint8_t voice);//0xff == all voices
+//uint8_t voiceControl_isVoicePlaying(uint8_t voice);
+
+//called after everything else is initialized, to prevent hanging notes from triggers during module init
+void voiceControl_start();
 
 #endif /* MIDIVOICECONTROL_H_ */

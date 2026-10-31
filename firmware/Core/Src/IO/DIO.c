@@ -15,15 +15,15 @@
 
 #include "IO/DIO.h"
 #include "buttonHandler.h"
-SPI_HandleTypeDef *spi1;
+//SPI_HandleTypeDef *spi1;
 //SPI_HandleTypeDef hspi1;
 
 
-uint8_t INDTCMZ din_inputData[NUM_INPUTS/8];
-uint8_t INDTCMZ din_inputData_old[NUM_INPUTS/8];
+uint8_t INDTCMZ din_inputData[NUM_INPUTS];
+uint8_t INDTCMZ din_inputData_old[NUM_INPUTS];
 uint8_t dout_outputData[NUM_OUTS/8];
 
-uint8_t button43_old;
+//uint8_t button43_old;
 #if 0
 static void MX_SPI1_Init(void)
 {
@@ -60,18 +60,23 @@ static void MX_SPI1_Init(void)
 #endif
 
 
-void dio_init(SPI_HandleTypeDef* _hspi1)
+void dio_init()
 {
 	//MX_SPI1_Init();
-	spi1 = _hspi1;
 
-	button43_old = 0;
+
+	//button43_old = 0;
+}
+
+void dio_mute(uint8_t voice, uint8_t onOff)
+{
+#pragma message "implement dio_mute for triggers"
 }
 
 
 void dio_process()
 {
-
+#if !EURORACK_MODULE
 	//SCB_CleanDCache();
 	//send and receive via shift registers
 
@@ -86,6 +91,7 @@ void dio_process()
 	//HAL_SPI_TransmitReceive(&hspi1, dout_outputData, din_inputData, NUM_INPUTS/8, 100);
 	HAL_SPI_Transmit(spi1, dout_outputData, NUM_OUTS/8, 100);
 	DIO_LD_GPIO_Port->BSRR = DIO_LD_Pin; //set LD pin
+
 
 
 
@@ -134,6 +140,88 @@ void dio_process()
 			buttonHandler_buttonPressed(BUT_PAGE_DOWN);
 		}
 	}
+#else
+
+
+	//read buttons
+	din_inputData[0] = (Button_1_GPIO_Port->IDR & Button_1_Pin)!=0;
+	din_inputData[1] = (Button_2_GPIO_Port->IDR & Button_2_Pin)!=0;
+	din_inputData[2] = (Button_3_GPIO_Port->IDR & Button_3_Pin)!=0;
+	din_inputData[3] = (Button_4_GPIO_Port->IDR & Button_4_Pin)!=0;
+	din_inputData[4] = (Button_5_GPIO_Port->IDR & Button_5_Pin)!=0;
+	din_inputData[5] = (Button_6_GPIO_Port->IDR & Button_6_Pin)!=0;
+	din_inputData[6] = (Button_7_GPIO_Port->IDR & Button_7_Pin)!=0;
+	din_inputData[7] = (Button_8_GPIO_Port->IDR & Button_8_Pin)!=0;
+	din_inputData[8] = (Button_9_GPIO_Port->IDR & Button_9_Pin)!=0;
+	din_inputData[9] = (Button_10_GPIO_Port->IDR & Button_10_Pin)!=0;
+	din_inputData[10] = (Button_11_GPIO_Port->IDR & Button_11_Pin)!=0;
+	din_inputData[11] = (Button_12_GPIO_Port->IDR & Button_12_Pin)!=0;
+
+	din_inputData[12] = (Button_13_GPIO_Port->IDR & Button_13_Pin)!=0;
+	din_inputData[13] = (Button_14_GPIO_Port->IDR & Button_14_Pin)!=0;
+
+	//process buttons
+	for(uint8_t i=0; i<NUM_INPUTS;i++)
+	{
+		if(din_inputData[i] != din_inputData_old[i])
+		{
+			din_inputData_old[i] = din_inputData[i];
+			if(din_inputData[i] == 0)
+			{
+				buttonHandler_buttonReleased(i);
+			}
+			else
+			{
+				buttonHandler_buttonPressed(i);
+			}
+		}
+	}
+
+	//process dout LED data
+	//	HAL_SPI_Transmit(spi1, dout_outputData, NUM_OUTS/8, 100);
+	if(dout_outputData[0] & 0x01)	LED_1_GPIO_Port->BSRR = LED_1_Pin;
+	else							LED_1_GPIO_Port->BSRR = LED_1_Pin << 16;
+
+	if(dout_outputData[0] & 0x02)	LED_2_GPIO_Port->BSRR = LED_2_Pin;
+	else							LED_2_GPIO_Port->BSRR = LED_2_Pin << 16;
+
+	if(dout_outputData[0] & 0x04)	LED_3_GPIO_Port->BSRR = LED_3_Pin;
+	else							LED_3_GPIO_Port->BSRR = LED_3_Pin << 16;
+
+	if(dout_outputData[0] & 0x08)	LED_4_GPIO_Port->BSRR = LED_4_Pin;
+	else							LED_4_GPIO_Port->BSRR = LED_4_Pin << 16;
+
+	if(dout_outputData[0] & 0x10)	LED_5_GPIO_Port->BSRR = LED_5_Pin;
+	else							LED_5_GPIO_Port->BSRR = LED_5_Pin << 16;
+
+	if(dout_outputData[0] & 0x20)	LED_6_GPIO_Port->BSRR = LED_6_Pin;
+	else							LED_6_GPIO_Port->BSRR = LED_6_Pin << 16;
+
+	if(dout_outputData[0] & 0x40)	LED_7_GPIO_Port->BSRR = LED_7_Pin;
+	else							LED_7_GPIO_Port->BSRR = LED_7_Pin << 16;
+
+	if(dout_outputData[0] & 0x80)	LED_8_GPIO_Port->BSRR = LED_8_Pin;
+	else							LED_8_GPIO_Port->BSRR = LED_8_Pin << 16;
+
+	if(dout_outputData[1] & 0x01)	LED_9_GPIO_Port->BSRR = LED_9_Pin;
+	else							LED_9_GPIO_Port->BSRR = LED_9_Pin << 16;
+
+	if(dout_outputData[1] & 0x02)	LED_10_GPIO_Port->BSRR = LED_10_Pin;
+	else							LED_10_GPIO_Port->BSRR = LED_10_Pin << 16;
+
+	if(dout_outputData[1] & 0x04)	LED_11_GPIO_Port->BSRR = LED_11_Pin;
+	else							LED_11_GPIO_Port->BSRR = LED_11_Pin << 16;
+
+	if(dout_outputData[1] & 0x08)	LED_12_GPIO_Port->BSRR = LED_12_Pin;
+	else							LED_12_GPIO_Port->BSRR = LED_12_Pin << 16;
+
+	if(dout_outputData[1] & 0x10)	LED_13_GPIO_Port->BSRR = LED_13_Pin;
+	else							LED_13_GPIO_Port->BSRR = LED_13_Pin << 16;
+
+	if(dout_outputData[1] & 0x20)	LED_14_GPIO_Port->BSRR = LED_14_Pin;
+	else							LED_14_GPIO_Port->BSRR = LED_14_Pin << 16;
+
+#endif
 
 }
 

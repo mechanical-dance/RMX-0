@@ -15,12 +15,13 @@
 #ifndef PARAMETERARRAY_H_
 #define PARAMETERARRAY_H_
 
-#define TYPE_UINT8 				0	// byte
-#define TYPE_FLT 				1	// float
-#define TYPE_SPECIAL_F			2	// float value targeting modNodeValue (as opposed to actual parameter)
-#define TYPE_UINT32				3	// 32 bit int
-#define TYPE_SPECIAL_P			4	// pan
-#define TYPE_SPECIAL_FILTER_F	5	// not used apparently
+#define TYPE_NULL				0
+#define TYPE_UINT8 				1	// byte
+#define TYPE_FLT 				2	// float
+#define TYPE_SPECIAL_F			3	// float value targeting modNodeValue (as opposed to actual parameter)
+#define TYPE_UINT32				4	// 32 bit int
+#define TYPE_SPECIAL_P			5	// pan
+#define TYPE_SPECIAL_FILTER_F	6	// not used apparently
 
 // **PATROT this list needs to correspond exactly with the sound parameters in the AVR side because
 // modulation targets are sent across and they have to match in this list
@@ -298,6 +299,7 @@ enum ParamEnums
 	PAR_AUDIO_OUT5,
 	PAR_AUDIO_OUT6,
 
+
 	PAR_MIDI_NOTE1,
 	PAR_MIDI_NOTE2,
 	PAR_MIDI_NOTE3,
@@ -377,7 +379,7 @@ typedef struct ParameterStruct
 
 } Parameter;
 
-extern Parameter parameterArray[END_OF_SOUND_PARAMETERS];
+extern Parameter parameterArray[PAR_ACTIVE_STEP];
 void paramArray_setParameter(uint16_t idx, ptrValue newValue);
 void parameterArray_init();
 

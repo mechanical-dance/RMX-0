@@ -19,7 +19,7 @@
 #define FOLLOW_PATTERN 0x2
 #define FOLLOW_BAR 0x1
 
-#define NUM_KIT_SLOTS 64
+#define NUM_KIT_SLOTS 128 //64
 
 #include "stm32f7xx_hal.h"
 
@@ -300,17 +300,17 @@ enum ParamEnums
 	PAR_AUDIO_OUT6,						/*220*/
 	
 //ATTENTION these were MIDI_NOTE_x and still appear as dummies in the mod target array!
-	PAR_UNUSED_1,
-	PAR_UNUSED_2,
-	PAR_UNUSED_3,
-	PAR_UNUSED_4,
-	PAR_UNUSED_5,
-	PAR_UNUSED_6,
+	PAR_CV_1VOCT_1,
+	PAR_CV_1VOCT_2,
+	PAR_CV_1VOCT_3,
+	PAR_CV_1VOCT_4,
+	PAR_CV_1VOCT_5,
+	PAR_CV_1VOCT_6,
 	PAR_UNUSED_7,
 
 	PAR_PWM_1,
 	PAR_PWM_2,
-	PAR_PWM_3,
+	PAR_PWM_3, //230
 	PAR_PWM_4,
 	PAR_PWM_5,
 	PAR_PWM_6,
@@ -322,13 +322,79 @@ enum ParamEnums
 	PAR_FX_DIST_TYPE,
 	PAR_FX_P1,
 	PAR_FX_P2,
-	PAR_FX_P3,
+	PAR_FX_P3, //240
 	PAR_FX_P4,
 	PAR_FX_RATIO,
 	PAR_FX_WAVE,
 	PAR_FX_REVERB_TYPE,
 	PAR_FX_DELAY_TYPE,
 	PAR_MORPH_KIT_DEST,
+
+/*ATTENTION kit load routine ignores everything following PAR_CV_DEST_1, when CV savbing is set to global!!!!*/
+
+	PAR_CV_DEST_1,
+	PAR_CV_DEST_2,
+	PAR_CV_DEST_3,
+	PAR_CV_DEST_4, //250
+	PAR_CV_DEST_5,
+	PAR_CV_DEST_6,
+	PAR_CV_DEST_7,
+	PAR_CV_DEST_8,
+	//######################################
+	//######## END OF MIDI DATASIZE     ####
+	//######## PARAM NR CC2 127 REACHED ####
+	//######################################
+	PAR_CV_DEST_9, //255
+	PAR_CV_DEST_10,
+	PAR_CV_DEST_11,
+	PAR_CV_DEST_12,
+	PAR_CV_DEST_13,
+	PAR_CV_DEST_14,
+	PAR_CV_DEST_15,
+	PAR_CV_DEST_16,
+	PAR_CV_DEST_17,
+	PAR_CV_DEST_18,
+
+
+
+	PAR_CV_MOD_AMT_1,
+	PAR_CV_MOD_AMT_2,
+	PAR_CV_MOD_AMT_3,
+	PAR_CV_MOD_AMT_4,
+	PAR_CV_MOD_AMT_5,
+	PAR_CV_MOD_AMT_6,
+	PAR_CV_MOD_AMT_7,
+	PAR_CV_MOD_AMT_8,
+	PAR_CV_MOD_AMT_9,
+	PAR_CV_MOD_AMT_10,
+	PAR_CV_MOD_AMT_11,
+	PAR_CV_MOD_AMT_12,
+	PAR_CV_MOD_AMT_13,
+	PAR_CV_MOD_AMT_14,
+	PAR_CV_MOD_AMT_15,
+	PAR_CV_MOD_AMT_16,
+	PAR_CV_MOD_AMT_17,
+	PAR_CV_MOD_AMT_18,
+
+	PAR_CV_SRC_1,
+	PAR_CV_SRC_2,
+	PAR_CV_SRC_3,
+	PAR_CV_SRC_4,
+	PAR_CV_SRC_5,
+	PAR_CV_SRC_6,
+	PAR_CV_SRC_7,
+	PAR_CV_SRC_8,
+	PAR_CV_SRC_9,
+	PAR_CV_SRC_10,
+	PAR_CV_SRC_11,
+	PAR_CV_SRC_12,
+	PAR_CV_SRC_13,
+	PAR_CV_SRC_14,
+	PAR_CV_SRC_15,
+	PAR_CV_SRC_16,
+	PAR_CV_SRC_17,
+	PAR_CV_SRC_18,
+
 
 	//#########################################
 	//######## End of sound Parameters ########
@@ -391,7 +457,7 @@ enum ParamEnums
 	PAR_MIDI_CHAN_5,
 	PAR_MIDI_CHAN_6,
 
-	PAR_FETCH,							// bool - UNUSED
+	PAR_CV_SAVE,							// bool - UNUSED
 	PAR_FOLLOW,							// bool
 	
 	
@@ -416,15 +482,17 @@ enum ParamEnums
 		// PAR_STEP_NOTE is ignored and this note is sent instead
 	//moved to globals
 
-		PAR_MIDI_NOTE1,
-		PAR_MIDI_NOTE2,
-		PAR_MIDI_NOTE3,
-		PAR_MIDI_NOTE4,
-		PAR_MIDI_NOTE5,
-		PAR_MIDI_NOTE6,
-		PAR_MIDI_NOTE7,
+	PAR_MIDI_NOTE1,
+	PAR_MIDI_NOTE2,
+	PAR_MIDI_NOTE3,
+	PAR_MIDI_NOTE4,
+	PAR_MIDI_NOTE5,
+	PAR_MIDI_NOTE6,
+	PAR_MIDI_NOTE7,
 
-		PAR_PATTERN_MODE,
+	PAR_PATTERN_MODE,
+
+	PAR_MORPH_TARGET, //which kit to morph to
 
 	NUM_PARAMS	
 };

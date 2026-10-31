@@ -189,7 +189,7 @@ enum NamesEnum
 	TEXT_CODEC_LIMIT_MIN,
 #endif
 	TEXT_ROLL_SPEED,
-	TEXT_X_FADE,					//40
+	TEXT_MORPH,					//40
 	
 	TEXT_STEP_VELOCITY,
 	TEXT_NOTE,
@@ -270,6 +270,13 @@ enum NamesEnum
 	TEXT_FX_P3,
 	TEXT_FX_P4,
 	TEXT_PATTERN_MODE,
+
+	TEXT_CV_DEST,
+	TEXT_CV_AMT,
+	TEXT_CV_SRC,
+	TEXT_1VOCT,
+	TEXT_CV_SAVE,
+	TEXT_MORPH_TARGET,
 
 
 	NUM_NAMES
@@ -379,7 +386,11 @@ enum shortNamesEnum
 	SHORT_P4,
 	SHORT_KCM,
 	SHORT_FLAM,
-	SHORT_SHIFT
+	SHORT_SHIFT,
+	SHORT_SRC,
+	SHORT_1VOCT,
+	SHORT_CV,
+	SHORT_MORPH_TARGET,
 
 	
 };
@@ -409,13 +420,14 @@ enum catNamesEnum
 	CAT_STEP,
 	CAT_EUKLID,
 	CAT_GLOBAL,
-	CAT_VELOCITY,
+	CAT_ACCENT,
 	CAT_PARAMETER,
 	CAT_SEQUENCER,
 	CAT_GENERATOR,
 	CAT_MIDI,
 	CAT_CLOCK,
-	CAT_FX
+	CAT_FX,
+	CAT_MOD
 };
 //-----------------------------------------------------------------
 // these must correspond with longNames in MenuText.h
@@ -508,7 +520,11 @@ enum longNamesEnum
 	LONG_P4,
 	LONG_PATTERN_MODE,
 	LONG_FLAM,
-	LONG_SHIFT
+	LONG_SHIFT,
+	LONG_SRC,
+	LONG_1VOCT,
+	LONG_CV,
+	LONG_MORPH_TARGET
 	
 };
 
@@ -516,12 +532,12 @@ enum longNamesEnum
 enum loadSaveEnum
 {
 	SAVE_TYPE_KIT = 0,
-	SAVE_TYPE_PATTERN,
-	SAVE_TYPE_SONG,
+	//SAVE_TYPE_PATTERN,
+	//SAVE_TYPE_SONG,
 	SAVE_TYPE_MORPH,
 
-	SAVE_TYPE_PROJECT,	// kit data, pattern data and BPM
-	SAVE_TYPE_ALL,			// all global settings, kit data and pattern data
+	//SAVE_TYPE_PROJECT,	// kit data, pattern data and BPM
+	//SAVE_TYPE_ALL,			// all global settings, kit data and pattern data
 	SAVE_TYPE_GLO,
 	//SAVE_TYPE_SAMPLES,
 	NUM_SAVE_TYPES
@@ -589,7 +605,7 @@ enum Datatypes
 {
 	DTYPE_0B255,	//0:255
 	DTYPE_0B127,	//0-127
-	DTYPE_PM100,	//-100:100
+	DTYPE_PM100,	//-100:100 <-- not working with the 3 spaces we have for -100 :(
 	DTYPE_MENU,		//text type outputs 
 	DTYPE_PM63,		//-63 <-> 63
 	DTYPE_1B16,		//1-16
@@ -598,7 +614,7 @@ enum Datatypes
 	DTYPE_TARGET_SELECTION_LFO,
 	DTYPE_TARGET_SELECTION_VELO,	
 	DTYPE_VOICE_LFO,
-	DTYPE_AUTOM_TARGET,
+	DTYPE_TARGET_SELECTION_CV,
 	DTYPE_0b1,
 	DTYPE_NOTE_NAME, // eg C#0, D 1 for note name
 	DTYPE_0B15,		//0-15
@@ -615,7 +631,7 @@ extern const enum Datatypes parameter_dtypes[NUM_PARAMS];
 extern uint8_t mainParameters[NUM_KIT_SLOTS][END_OF_SOUND_PARAMETERS];		// keeps all kits from sd card in memory
 extern uint8_t activeParameters[NUM_PARAMS];					// keeps the currently used kit in memory -> editBuffer
 //extern uint8_t morphParameters[END_OF_SOUND_PARAMETERS];
-extern uint8_t *morphParameters;
+//extern uint8_t *morphParameters;
 //extern uint8_t abs_pot_Parameter_position[NUM_PARAMS];
 
 extern const Page menuPages[NUM_PAGES][NUM_SUB_PAGES];
@@ -640,12 +656,11 @@ extern uint8_t paramToModTarget[END_OF_SOUND_PARAMETERS];
 
 void menu_showSdError(uint8_t res);
 
-/** returns the current menu index (page and parameter, see MASK_PAGE / MASK_PARAMETER) */
-uint8_t getMenuIndx(void);
-
 //-----------------------------------------------------------------
 /** forces a complete repaint of the display*/
 void menu_repaintAll();
+//-----------------------------------------------------------------
+void menu_debugPrint(char* c);
 //-----------------------------------------------------------------
 //repaint the screen. show all changes*/
 void menu_repaint();
@@ -684,12 +699,12 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff);
 void menu_parseGlobalParam(uint16_t paramNr, uint8_t value);
 //-----------------------------------------------------------------
 /** all parameters are send to the cortex soundchip. called after loading a preset into the avr ram*/
-void menu_sendAllParameters();
+//void menu_sendAllParameters();
 //-----------------------------------------------------------------
 /** get the currently active page nr*/
 uint8_t menu_getActivePage();
 //-----------------------------------------------------------------
-uint8_t menu_areMuteLedsShown();
+//uint8_t menu_areMuteLedsShown();
 //-----------------------------------------------------------------
 /** get the currently active voice nr*/
 uint8_t menu_getActiveVoice();

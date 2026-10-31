@@ -18,13 +18,14 @@
 #include "Soundengine/DSPAudio/CymbalVoice.h"
 #include "Soundengine/DSPAudio/HiHat.h"
 #include "Soundengine/DSPAudio/Snare.h"
-#include "Soundengine/Sequencer/sequencer.h"
+//#include "Soundengine/Sequencer/sequencer.h"
 #include "menu/menu.h"
 #include "Soundengine/MIDI/MidiMessages.h"
 #include "Soundengine/MIDI/MidiParser.h"
 #include "frontPanelParser_ui.h"
+#include "Preset/PresetManager.h"
 
-INDTCMZ ModulationNode velocityModulators[6];
+//INDTCMZ ModulationNode velocityModulators[6];
 
  //-----------------------------------------------------------------------
 void modNode_init(ModulationNode* vm)
@@ -74,37 +75,56 @@ static void modNode_setOriginalValueChanged(ModulationNode* vm, uint16_t idx)
 void modNode_originalValueChanged(uint16_t idx)
 {
 	uint8_t i;
+#if OLD_LFO_ROUTING
 	for(i=0;i<6;i++)
 	{
 		modNode_setOriginalValueChanged(&velocityModulators[i],idx);
 	}
+#endif
+	//CV mods
+	for(i=0;i<NUM_MOD_SLOTS;i++)
+	{
+		modNode_setOriginalValueChanged(&cvModulators[i],idx);
+	}
 
+#if OLD_LFO_ROUTING
 	modNode_setOriginalValueChanged(&voiceArray[0].lfo.modTarget,idx);
 	modNode_setOriginalValueChanged(&voiceArray[1].lfo.modTarget,idx);
 	modNode_setOriginalValueChanged(&voiceArray[2].lfo.modTarget,idx);
 	modNode_setOriginalValueChanged(&snareVoice.lfo.modTarget,idx);
 	modNode_setOriginalValueChanged(&cymbalVoice.lfo.modTarget,idx);
 	modNode_setOriginalValueChanged(&hatVoice.lfo.modTarget,idx);
+#endif
 }
 //-----------------------------------------------------------------------
 IN_ITCM_RAM void modNode_resetTargets()
 {
+
 	uint8_t i;
+#if OLD_LFO_ROUTING
 	for(i=0;i<6;i++)
 	{
 		paramArray_setParameter(velocityModulators[i].destination,velocityModulators[i].originalValue);
 	}
-
+#endif
+	//CV mods
+	for(i=0;i<NUM_MOD_SLOTS;i++)
+	{
+		if(cvModulators[i].destination != 0)
+			paramArray_setParameter(cvModulators[i].destination,cvModulators[i].originalValue);
+	}
+#if OLD_LFO_ROUTING
 	paramArray_setParameter(voiceArray[0].lfo.modTarget.destination,voiceArray[0].lfo.modTarget.originalValue);
 	paramArray_setParameter(voiceArray[1].lfo.modTarget.destination,voiceArray[1].lfo.modTarget.originalValue);
 	paramArray_setParameter(voiceArray[2].lfo.modTarget.destination,voiceArray[2].lfo.modTarget.originalValue);
 	paramArray_setParameter(snareVoice.lfo.modTarget.destination,snareVoice.lfo.modTarget.originalValue);
 	paramArray_setParameter(cymbalVoice.lfo.modTarget.destination,cymbalVoice.lfo.modTarget.originalValue);
 	paramArray_setParameter(hatVoice.lfo.modTarget.destination,hatVoice.lfo.modTarget.originalValue);
-
+#endif
 
 }
 //-----------------------------------------------------------------------
+#if OLD_LFO_ROUTING
 IN_ITCM_RAM void modNode_reassignVeloMod()
 {
 	uint8_t i;
@@ -113,6 +133,7 @@ IN_ITCM_RAM void modNode_reassignVeloMod()
 		modNode_updateValue(&velocityModulators[i], velocityModulators[i].lastVal);
 	}
 }
+#endif
 //-----------------------------------------------------------------------
 // set a modulation destination to one of the sound parameters.
 // This is called when the mod target changes or is initialized.
@@ -138,6 +159,10 @@ void modNode_setDestination(ModulationNode* vm, uint16_t dest)
 	//get new original parameter value
 	switch(p->type)
 	{
+		case TYPE_NULL:
+			//should not get here, but somehow it happens with not set parameterArray fields
+			break;
+
 		case TYPE_UINT8:
 			vm->originalValue.itg = *((uint8_t*)p->ptr);
 			break;
@@ -174,38 +199,73 @@ void modNode_updateValue(ModulationNode* vm, float val)
 #if 1
 
 	MidiMsg msg;
-	float originalValue = activeParameters[vm->destination]/127.f;
-	//val is [0:1] make [-1:1] for bipolar modulation around original value
-	float newValue = originalValue + vm->amount * (val*2.f-1.f);
-	newValue = newValue < 0.f ? 0 : newValue > 1.f ? 1.f : newValue;
-	if(vm->destination < 128)
+
+	if(vm->destination == PAR_MORPH)
 	{
-		/* comes from cortex midi handler
-		 * stupid offset!
-		 * TODO fix this stupid offset			 *
-		 * 		frontParser_midiMsg.data1 += 1;
-
-				//because hh slope on front is 127 and on cortex is 0 wrap data1 at 127
-				frontParser_midiMsg.data1 &= 0x7f;
-		 *
-		 */
-		msg.status = MIDI_CC;
-		msg.data1 = vm->destination;
-
-		msg.data1 += 1;
-		msg.data1 &= 0x7f;
-		midiParser_ccHandler(msg,0, 1, newValue);
+		float originalValue = activeParameters[vm->destination]/255.f;
+		//val is [0:1] make [-1:1] for bipolar modulation around original value
+		float newValue = originalValue + vm->amount * (val*2.f-1.f);
+		newValue = newValue < 0.f ? 0 : newValue > 1.f ? 1.f : newValue;
 
 
+		//*((uint8_t*)p->ptr)
+		//preset_morphValue = newValue*255;
+		preset_morph(newValue*255, 0);
 	}
 	else
 	{
-		msg.status = CC_2;
-		msg.data1 = vm->destination-128; //stupid offset only in CC not CC2
+		float originalValue = activeParameters[vm->destination]/127.f;
+		//val is [0:1] make [-1:1] for bipolar modulation around original value
 
-		msg.data1 &= 0x7f;
-		midiParser_ccHandler(msg,0, 1, newValue);
+		float newValue;
+#if 0
+		if((vm->destination >= PAR_CV_1VOCT_1) && (vm->destination <= PAR_CV_1VOCT_6))
+		{
+			newValue = originalValue + vm->amount * (val);
+			newValue = newValue < 0.f ? 0 : newValue > 1.f ? 1.f : newValue;
+		}
+		else
+#endif
+		{
+			newValue = originalValue + vm->amount * (val*2.f-1.f);
+			newValue = newValue < 0.f ? 0 : newValue > 1.f ? 1.f : newValue;
+		}
 
+
+
+		if(vm->destination < 128)
+		{
+			/* comes from cortex midi handler
+			 * stupid offset!
+			 * TODO fix this stupid offset			 *
+			 * 		frontParser_midiMsg.data1 += 1;
+
+					//because hh slope on front is 127 and on cortex is 0 wrap data1 at 127
+					frontParser_midiMsg.data1 &= 0x7f;
+			 *
+			 */
+			msg.status = MIDI_CC;
+			msg.data1 = vm->destination;
+
+			msg.data1 += 1;
+			//msg.data1 &= 0x7f;
+			midiParser_ccHandler(msg,0, 1, newValue);
+
+
+		}
+		else if (vm->destination <= 255 )
+		{
+			msg.status = CC_2;
+			msg.data1 = vm->destination-128; //stupid offset only in CC not CC2
+
+			//msg.data1 &= 0x7f;
+			midiParser_ccHandler(msg,0, 1, newValue);
+
+		}
+		else
+		{
+#pragma message "nothing over 255 is morphed (mod matrix stuff)"
+		}
 	}
 
 #else

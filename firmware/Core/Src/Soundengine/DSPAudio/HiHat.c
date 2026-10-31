@@ -13,10 +13,10 @@
 
 
 
+#include <Soundengine/TriggerProcessor.h>
 #include "Soundengine/DSPAudio/HiHat.h"
 #include "Soundengine/DSPAudio/squareRootLut.h"
 #include "Soundengine/DSPAudio/modulationNode.h"
-#include "Soundengine/TriggerOut.h"
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "IO/adcPots.h"
 #include "Soundengine/FxBus.h"
@@ -34,12 +34,16 @@ void HiHat_setPan(const uint8_t pan)
 
 void HiHat_init()
 {
-	initOnePole(&hatVoice.FaderVolumeFilter);
-	setOnePoleCoef(&hatVoice.FaderVolumeFilter,0.1);
+//	initOnePole(&hatVoice.FaderVolumeFilter);
+//	setOnePoleCoef(&hatVoice.FaderVolumeFilter,0.1);
 
 	SnapEg_init(&hatVoice.snapEg);
 	HiHat_setPan(0);
 	hatVoice.vol = 0.8f;
+	hatVoice.cvFreq = 0.5f;
+
+	hatVoice.decayClosed = 0.002f;
+	hatVoice.decayOpen = 0.002f;
 
 	//hatVoice.panModifier = 1.f;
 
@@ -56,6 +60,7 @@ void HiHat_init()
 	hatVoice.modOsc.midiFreq = 70<<8 | 64 ;
 	hatVoice.modOsc.pitchMod = 1.0f;
 	hatVoice.modOsc.modNodeValue = 1;
+	hatVoice.modOsc.cvFreq = -1.f;
 
 	hatVoice.modOsc2.freq = 440;
 	hatVoice.modOsc2.waveform = NOISE;//SINE;
@@ -63,6 +68,7 @@ void HiHat_init()
 	hatVoice.modOsc2.midiFreq = 70<<8 | 64;
 	hatVoice.modOsc2.pitchMod = 1.0f;
 	hatVoice.modOsc2.modNodeValue = 1;
+	hatVoice.modOsc2.cvFreq = -1.f;
 
 	hatVoice.osc.freq = 440;
 	hatVoice.osc.waveform = 1;
@@ -70,6 +76,7 @@ void HiHat_init()
 	hatVoice.osc.midiFreq = 70<<8 | 64;
 	hatVoice.osc.pitchMod = 1.0f;
 	hatVoice.osc.modNodeValue = 1;
+	hatVoice.osc.cvFreq = -1.f;
 
 	hatVoice.volumeMod = 1;
 
@@ -87,13 +94,24 @@ void HiHat_updatePan()
 	hatVoice.triggeredPanR = sqrtf(hatVoice.pan/127.f);
 }
 //---------------------------------------------------
+void HiHat_setCv1VOct(float oct)
+{
+	hatVoice.osc.cvFreq		= oct;		// the main fm oscillator
+	hatVoice.modOsc.cvFreq	= oct;		// the mod osc
+	hatVoice.modOsc2.cvFreq	= oct;		// the mod osc
+	hatVoice.transGen.cvFreq = oct;
+}
+//---------------------------------------------------
 void HiHat_trigger( uint8_t vel, uint8_t isOpen, const uint8_t note)
 {
 	lfo_retrigger(5);
 
 	//update velocity modulation
+#if OLD_LFO_ROUTING
 	modNode_updateValue(&velocityModulators[5],vel/127.f);
-
+#else
+	hatVoice.velocity = vel/127.f;
+#endif
 	float offset = 1;
 	if(hatVoice.transGen.waveform==1) //offset mode
 	{
@@ -210,7 +228,7 @@ void HiHat_calcSyncBlock(int16_t* buf, const uint8_t size)
 			for(j=0;j<size;j++)
 			{
 				//add volume
-				buf[j] *=  hatVoice.combinedVolume * calcOnePole( &hatVoice.FaderVolumeFilter, adc_getFaderVolume(5));
+				buf[j] *=  hatVoice.combinedVolume ;//* calcOnePole( &hatVoice.FaderVolumeFilter, adc_getFaderVolume(5));
 			}
 #else
 		for(j=0;j<size;j++)
@@ -238,7 +256,7 @@ void HiHat_calcSyncBlock(int16_t* buf, const uint8_t size)
 			for(j=0;j<size;j++)
 			{
 				//add volume
-				buf[j] *=  hatVoice.combinedVolume * calcOnePole( &hatVoice.FaderVolumeFilter, adc_getFaderVolume(5));
+				buf[j] *=  hatVoice.combinedVolume ;//* calcOnePole( &hatVoice.FaderVolumeFilter, adc_getFaderVolume(5));
 			}
 #else
 		for(j=0;j<size;j++)

@@ -72,9 +72,12 @@ typedef struct SnareStruct
 	uint8_t volumeMod;	//modulate volume by midi velocity if 1
 
 	float combinedVolume;
-	OnePoleFilter FaderVolumeFilter;
+	//OnePoleFilter FaderVolumeFilter;
 
 	float pwm;
+	float cvFreq;
+
+	float velocity; //last accent value
 
 } SnareVoice;
 
@@ -83,7 +86,7 @@ extern SnareVoice snareVoice;
 
 //initialize all the parameters to sane values
 void Snare_init();
-
+void Snare_setCv1VOct(float oct);
 void Snare_trigger(const uint8_t vel, const uint8_t note);
 void Snare_updatePan();
 /** claculate the oscillators and sample based stuff*/

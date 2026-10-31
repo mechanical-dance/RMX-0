@@ -48,6 +48,7 @@ extern uint8_t frontPanel_sysexMode;
 #define CC_2				0xd6		//for parameters above 127
 #define CC_LFO_TARGET		0xd7
 #define CC_VELO_TARGET		0xd8
+#define CC3					0xd9
 //#define STEP_CC				0xd9	//toggle sub step pattern step on/off
 #define SET_P1_DEST			0xda	// SET_P1_DEST,  destinationNr (hi/lo byte) --> track(voice) via set active track cmd, step as well (SEQ_SELECT_ACTIVE_STEP)
 #define SET_P2_DEST			0xdb

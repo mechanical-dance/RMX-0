@@ -19,7 +19,7 @@ void Ringmod_init(Ringmod *rm)
 {
 	rm->freq = 0.5f;
 
-
+	rm->osc.cvFreq = -1.f;
 	rm->osc.freq = 100;
 	rm->osc.modNodeValue = 1;
 	rm->osc.waveform = REC; //for testing init to tri,saw,rec

@@ -21,25 +21,24 @@
 #include "Soundengine/DSPAudio/HiHat.h"
 #include "Soundengine/DSPAudio/CymbalVoice.h"
 #include "Soundengine/MIDI/Uart.h"
-#include "Soundengine/Sequencer/sequencer.h"
-#include "Soundengine/Sequencer/clockSync.h"
+//#include "Soundengine/Sequencer/sequencer.h"
+//#include "Soundengine/Sequencer/clockSync.h"
 #include "Soundengine/DSPAudio/mixer.h"
 #include "Soundengine/MIDI/valueShaper.h"
 #include "Soundengine/DSPAudio/modulationNode.h"
-#include "Soundengine/USB/usb_manager.h"
+
 #include "menu/menu.h"
 #include "Soundengine/FxBus.h"
-
-#include "Soundengine/MIDI/MidiMessages.h"
+#include "IO/DIO.h"
 
 static uint16_t midiParser_activeNrpnNumber = 0;
 
 uint8_t midiParser_originalCcValues[0xff];
 
 // this will be set to some value if we are ignoring all mtc messages until the next 0 message
-static uint8_t midiParser_mtcIgnore=1;
+//static uint8_t midiParser_mtcIgnore=1;
 static uint32_t volatile midiParser_lastMtcReceived=0x0;
-static uint8_t midiParser_mtcIsRunning=0;
+//static uint8_t midiParser_mtcIsRunning=0;
 
 static union {
 	uint8_t value;
@@ -74,7 +73,7 @@ enum State
 uint8_t midiParser_selectedLfoVoice[NUM_LFO] = {0,0,0,0,0,0};
 
 #if 0
-// -- AS for debugging
+// for debugging
 void midiDebugSend(uint8_t b1, uint8_t b2)
 {
 	uart_sendMidiByte(0xF2);
@@ -138,6 +137,139 @@ static void midiParser_nrpnHandler(uint16_t value)
 	msg2.data1 = midiParser_activeNrpnNumber;
 	msg2.data2 = value;
 	midiParser_ccHandler(msg2,true, 0, 0.f);
+}
+//-----------------------------------------------------------
+/* takes a [0:1] value from the CV ADC and converts it to freq information
+ * CV input range is [-5V:5V] so it should span +/- 5 octaves
+ */
+
+#define QUANTIZE_CV 1
+
+#define INPUT_VOLTAGE			3.3f	//Volt
+#define OCTAVES				5.f	//octaves
+#define VOLT_PER_OCTAVE			(INPUT_VOLTAGE/OCTAVES) // 1
+#define VOLT_PER_NOTE			(VOLT_PER_OCTAVE/12.f)  // 0,08333333333333333333
+#define VOLT_PER_ADC_STEP		(INPUT_VOLTAGE/4096.f)  // 0,000244140625
+#define ADC_STEPS_PER_NOTE		(VOLT_PER_NOTE/VOLT_PER_ADC_STEP) //341,33333333333333331968
+
+
+static float lastInput=0;
+static float lastQuantValue = 0;
+const float base_a4=440.f; // set A4=440Hz
+
+float NoteToFrequency(uint8_t n )
+{
+ if ((n>=0) && (n<=119))
+ {
+  return 440*powf(2,(n-57)/12.f);
+ }
+ else return 0;
+}
+
+float calibration[6] = {0.0039, 0.2031, 0.403320, 0.601074, 0.798340, 0.982421};
+
+#define OCT 5
+#define VAL_PER_NOTE (1.f/(5*12))
+float floatCvToFreq(float val)
+{
+	if(val==-1.0) return -1.0;
+
+
+
+
+	//val = val * 4096.f;
+
+
+
+
+	 if(fabs(val-lastInput) >= 0.001f)
+	 {
+	    lastInput = val;
+	 } else
+	{
+		 return lastQuantValue;
+	}
+/*
+		char c[17];
+		sprintf(c, "cv:%.6f", val);
+		menu_debugPrint(c);
+*/
+		val += (VAL_PER_NOTE/3.f);
+
+		float steps=1.f/12.f;
+
+		//val += steps/2.f;
+
+
+		float octave = 0;
+		float note = 0;
+		float offset = 0;
+
+		if(val < calibration[1])
+		{
+			offset = calibration[0];
+			steps = (calibration[1] - calibration[0]) / 12.f;
+			octave = 0;
+		}
+		else if((val >= calibration[1]) &&(val < calibration[2]))
+		{
+			offset = calibration[1];
+			steps = (calibration[2] - calibration[1]) / 12.f;
+			octave = 1;
+		}
+		else if((val >= calibration[2]) &&(val < calibration[3]))
+		{
+			offset = calibration[2];
+			steps = (calibration[3] - calibration[2]) / 12.f;
+			octave = 2;
+		}
+		else if((val >= calibration[3]) &&(val < calibration[4]))
+		{
+			offset = calibration[3];
+			steps = (calibration[4] - calibration[3]) / 12.f;
+			octave = 3;
+		}
+		else
+		{
+			offset = calibration[4];
+			steps = (calibration[5] - calibration[4]) / 12.f;
+			octave = 4;
+
+		}
+		note = (val - offset)/ steps;
+
+	// float quantValue = ((val+(ADC_STEPS_PER_NOTE/2.f)))/ADC_STEPS_PER_NOTE;
+	 //float quantValue = ((val+(ADC_STEPS_PER_NOTE/2.f)))/ADC_STEPS_PER_NOTE;
+
+
+	 /*
+	 float quantValue = ((val+(VAL_PER_NOTE/2.f)))/VAL_PER_NOTE;
+		uint8_t octave = quantValue/12;
+		uint8_t note = quantValue-(octave*12);
+
+		*/
+
+
+
+
+
+
+		lastQuantValue = /*powf(2.0,octave+note/12.f-5)*/NoteToFrequency(octave*12+note);
+		return lastQuantValue;
+
+#if 1
+
+#else
+	float oct = val * 10.f - 5.f;
+
+	if(QUANTIZE_CV)
+	{
+		//a semi tone is 1.f/12.f = 0.0833333
+		oct = floorf(oct / (1.f/12.f)) * (1.f/12.f);
+	}
+	//calc frequency from fractional octave notation
+	return  pow(2.0, octave);
+#endif
 }
 //-----------------------------------------------------------
 /** handle all incoming CCs and invoke action*/
@@ -868,7 +1000,7 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 			case FREQ_LFO6:
 				lfo_setFreq(&hatVoice.lfo,value.flt);
 				break;
-
+#if OLD_LFO_ROUTING
 			case AMOUNT_LFO1:
 			case AMOUNT_LFO2:
 			case AMOUNT_LFO3:
@@ -883,7 +1015,7 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 			case AMOUNT_LFO6:
 				hatVoice.lfo.modTarget.amount = value.flt;
 				break;
-
+#endif
 			case VOICE_DECIMATION1:
 			case VOICE_DECIMATION2:
 			case VOICE_DECIMATION3:
@@ -905,7 +1037,23 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 
 	else //MIDI_CC2
 	{
-		const uint16_t paramNr = msg.data1 + 1 + 127;
+		uint16_t paramNr;
+		if(msg.status  == MIDI_CC3)
+		{
+//			frontPanel_sendData(CC3,(uint8_t)(paramNr-255),dtypeValue);
+			paramNr = msg.data1 + 255;
+			//TODO: dirty hack that we return here, but all CC3 parameters arn't parsed here anyways
+			return;
+		}
+		else if (msg.status  == MIDI_CC2)
+		{
+			paramNr = msg.data1+1 + 127;
+		}
+		else
+		{
+			return;
+		}
+
 
 		if(updateOriginalValue && !isFloatModulator) {
 			midiParser_originalCcValues[paramNr] = value.itg;
@@ -1099,7 +1247,7 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 #if UNIT_GAIN_DRIVE
 				voiceArray[msg.data1-CC2_FILTER_DRIVE_1].filter.drive = (value.itg/127.f);
 #else
-				SVF_setDrive(&voiceArray[msg.data1-CC2_FILTER_DRIVE_1].filter, value.flt);
+				SVF_setDrive(&voiceArray[msg.data1-CC2_FILTER_DRIVE_1].filter,value.flt);
 #endif
 				break;
 			case CC2_FILTER_DRIVE_4:
@@ -1147,7 +1295,7 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 			case CC2_VOLUME_MOD_ON_OFF6:
 				hatVoice.volumeMod = value.itg != 0;
 				break;
-
+#if OLD_LFO_ROUTING
 			case CC2_VELO_MOD_AMT_1:
 			case CC2_VELO_MOD_AMT_2:
 			case CC2_VELO_MOD_AMT_3:
@@ -1156,7 +1304,7 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 			case CC2_VELO_MOD_AMT_6:
 				velocityModulators[msg.data1-CC2_VELO_MOD_AMT_1].amount = value.flt;
 				break;
-
+#endif
 			case CC2_WAVE_LFO1:
 			case CC2_WAVE_LFO2:
 			case CC2_WAVE_LFO3:
@@ -1317,6 +1465,7 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 				mixer_audioRouting[msg.data1-CC2_AUDIO_OUT1] = value.itg;
 				break;
 
+
 				/*
 			case CC2_MIDI_NOTE1:
 			case CC2_MIDI_NOTE2:
@@ -1342,11 +1491,11 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 				const uint8_t voiceNr = msg.data1 - CC2_MUTE_1;
 				if(value.itg == 0)
 				{
-					seq_setMute(voiceNr,0);
+					dio_mute(voiceNr,0);
 				}
 				else
 				{
-					seq_setMute(voiceNr,1);
+					dio_mute(voiceNr,1);
 				}
 
 			}
@@ -1430,7 +1579,51 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 				fxBus.delay.delayType = value.itg;
 			break;
 
+			case CC2_1VOCT_1:
+			case CC2_1VOCT_2:
+			case CC2_1VOCT_3:
+				if(isFloatModulator)
+				{
+					Drum_setCv1VOct(msg.data1-CC2_1VOCT_1, floatCvToFreq(value.flt));
+				}
+				else
+				{
+					Drum_setCv1VOct(msg.data1-CC2_1VOCT_1, floatCvToFreq(-1.0));
+				}
+				break;
+			case CC2_1VOCT_4:
+				if(isFloatModulator)
+				{
+					Snare_setCv1VOct(floatCvToFreq(value.flt));
+				}
+				else
+				{
+					Snare_setCv1VOct(floatCvToFreq(-1.0));
+				}
+				break;
+			case CC2_1VOCT_5:
+				if(isFloatModulator)
+				{
+					Cymbal_setCv1VOct(floatCvToFreq(value.flt));
+				}
+				else
+				{
+					Cymbal_setCv1VOct(floatCvToFreq(-1.0));
+				}
+				break;
+			case CC2_1VOCT_6:
+				if(isFloatModulator)
+				{
+					HiHat_setCv1VOct(floatCvToFreq(value.flt));
+				}
+				else
+				{
+					HiHat_setCv1VOct(floatCvToFreq(-1.0));
+				}
+				break;
+
 			default:
+				return;
 				break;
 		}
 		if(!isFloatModulator)
@@ -1445,6 +1638,7 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 // check to see whether we need to stop the sequencer due to
 // lack of recent mtc activity. It will also reset our running indicator
 // if the sequencer has stopped for some other reason
+#if !EURORACK_MODULE
 void midiParser_checkMtc()
 {
 	if(!midiParser_mtcIsRunning)
@@ -1469,11 +1663,12 @@ void midiParser_checkMtc()
 		seq_setRunning(0);
 	}
 }
-
+#endif
 //------------------------------------------------------
 // this fn assumes a valid voice is sent
 // do_rec - whether we want to allow it to be recorded and echoed - we will only record
 //          to the active track for notes received from the global channel
+#if !EURORACK_MODULE
 static void midiParser_noteOn(uint8_t voice, uint8_t note, uint8_t vel, uint8_t do_rec)
 {
 
@@ -1532,6 +1727,7 @@ static void midiParser_noteOn(uint8_t voice, uint8_t note, uint8_t vel, uint8_t 
 	}
 
 }
+#endif
 //------------------------------------------------------
 //static void midiParser_noteOff(uint8_t voice, uint8_t note, uint8_t vel)
 //{
@@ -1539,183 +1735,13 @@ static void midiParser_noteOn(uint8_t voice, uint8_t note, uint8_t vel, uint8_t 
 //}
 
 
-//check if midi channel is selected for a voice or as global channel
-uint8_t midiParser_isValidChannel(uint8_t chan)
-{
-	for(int i=0;i<8;i++)
-	{
-		if(chan == midi_MidiChannels[i]) return 1;
-	}
-
-	return 0;
-}
-
-uint8_t midiParser_cc2voiceNr(uint8_t cc)
-{
-	switch(cc)
-	{
-
-	//No voice
-	default:
-		case 0:
-		case 1:
-		case 6:
-		case 98:
-		case 99:
-			return 0;
-
-	//voice 1
-		case 2:
-		case 9:
-		case 10:
-		case 21:
-		case 38:
-		case 44:
-		case 50:
-		case 51:
-		case 63:
-		case 71:
-		case 75:
-		case 79:
-		case 83:
-		case 84:
-		case 89:
-		case 95:
-		case 103:
-		case 109:
-		case 116:
-		case 122:
-			return 1;
-
-	//voice 2
-		case 3:
-		case 11:
-		case 12:
-		case 22:
-		case 39:
-		case 45:
-		case 52:
-		case 53:
-		case 64:
-		case 72:
-		case 76:
-		case 80:
-		case 85:
-		case 86:
-		case 90:
-		case 96:
-		case 104:
-		case 110:
-		case 117:
-		case 123:
-			return 2;
-
-	//voice 3
-		case 4:
-		case 13:
-		case 14:
-		case 23:
-		case 40:
-		case 46:
-		case 54:
-		case 55:
-		case 65:
-		case 73:
-		case 77:
-		case 81:
-		case 87:
-		case 88:
-		case 91:
-		case 97:
-		case 105:
-		case 111:
-		case 118:
-		case 124:
-			return 3;
-
-	//voice 4
-		case 5:
-		case 15:
-		case 16:
-		case 28:
-		case 29:
-		case 41:
-		case 47:
-		case 56:
-		case 57:
-		case 66:
-		case 69:
-		case 74:
-		case 78:
-		case 82:
-		case 92:
-		case 100:
-		case 106:
-		case 112:
-		case 119:
-		case 125:
-			return 4;
-
-	//voice 5
-		case 7:
-		case 17:
-		case 18:
-		case 24:
-		case 25:
-		case 30:
-		case 31:
-		case 32:
-		case 33:
-		case 42:
-		case 48:
-		case 58:
-		case 59:
-		case 67:
-		case 70:
-		case 93:
-		case 101:
-		case 107:
-		case 113:
-		case 120:
-		case 126:
-			return 5;
-
-	//voice 6
-		case 8:
-		case 19:
-		case 20:
-		case 26:
-		case 27:
-		case 34:
-		case 35:
-		case 36:
-		case 37:
-		case 43:
-		case 49:
-		case 60:
-		case 61:
-		case 62:
-		case 68:
-		case 94:
-		case 102:
-		case 108:
-		case 114:
-		case 121:
-		case 127:
-			return 6;
-
-	//all voices
-		case 115:
-			return 7;
-
-	}
-}
-
 //-----------------------------------------------------------
 /** Parse incoming midi messages and invoke corresponding action
  */
 void midiParser_parseMidiMessage(MidiMsg msg)
 {
+
+#if !EURORACK_MODULE
 	// route message if needed
 	if(midiParser_routing.value) {
 		if(msg.bits.source==midiSourceUSB) {
@@ -1734,6 +1760,7 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 			}
 		}
 	}
+#endif
 
 	if(msg.bits.sysxbyte)
 		return; // no further action needed. we don't interpret sysex data right now
@@ -1741,105 +1768,106 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 	// FILT filter messages here. Filter inline below to be more optimal
 	// we are interested in the low nibble since we are Rx here
 
-
-	if((msg.status & 0xF0) == 0xF0)
-  {
+#if !EURORACK_MODULE
+	if((msg.status & 0xF0) == 0XF0) {
 		// non-channel specific messages (system messages)
-		switch(msg.status)
-    {
-      case MIDI_CLOCK:
-        if((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) && seq_getExtSync())
-          seq_sync();
-        break;
-      case MIDI_START:
-        if((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) && seq_getExtSync())
-        {
-          sync_midiResetPosition();
-          sync_midiStartStop(1);
-        }
-        break;
-      case MIDI_CONTINUE:
-        if((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) && seq_getExtSync())
-          sync_midiStartStop(1);
-        break;
-      case MIDI_STOP:
-        if((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) && seq_getExtSync())
-          sync_midiStartStop(0);
-        break;
-      case MIDI_SONG_POSITION_POINTER:
-        {
-          /* Two data bytes follow the status. Just like with the Pitch Wheel,
-          * these two bytes are combined into a 14-bit value. (See Pitch Wheel).
-          * This 14-bit value is the MIDI Beat upon which to start the song.
-          * Songs are always assumed to start on a MIDI Beat of 0. Each MIDI
-          * Beat spans 6 MIDI Clocks. In other words, each MIDI Beat is a 16th
-          * note (since there are 24 MIDI Clocks in a quarter note).
-          *
-          */
-          // TODO song position pointer is not implemented yet:
-          // position = msg.data1 | (msg.data2<<7)  (in MIDI beats = 16th notes)
-        }
-        break;
-      case MIDI_MTC_QFRAME:
-        /* Strategy:
-        * If we get through all 8 of the mtc messages with a value of 0, it means that
-        * the song has just started playing. That is the only time we will start the
-        * sequencer. so we will not start it if they start the tape recorder playing half way
-        * through the song. Also, if the sequencer is running, or we are in external sync mode
-        * we will ignore mtc messages as well
-        */
-        if ((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) == 0)
-          break; // ignore filtered
+		switch(msg.status) {
+		case MIDI_CLOCK:
+			if((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) && seq_getExtSync())
+				seq_sync();
+			break;
 
-        // keep track of when we got the last mtc. only do this for the 0 msg to save time
-        if((msg.data1 & 0x70)==0) {
-          midiParser_lastMtcReceived=systick_ticks;
-        }
+		case MIDI_START:
+			if((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) && seq_getExtSync())
+			{
+				sync_midiResetPosition();
+				sync_midiStartStop(1);
+			}
+			break;
+		case MIDI_CONTINUE:
+			if((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) && seq_getExtSync())
+				sync_midiStartStop(1);
+			break;
 
-        if(seq_isRunning()) {
-          break; //already running, so we don't care to figure out where we are
-        }
-        if(seq_getExtSync())
-          break; // bypass the lot. we are using external midi clock sync
+		case MIDI_STOP:
+			if((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) && seq_getExtSync())
+				sync_midiStartStop(0);
+			break;
 
-        // figure out whether we are at 0:0:0:0
-        if((msg.data1 & 0x7F)==0) { // this is the first mtc message of the set AND it's value is 0
-          midiParser_mtcIgnore=0; // reset our level of ignorance
-        } else if(midiParser_mtcIgnore) { // not the first msg and we are ignoring
-          break; // get out of here fast
-        } else if((msg.data1 & 0x70)!=0x70) { // messages 0 to 6 and we are not ignoring yet
-          if((msg.data1 & 0x0F) !=0) {
-            midiParser_mtcIgnore=1;
-            break; // get out fast
-          }
-        } else { // message 7 and we are not ignoring yet
-          if((msg.data1 & 0x01)==0) { // hour high nibble is 0
-            // well, we got all the way thru all 8 messages with 0, so the song has just begun
-            // tell the front that we've started running on our own
-            uart_sendFrontpanelByte(FRONT_SEQ_CC);
-            uart_sendFrontpanelByte(FRONT_SEQ_RUN_STOP);
-            uart_sendFrontpanelByte(1);
-            midiParser_mtcIgnore=1; // in case we happen to miss a 0 message. probably wouldn't happen, but...
-            midiParser_mtcIsRunning=1;
-            midiParser_lastMtcReceived=systick_ticks; // also might not be needed, but...
-            // start the sequencer
-            seq_setRunning(1);
-          }
-        }
-        break;
+		case MIDI_SONG_POSITION_POINTER:
+			{
+				/* Two data bytes follow the status. Just like with the Pitch Wheel,
+				 * these two bytes are combined into a 14-bit value. (See Pitch Wheel).
+				 * This 14-bit value is the MIDI Beat upon which to start the song.
+				 * Songs are always assumed to start on a MIDI Beat of 0. Each MIDI
+				 * Beat spans 6 MIDI Clocks. In other words, each MIDI Beat is a 16th
+				 * note (since there are 24 MIDI Clocks in a quarter note).
+				 *
+				 */
 
-      default:
-        break;
+				 const uint16_t spp = msg.data1 | (msg.data2<<7);
+#pragma message"code the song position pointer stuff here!"
+			}
+			break;
+
+		case MIDI_MTC_QFRAME:
+			/* Strategy:
+			 * If we get through all 8 of the mtc messages with a value of 0, it means that
+			 * the song has just started playing. That is the only time we will start the
+			 * sequencer. so we will not start it if they start the tape recorder playing half way
+			 * through the song. Also, if the sequencer is running, or we are in external sync mode
+			 * we will ignore mtc messages as well
+			 */
+			if ((midiParser_txRxFilter & MIDI_FILTER_SYSTEM) == 0)
+				break; // ignore filtered
+
+			// keep track of when we got the last mtc. only do this for the 0 msg to save time
+			if((msg.data1 & 0x70)==0) {
+				midiParser_lastMtcReceived=systick_ticks;
+			}
+
+			if(seq_isRunning()) {
+				break; //already running, so we don't care to figure out where we are
+			}
+			if(seq_getExtSync())
+				break; // bypass the lot. we are using external midi clock sync
+
+			// figure out whether we are at 0:0:0:0
+			if((msg.data1 & 0x7F)==0) { // this is the first mtc message of the set AND it's value is 0
+				midiParser_mtcIgnore=0; // reset our level of ignorance
+			} else if(midiParser_mtcIgnore) { // not the first msg and we are ignoring
+				break; // get out of here fast
+			} else if((msg.data1 & 0x70)!=0x70) { // messages 0 to 6 and we are not ignoring yet
+				if((msg.data1 & 0x0F) !=0) {
+					midiParser_mtcIgnore=1;
+					break; // get out fast
+				}
+			} else { // message 7 and we are not ignoring yet
+				if((msg.data1 & 0x01)==0) { // hour high nibble is 0
+					// well, we got all the way thru all 8 messages with 0, so the song has just begun
+					// tell the front that we've started running on our own
+					uart_sendFrontpanelByte(FRONT_SEQ_CC);
+					uart_sendFrontpanelByte(FRONT_SEQ_RUN_STOP);
+					uart_sendFrontpanelByte(1);
+					midiParser_mtcIgnore=1; // in case we happen to miss a 0 message. probably wouldn't happen, but...
+					midiParser_mtcIsRunning=1;
+					midiParser_lastMtcReceived=systick_ticks; // also might not be needed, but...
+					// start the sequencer
+					seq_setRunning(1);
+				}
+			}
+
+			break;
+		default:
+			break;
 		}
-    // msg.status = msg.lastNonSysStatus;
-	}
-  else
-  { // channel specific message
-		const uint8_t msgonly = msg.status & 0xF0;
-		const uint8_t chanonly= msg.status & 0x0F;
 
-    msg.lastNonSysStatus = msg.status;
-
+	} else
+#endif
+		{ // channel specific message
+		const uint8_t msgonly =msg.status & 0xF0;
+		const uint8_t chanonly=msg.status & 0x0F;
+#if !EURORACK_MODULE
 		if((msgonly & 0xE0) == 0x80) {
 			// note on or note off message (one of these two only)
 			if(midiParser_txRxFilter & MIDI_FILTER_NOTES) {
@@ -1852,7 +1880,7 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 					if(msgonly==NOTE_ON && msg.data2) {
 						midiParser_noteOn(frontParser_activeTrack, msg.data1, msg.data2, 1);
 					} else { // NOTE_OFF or zero velocity note
-						//midiParser_noteOff(frontParser_activeTrack, msg.data1, msg.data2);
+						//midiParser_noteOff(v, msg.data1, msg.data2);
 					}
 				}
 
@@ -1863,52 +1891,35 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 							midiParser_noteOn(v, msg.data1, msg.data2, 1);
 							//Also used in sequencer trigger note function
 						} else { // NOTE_OFF or zero velocity note
-						//	midiParser_noteOff(v, msg.data1, msg.data2);
+							//midiParser_noteOff(v, msg.data1, msg.data2);
 						}
 					} // if channel matches
 				} // for each voice
 			} // check midi filter
 
-		} else if(msgonly==PROG_CHANGE) {
+		} else
+#endif
+			if(msgonly==PROG_CHANGE) {
 			// respond to prog change and change patterns. This responds only when global channel matches the PC message's channel.
 			if((midiParser_txRxFilter & MIDI_FILTER_PROG_C) && (chanonly == midi_MidiChannels[7]))
-				seq_setNextPattern(msg.data1);
+			{
+				//seq_setNextPattern(msg.data1);
+			}
 
 		} else if(msgonly==MIDI_CC){
+			// respond to CC message. This responds only when global channel matches the cc message's channel
+			if((midiParser_txRxFilter & MIDI_FILTER_CC) && (chanonly == midi_MidiChannels[7])) {
+				//record automation if record is turned on
+#if !EURORACK_MODULE
+				seq_recordAutomation(frontParser_activeTrack, msg.data1, msg.data2);
+#endif
 
-
-			uint8_t voiceNr = midiParser_cc2voiceNr(msg.data1);
-
-			if(voiceNr==0 || voiceNr >= 7) //any set midi channel
-			{
-				if((midiParser_txRxFilter & MIDI_FILTER_CC) && (midiParser_isValidChannel(chanonly) ))
-				{
-					//record automation if record is turned on
-					seq_recordAutomation(frontParser_activeTrack, msg.data1, msg.data2);
-
-					//handle midi data
-					midiParser_ccHandler(msg,1, 0, 0.f);
-					//we received a midi cc message forward it to the front panel
-					uart_sendFrontpanelByte(msg.status);
-					uart_sendFrontpanelByte(msg.data1);
-					uart_sendFrontpanelByte(msg.data2);
-				}
-			}
-			else
-			{
-
-				// respond to CC message. This responds only when global channel or voice channel matches the cc message's channel
-				if((midiParser_txRxFilter & MIDI_FILTER_CC) && ((chanonly == midi_MidiChannels[voiceNr]) || (chanonly == midi_MidiChannels[7]) )) {
-					//record automation if record is turned on
-					seq_recordAutomation(frontParser_activeTrack, msg.data1, msg.data2);
-
-					//handle midi data
-					midiParser_ccHandler(msg,1, 0, 0.f);
-					//we received a midi cc message forward it to the front panel
-					uart_sendFrontpanelByte(msg.status);
-					uart_sendFrontpanelByte(msg.data1);
-					uart_sendFrontpanelByte(msg.data2);
-				}
+				//handle midi data
+				midiParser_ccHandler(msg,1, 0, 0.f);
+				//we received a midi cc message forward it to the front panel
+				uart_sendFrontpanelByte(msg.status);
+				uart_sendFrontpanelByte(msg.data1);
+				uart_sendFrontpanelByte(msg.data2);
 			}
 		} else {
 			// anything else
@@ -1923,176 +1934,133 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 void midiParser_handleStatusByte(unsigned char data)
 {
 	// we received a channel voice/mode byte. set the status as appropriate
-	switch(data&0xF0)
-  {
-    // 2 databyte messages
-    case NOTE_OFF:
-    case NOTE_ON:
-    case MIDI_CC:
-    case MIDI_PITCH_WHEEL:
-    case MIDI_AT:
-      midiMsg_tmp.status = data;	// store the new status byte
-      parserState = MIDI_DATA1;	//status received, next should be data byte 1
-      midiMsg_tmp.bits.length = 2;// status is followed by 2 data bytes
-      break;
+	switch(data&0xF0) {
+	// 2 databyte messages
+	case NOTE_OFF:
+	case NOTE_ON:
+	case MIDI_CC:
+	case MIDI_PITCH_WHEEL:
+	case MIDI_AT:
+		midiMsg_tmp.status = data;	// store the new status byte
+		parserState = MIDI_DATA1;	//status received, next should be data byte 1
+		midiMsg_tmp.bits.length=2;// status is followed by 2 data bytes
+		break;
 
-    // 1 databyte messages
-    case PROG_CHANGE:
-    case CHANNEL_PRESSURE:
-      midiMsg_tmp.status = data;	// store the new status byte
-      parserState = MIDI_DATA1;	//status received, next should be data byte 1
-      midiMsg_tmp.bits.length = 1;// status is followed by 1 data bytes
-      break;
+	// 1 databyte messages
+	case PROG_CHANGE:
+	case CHANNEL_PRESSURE:
+		midiMsg_tmp.status = data;	// store the new status byte
+		parserState = MIDI_DATA1;	//status received, next should be data byte 1
+		midiMsg_tmp.bits.length=1;// status is followed by 1 data bytes
+		break;
 
-    // messages we don't care about right now, and don't know how to handle or passthru (Are there any?).
-    default:
-      parserState = IGNORE;	// throw away any data bytes until next message
-      midiMsg_tmp.bits.length = 0;
-      break;
+	// messages we don't care about right now, and don't know how to handle or passthru (Are there any?).
+	default:
+		parserState = IGNORE;	// throw away any data bytes until next message
+		midiMsg_tmp.bits.length=0;
+
+		break;
 	}
-
-  midiMsg_tmp.lastNonSysStatus = data;
 }
 //-----------------------------------------------------------
+#if !EURORACK_MODULE
 // This will build up the midi message and hand it off to
 // parseMidiMessage when it's complete
-volatile static uint8_t checkMIDIprocPAR_t = 0;
-volatile static int8_t checkMIDIprocPAR = 0;
-
 void midiParser_parseUartData(unsigned char data)
 {
-  checkMIDIprocPAR_t = ((checkMIDIprocPAR_t^1) & 0x01);
-  checkMIDIprocPAR = (int8_t)checkMIDIprocPAR_t - 6;
 
-  uint8_t parseMsg = 0;
-
-  // if (data == 0xF8)
-  // {
-  //   return;
-  // }
-
-	if(data & 0x80)
-  {
-  /*  High bit is set -  its either a status or a system message.
-      regardless of current state, we blindly start a new message without questioning it */
-		midiMsg_tmp.bits.sysxbyte = 0;
-
-		if((data&0xf0) == 0xF0) /* System message */
-    {
+	if(data&0x80) { // High bit is set -  its either a status or a system message.
+		// regardless of current state, we blindly start a new message without questioning it
+		midiMsg_tmp.bits.sysxbyte=0;
+		if( (data&0xf0) == 0xf0) { // system message
 			midiMsg_tmp.status = data;
-			switch(data)
-      {
-        case MIDI_CLOCK:
-          parseMsg = 1;
-          break;  
-			  case SYSEX_START: /*  Get into sysex receive mode. any more bytes received until this status changes are considered
-							                to be sysex data. we still need to parse this sysex start, in case we are routing it */
-          parserState = SYSEX_DATA;
-          midiMsg_tmp.bits.length = 0;
-          parseMsg = 1; /* we will still parse it in case we are doing a passthru */
-          break;
-        case SYSEX_END:	  /* Get out of sysex mode */
-          if(parserState == SYSEX_DATA)
-          {
-            parserState = MIDI_STATUS;
-            midiMsg_tmp.bits.length = 0;
-            parseMsg = 1; // We will still parse it in case we are doing a passthru
-            break;
-          }
-          else
-          {
-            // spurious sysex end msg received. ignore it
-          }
-          break;
-        /* 1 byte payload messages */
-        case MIDI_SONG_SEL:		  // passthru only
-          parseMsg = 1;
-          break; 
-        case MIDI_MTC_QFRAME: 	// mtc chunk
-          parserState = MIDI_DATA1; 	  // we expect the nugget of mtc frame info
-          midiMsg_tmp.bits.length = 1;  // we expect 1 data byte
-          break;
-        case MIDI_SONG_POSITION_POINTER:
-          parserState = MIDI_DATA1; 	// we expect 14-bit value for song position
-          midiMsg_tmp.bits.length = 2;// we expect 1 data byte
-          break;
-        default: /* 0 byte payload messages (we will assume that any system message
-                    other than those above has 0 byte payload) */
-          // midiMsg_tmp.bits.length = 0;
-          parseMsg = 1;
-          break;
+			switch(data) {
+			case SYSEX_START: // get into sysex receive mode. any more bytes received until this status changes are considered
+							  // to be sysex data. we still need to parse this sysex start, in case we are routing it
+				parserState = SYSEX_DATA;
+				midiMsg_tmp.bits.length=0;
+				goto parseMsg; // we will still parse it in case we are doing a passthru
+			case SYSEX_END:	  // get out of sysex mode
+				if(parserState==SYSEX_DATA) {
+					parserState=MIDI_STATUS;
+					midiMsg_tmp.bits.length=0;
+					goto parseMsg; // we will still parse it in case we are doing a passthru
+				} else {
+					// spurious sysex end msg received. ignore it
+				}
+				break; //
+			// 1 byte payload messages
+			case MIDI_SONG_SEL:		// passthru only
+			case MIDI_MTC_QFRAME: 	// mtc chunk
+				parserState = MIDI_DATA1; 	// we expect the nugget of mtc frame info
+				midiMsg_tmp.bits.length=1;// we expect 1 data byte
+				break;
+
+			case MIDI_SONG_POSITION_POINTER:
+				parserState = MIDI_DATA1; 	// we expect 14-bit value for song position
+				midiMsg_tmp.bits.length=2;// we expect 1 data byte
+				break;
+
+			// 0 byte payload messages (we will assume that any system message
+			// other than those above has 0 byte payload)
+			default:
+				midiMsg_tmp.bits.length=0;
+				goto parseMsg;
 			}
-		}
-    else
-    { /* Status byte (channel specific message containing a channel number) */
+		} else { //status byte (channel specific message containing a channel number)
 			midiParser_handleStatusByte(data);
 		}
-	}
-  else
-  { /* High bit is not set - it's a data byte */
-		switch(parserState)
-    {
-      case MIDI_STATUS: /* We are expecting status msg, but got data, so running status may be in effect */
-        midiMsg_tmp.status = midiMsg_tmp.lastNonSysStatus;
-        if(midiMsg_tmp.bits.length)
-        {
-          midiMsg_tmp.data1 = data;
-          if(midiMsg_tmp.bits.length == 2)
-          {
-            parserState = MIDI_DATA2;
-          }
-          else
-          {
-            midiMsg_tmp.data2 = 0;
-            parseMsg = 1;
-            break;
-          }
-        }
-        else
-        {
-          break; // last msg had 0 payload, so wtf is this? just ignore it
-        }
-        break;
-      case MIDI_DATA1:
-        midiMsg_tmp.data1 = data;
-        if(midiMsg_tmp.bits.length == 2)
-        {
-          parserState = MIDI_DATA2; /* We need another byte before we can do anything meaningful */
-        }
-        else /* It must be 1 */
-        {
-          parseMsg = 1;
-          break;
-        }
-        break;
-      case MIDI_DATA2:
-        midiMsg_tmp.data2 = data;
-        parseMsg = 1; /* Message complete */
-        break;
-      case SYSEX_DATA: /* We are in sysex mode */
-        midiMsg_tmp.bits.sysxbyte = 1;
-        midiMsg_tmp.status = data; // Status will contain the sysex byte
-        midiMsg_tmp.bits.length = 0;
-        parseMsg = 1;
-        break;
-      default: /* We are expecting no data byte, but we got one */
-			  break;
-		}
-	}
+	} else { // high bit is not set - it's a data byte
 
-  if (parseMsg == 1)
-  {
-    /* We get here if we have proudly received a message that we want to do something with */
-    if(parserState != SYSEX_DATA) // we are still in sysex receive mode
-      parserState = MIDI_STATUS;  // next byte should be a new message, or we don't care about it
-    midiMsg_tmp.bits.source = midiSourceMIDI;
-    midiParser_parseMidiMessage(midiMsg_tmp);
-    parseMsg = 0;
-  }
+		switch(parserState)	{
+		case MIDI_STATUS: // we are expecting status msg, but got data, so running status may be in effect
+			if(midiMsg_tmp.bits.length) {
+				midiMsg_tmp.data1 = data;
+				if(midiMsg_tmp.bits.length==2)
+					parserState=MIDI_DATA2;
+				else {
+					midiMsg_tmp.data2=0;
+					goto parseMsg;
+				}
+			} else {
+				break; // last msg had 0 payload, so wtf is this? just ignore it
+			}
+			break;
+
+		case MIDI_DATA1:
+			midiMsg_tmp.data1 = data;
+			if(midiMsg_tmp.bits.length==2) {
+				// we need another byte before we can do anything meaningful
+				parserState = MIDI_DATA2;
+			} else { // it must be 1
+				goto parseMsg;
+			}
+			break;
+		case MIDI_DATA2:
+			midiMsg_tmp.data2 = data;
+			goto parseMsg; // message complete
+		case SYSEX_DATA: // we are in sysex mode
+			midiMsg_tmp.bits.sysxbyte=1;
+			midiMsg_tmp.status = data; // status will contain the sysex byte
+			midiMsg_tmp.bits.length=0;
+			goto parseMsg;
+		default: //we are expecting no data byte, but we got one.
+			// ignore it
+			break;
+		} // switch parserState
+	} // if high bit is set
 
 	return;
-}
 
+parseMsg:
+	// we get here if we have proudly received a message that we want to do something with
+	if(parserState != SYSEX_DATA) // we are still in sysex receive mode
+		parserState = MIDI_STATUS; // next byte should be a new message, or we don't care about it
+	midiMsg_tmp.bits.source=midiSourceMIDI;
+	midiParser_parseMidiMessage(midiMsg_tmp);
+
+}
+#endif
 // 0 - Off - nothing to nothing
 // 1 - U2M - usb in to midi out
 // 2 - M2M - midi in to midi out

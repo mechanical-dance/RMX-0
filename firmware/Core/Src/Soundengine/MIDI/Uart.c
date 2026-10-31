@@ -17,8 +17,6 @@
 #include "Soundengine/config.h"
 #include "main.h"
 
-#include <stdint.h>
-
  /* USART2 MIDI configured as follow:
 	 - BaudRate = 31250 baud
 	 - Word Length = 8 Bits
@@ -30,7 +28,6 @@
 //-----------------------------------------------------------------------------
 //we need a TX and RX FIFO for every uart
 
-uint8_t midi_process_block = 0;
 
 static Fifo fifo_midiTx;
 static Fifo fifo_midiRx;
@@ -43,52 +40,140 @@ void uart_clearFrontFifo()
 {
 	fifo_clear(&fifo_frontTx);
 	fifoBig_clear(&fifo_frontRx);
+
 }
 //-----------------------------------------------------------------------------
+//the midi interrupt handler
+#if !OLD_USART
+/*
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	uint8_t data;
+	if(huart->Instance == USART2)
+	{
+		if (fifo_bufferOut(&fifo_midiTx,&data) == SUCCESS)//if there is data in the output buffer to send
+		{
+			HAL_UART_Transmit_IT(huart, &data, 1);
+		}
+
+		else//if buffer empty
+		{
+			//disable Transmit Data Register empty interrupt
+			//USART_ITConfig(USART2, USART_IT_TXE, DISABLE);
+			__HAL_UART_DISABLE_IT(huart,UART_IT_TXE);
+		}
+
+	}
+}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	uint8_t data;
+	if(huart->Instance == USART2)
+	{
+		HAL_UART_Receive(huart, &data, 1, 100);
+
+		//put the received data in the RX midi buffer
+		fifo_bufferIn(&fifo_midiRx,data);
+	}
+}
+*/
+#if !EURORACK_MODULE
 void USART3_IRQHandler(void)
 {
-	uint32_t isrflags = READ_REG((&huart3)->Instance->ISR);
+	uint32_t isrflags   = READ_REG((&huart3)->Instance->ISR);
 	uint8_t data = 0;
-	
-  //if Receive interrupt (rx not empty)
-	__HAL_UART_CLEAR_OREFLAG(&huart3);
+	//if Receive interrupt (rx not empty)
+	  __HAL_UART_CLEAR_OREFLAG(&huart3);
+
 
 	if ((isrflags & USART_ISR_RXNE) != RESET)
 	{
-		// UART_Receive_IT(huart);
-		data = (uint8_t)(USART3->RDR & (uint16_t)0xFF);
+		//UART_Receive_IT(huart);
+		data=(uint8_t)(USART3->RDR & (uint16_t)0xFF);
 
-		// put the received data in the RX midi buffer
-    // fifo_bufferIn(&fifo_midiRx, data);
-    if (fifo_bufferIn(&fifo_midiRx, data) == 0)
-    {
-    }
-    //  if (!midi_process_block)
-    //  {
-    //    uart_processMidi();
-    //  }
+		//put the received data in the RX midi buffer
+		fifo_bufferIn(&fifo_midiRx,data);
 	}
+
 
 	//uint8_t test = ;// __HAL_UART_GET_IT(&huart2, UART_IT_TXE);
 	if ((isrflags & USART_ISR_TXE) != RESET)
 	{
-    if (fifo_bufferOut(&fifo_midiTx,&data) == 1) // If there is data in the output buffer to send
-    {
-      USART3->TDR = (data & (uint16_t)0x01FF);
-    }
-    else // If buffer empty
-    {
-      // Disable Transmit Data Register empty interrupt
-      __HAL_UART_DISABLE_IT(&huart3,UART_IT_TXE);
-    }
+			if (fifo_bufferOut(&fifo_midiTx,&data) == 1)//if there is data in the output buffer to send
+			{
+				USART3->TDR = (data & (uint16_t)0x01FF);
+
+			}
+			else//if buffer empty
+			{
+				//disable Transmit Data Register empty interrupt
+				__HAL_UART_DISABLE_IT(&huart3,UART_IT_TXE);
+			}
 	}
 }
+#endif
+#else
+void USART2_IRQHandler(void)
+{
+	uint8_t data;
+	//if Receive interrupt (rx not empty)
+	if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET)
+	{
+		data=(uint8_t)USART_ReceiveData(USART2);
 
+		//put the received data in the RX midi buffer
+		fifo_bufferIn(&fifo_midiRx,data);
+	}
+
+	if (USART_GetITStatus(USART2, USART_IT_TXE) != RESET)
+	{
+			if (fifo_bufferOut(&fifo_midiTx,&data) == SUCCESS)//if there is data in the output buffer to send
+			{
+				USART_SendData(USART2, data);
+			}
+			else//if buffer empty
+			{
+				//disable Transmit Data Register empty interrupt
+				USART_ITConfig(USART2, USART_IT_TXE, DISABLE);
+			}
+	}
+
+}
 //-----------------------------------------------------------------------------
+//the front panel interrupt handler
+void USART3_IRQHandler(void)
+{
+	uint8_t data;
+	//if Receive interrupt (rx not empty)
+	if (USART_GetITStatus(USART3, USART_IT_RXNE) != RESET)
+	{
+		data=(uint8_t)USART_ReceiveData(USART3);
+
+		//put the received data in the RX midi buffer
+		fifoBig_bufferIn(&fifo_frontRx,data);
+	}
+
+	if (USART_GetITStatus(USART3, USART_IT_TXE) != RESET)
+	{
+			if (fifo_bufferOut(&fifo_frontTx,&data) == SUCCESS)//if there is data in the output buffer to send
+			{
+				USART_SendData(USART3, data);
+			}
+			else//if buffer empty
+			{
+				//disable Transmit Data Register empty interrupt
+				USART_ITConfig(USART3, USART_IT_TXE, DISABLE);
+			}
+	}
+
+}
+#endif
+//-----------------------------------------------------------------------------
+#if !EURORACK_MODULE
 void uart_processMidi()
 {
 	uint8_t data;
-	while(fifo_bufferOut(&fifo_midiRx, &data))
+	if(fifo_bufferOut(&fifo_midiRx,&data))
 	{
 		midiParser_parseUartData(data);
 	}
@@ -104,7 +189,9 @@ void uart_sendMidi(MidiMsg msg)
 	}
 
 }
+#endif
 //-----------------------------------------------------------------------------
+#if !EURORACK_MODULE
 void uart_sendMidiByte(uint8_t data)
 {
 	//put data in the output fifo
@@ -114,7 +201,9 @@ void uart_sendMidiByte(uint8_t data)
 	__HAL_UART_ENABLE_IT(&huart3, UART_IT_TXE);
 
 };
+#endif
 //-----------------------------------------------------------------------------
+#if 0
 void uart_processFront()
 {
 #if UART_DEBUG_ECHO_MODE
@@ -131,7 +220,9 @@ void uart_processFront()
 		frontParser_parseUartData(data);
 	}
 #endif
+
 }
+#endif
 //-----------------------------------------------------------------------------
 #include "frontPanelParser_ui.h"
 void uart_sendFrontpanelByte(uint8_t data)

@@ -23,7 +23,7 @@
 #include "Soundengine/DSPAudio/CymbalVoice.h"
 #include "Soundengine/DSPAudio/HiHat.h"
 #include "Soundengine/DSPAudio/Snare.h"
-#include "Soundengine/Sequencer/EuklidGenerator.h"
+//#include "Soundengine/Sequencer/EuklidGenerator.h"
 #include "Soundengine/DSPAudio/modulationNode.h"
 #include "Soundengine/MIDI/MidiParser.h"
 

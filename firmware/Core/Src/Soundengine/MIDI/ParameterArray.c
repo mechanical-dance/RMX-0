@@ -25,8 +25,19 @@
 #include "Soundengine/MIDI/MidiParser.h"
 #include "frontPanelParser_ui.h"
 #include "menu/menu.h"
+#include "Preset/PresetManager.h"
 
- Parameter parameterArray[END_OF_SOUND_PARAMETERS];
+
+ //Parameter parameterArray[END_OF_SOUND_PARAMETERS];
+
+/*####################################################
+ATTENTION! -> making global morph a modulatable value
+we use a dirty hack and expand the parameterArray into
+the global space just a bit
+
+//###################################################*/
+Parameter parameterArray[PAR_ACTIVE_STEP];
+
 //the parameter numbers from the AVR/Frontpanel
 //####################################################################
  IN_ITCM_RAM void paramArray_setParameter(uint16_t idx, ptrValue newValue)
@@ -58,20 +69,25 @@
 		msg.data2 = val;
 
 		msg.data1 += 1;
-		msg.data1 &= 0x7f;
+	//	msg.data1 &= 0x7f;
 		midiParser_ccHandler(msg,0, 0, 0.f);
 
 
 	}
-	else
+
+	else if (idx <= 255 )
 	{
 		msg.status = CC_2;
 		msg.data1 = idx-128; //stupid offset only in CC not CC2
 		msg.data2 = val;
 
-		msg.data1 &= 0x7f;
+	//	msg.data1 &= 0x7f;
 		midiParser_ccHandler(msg,0, 0, 0.f);
 
+	}
+	else
+	{
+#pragma message "nothing over 255 is morphed (mod matrix stuff)"
 	}
 #else
 	// **PATROT we don't want to set any that have a null ptr
@@ -440,6 +456,7 @@ void parameterArray_init()
 	parameterArray[PAR_FREQ_LFO6].ptr 		= &hatVoice.lfo.modNodeValue;
 	parameterArray[PAR_FREQ_LFO6].type 		= TYPE_SPECIAL_F;//TYPE_FLT;
 
+#if OLD_LFO_ROUTING
 	parameterArray[PAR_AMOUNT_LFO1].ptr 	= &voiceArray[0].lfo.modTarget.amount;
 	parameterArray[PAR_AMOUNT_LFO1].type 	= TYPE_FLT;
 	parameterArray[PAR_AMOUNT_LFO2].ptr 	= &voiceArray[1].lfo.modTarget.amount;
@@ -452,6 +469,7 @@ void parameterArray_init()
 	parameterArray[PAR_AMOUNT_LFO5].type 	= TYPE_FLT;
 	parameterArray[PAR_AMOUNT_LFO6].ptr 	= &hatVoice.lfo.modTarget.amount;
 	parameterArray[PAR_AMOUNT_LFO6].type 	= TYPE_FLT;
+#endif
 	//######################################
 	//######## END OF MIDI DATASIZE ########
 	//######## PARAM NR 127 REACHED ########
@@ -503,7 +521,7 @@ void parameterArray_init()
 
 	parameterArray[PAR_VOLUME_MOD_ON_OFF6].ptr 			= &hatVoice.volumeMod;
 	parameterArray[PAR_VOLUME_MOD_ON_OFF6].type 		= TYPE_UINT8;
-
+#if OLD_LFO_ROUTING
 	parameterArray[PAR_VELO_MOD_AMT_1].ptr 	= &velocityModulators[0].amount;
 	parameterArray[PAR_VELO_MOD_AMT_1].type = TYPE_FLT;
 
@@ -539,7 +557,7 @@ void parameterArray_init()
 
 	parameterArray[PAR_VEL_DEST_6].ptr 		= &velocityModulators[5].destination;
 	parameterArray[PAR_VEL_DEST_6].type 	= TYPE_UINT8;
-
+#endif
 	parameterArray[PAR_WAVE_LFO1].ptr 		= &voiceArray[0].lfo.waveform;
 	parameterArray[PAR_WAVE_LFO1].type = TYPE_UINT8;
 	parameterArray[PAR_WAVE_LFO2].ptr 		= &voiceArray[1].lfo.waveform;
@@ -676,22 +694,22 @@ void parameterArray_init()
 	parameterArray[PAR_AUDIO_OUT6].ptr 		= &mixer_audioRouting[5];
 	parameterArray[PAR_AUDIO_OUT6].type 	= TYPE_UINT8;
 
-	/*
-	parameterArray[PAR_MIDI_NOTE1].ptr 		= &midi_NoteOverride[0];
-	parameterArray[PAR_MIDI_NOTE1].type 	= TYPE_UINT8;
-	parameterArray[PAR_MIDI_NOTE2].ptr 		= &midi_NoteOverride[1];
-	parameterArray[PAR_MIDI_NOTE2].type		= TYPE_UINT8;
-	parameterArray[PAR_MIDI_NOTE3].ptr 		= &midi_NoteOverride[2];
-	parameterArray[PAR_MIDI_NOTE3].type 	= TYPE_UINT8;
-	parameterArray[PAR_MIDI_NOTE4].ptr 		= &midi_NoteOverride[3];
-	parameterArray[PAR_MIDI_NOTE4].type 	= TYPE_UINT8;
-	parameterArray[PAR_MIDI_NOTE5].ptr 		= &midi_NoteOverride[4];
-	parameterArray[PAR_MIDI_NOTE5].type 	= TYPE_UINT8;
-	parameterArray[PAR_MIDI_NOTE6].ptr 		= &midi_NoteOverride[5];
-	parameterArray[PAR_MIDI_NOTE6].type 	= TYPE_UINT8;
-	parameterArray[PAR_MIDI_NOTE7].ptr 		= &midi_NoteOverride[6];
-	parameterArray[PAR_MIDI_NOTE7].type 	= TYPE_UINT8;
-	*/
+
+	parameterArray[PAR_CV_1VOCT_1].ptr 		= &voiceArray[0].cvFreq;
+	parameterArray[PAR_CV_1VOCT_1].type 	= TYPE_FLT;
+	parameterArray[PAR_CV_1VOCT_2].ptr 		= &voiceArray[1].cvFreq;
+	parameterArray[PAR_CV_1VOCT_2].type		= TYPE_FLT;
+	parameterArray[PAR_CV_1VOCT_3].ptr 		= &voiceArray[2].cvFreq;
+	parameterArray[PAR_CV_1VOCT_3].type 	= TYPE_FLT;
+	parameterArray[PAR_CV_1VOCT_4].ptr 		= &snareVoice.cvFreq;
+	parameterArray[PAR_CV_1VOCT_4].type 	= TYPE_FLT;
+	parameterArray[PAR_CV_1VOCT_5].ptr 		= &cymbalVoice.cvFreq;
+	parameterArray[PAR_CV_1VOCT_5].type 	= TYPE_FLT;
+	parameterArray[PAR_CV_1VOCT_6].ptr 		= &hatVoice.cvFreq;
+	parameterArray[PAR_CV_1VOCT_6].type 	= TYPE_FLT;
+	/*parameterArray[PAR_UNUSED_7].ptr 		= &midi_NoteOverride[6];
+	parameterArray[PAR_UNUSED_7].type 	= TYPE_UINT8;*/
+
 
 	parameterArray[PAR_PWM_1].ptr 			= &voiceArray[0].pwm;
 	parameterArray[PAR_PWM_1].type 			= TYPE_FLT;
@@ -733,6 +751,9 @@ void parameterArray_init()
 	parameterArray[PAR_FX_DELAY_TYPE].ptr 		= &fxBus.delay.delayType;
 	parameterArray[PAR_FX_DELAY_TYPE].type 		= TYPE_UINT8;
 
+
+	parameterArray[PAR_MORPH].ptr 		= &preset_morphValue;
+	parameterArray[PAR_MORPH].type 		= TYPE_UINT8;
 
 
 
