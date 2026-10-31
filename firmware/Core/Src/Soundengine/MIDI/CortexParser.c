@@ -19,6 +19,7 @@
 #include "Soundengine/MIDI/MidiParser.h"
 //#include "Soundengine/Sequencer/sequencer.h"
 #include "Soundengine/MIDI/Uart.h"
+#include "Soundengine/MIDI/MidiVoiceControl.h" // lxr-0: voiceControl_noteOff
 //#include "SD_Manager.h"
 //#include "Soundengine/Sequencer/EuklidGenerator.h"
 #include "Soundengine/config.h"
@@ -406,6 +407,20 @@ void frontParser_handleMidiMessage( MidiMsg msg)
 	//SEQ MESSAGES
 	case FRONT_SEQ_CC: // cortex_midiMsg.status
 		//frontParser_handleSeqCC();
+#if EURORACK_MODULE && LXR0_MIDI
+		// lxr-0: only the MIDI channel settings apply on the module (as FRONT_SEQ_MIDI_CHAN below)
+		if(msg.data1 == FRONT_SEQ_MIDI_CHAN)
+		{
+			uint8_t voice = msg.data2 >> 4;
+			uint8_t channel = msg.data2 & 0x0f;
+			// if midi channel changed, and a note was playing on old channel, turn it off
+			if(voice < 7 && midi_MidiChannels[voice] != channel)
+				voiceControl_noteOff(voice);
+
+			if(voice < 8)
+				midi_MidiChannels[voice] = channel;
+		}
+#endif
 		break;
 
 	case SAMPLE_CC:

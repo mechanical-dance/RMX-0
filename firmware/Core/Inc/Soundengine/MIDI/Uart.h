@@ -25,6 +25,8 @@ void uart_sendMidi(MidiMsg msg);
 void uart_sendMidiByte(uint8_t data);
 //check if there is some received data in the Rx buffer and send it to the midi parser
 void uart_processMidi();
+//lxr-0: OP HH jack as MIDI in (1) or trigger input (0)
+void lxr0_setOpHhMidi(uint8_t midiOn);
 
 void initFrontpanelUart();
 //check if there is data in the front panel Rx buffer and send it to the front panel parser

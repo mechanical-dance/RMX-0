@@ -39,6 +39,7 @@ extern uint8_t voiceStatus[NUM_DRUM_VOICES];
 void voiceControl_processQueue();
 void voiceControl_noteOn(uint8_t voice, uint8_t note, uint8_t vel);
 //void voiceControl_noteOff(uint8_t voice);//0xff == all voices
+void voiceControl_noteOff(uint8_t voice); // lxr-0: used when a MIDI channel changes
 //uint8_t voiceControl_isVoicePlaying(uint8_t voice);
 
 //called after everything else is initialized, to prevent hanging notes from triggers during module init

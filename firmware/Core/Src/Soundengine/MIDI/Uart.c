@@ -111,6 +111,64 @@ void USART3_IRQHandler(void)
 			}
 	}
 }
+#elif LXR0_MIDI
+// lxr-0: MIDI in on the OP HH jack (PD9 = USART3_RX, AF7). Receive only, the module has no MIDI out.
+void USART3_IRQHandler(void)
+{
+	const uint32_t isrflags = USART3->ISR;
+	const uint8_t data = (uint8_t)(USART3->RDR & 0xFF); // reading RDR clears RXNE
+	USART3->ICR = USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NCF | USART_ICR_PECF;
+
+	// drop bytes with framing or noise errors (an unpatched jack reads as a held break)
+	if((isrflags & USART_ISR_RXNE) && !(isrflags & (USART_ISR_FE | USART_ISR_NE)))
+	{
+		fifo_bufferIn(&fifo_midiRx,data);
+	}
+}
+
+// lxr-0: switch the OP HH jack between trigger input (EXTI9, falling edge) and MIDI in
+void lxr0_setOpHhMidi(uint8_t midiOn)
+{
+	static uint8_t fifoReady = 0;
+	if(!fifoReady)
+	{
+		fifo_init(&fifo_midiRx);
+		fifoReady = 1;
+	}
+
+	GPIO_InitTypeDef gpio = {0};
+	gpio.Pin = EXTI9_Trigger_7_Pin;
+	gpio.Pull = GPIO_PULLUP;
+	gpio.Speed = GPIO_SPEED_FREQ_LOW;
+
+	if(midiOn)
+	{
+		EXTI->IMR &= ~EXTI9_Trigger_7_Pin; // OP HH no longer triggers the voice
+		__HAL_RCC_USART3_CLK_ENABLE();
+		gpio.Mode = GPIO_MODE_AF_PP;
+		gpio.Alternate = GPIO_AF7_USART3;
+		HAL_GPIO_Init(GPIOD, &gpio);
+
+		USART3->CR1 = 0;
+		USART3->BRR = HAL_RCC_GetPCLK1Freq() / 31250; // 16x oversampling
+		USART3->CR2 = USART_CR2_RXINV; // the trigger input stage inverts the line
+		USART3->CR3 = 0;
+		USART3->ICR = USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NCF | USART_ICR_PECF;
+		USART3->CR1 = USART_CR1_RE | USART_CR1_RXNEIE | USART_CR1_UE;
+
+		HAL_NVIC_SetPriority(USART3_IRQn, 4, 0);
+		HAL_NVIC_EnableIRQ(USART3_IRQn);
+	}
+	else
+	{
+		HAL_NVIC_DisableIRQ(USART3_IRQn);
+		USART3->CR1 = 0;
+		gpio.Mode = GPIO_MODE_IT_FALLING; // as in main.c
+		HAL_GPIO_Init(GPIOD, &gpio);
+		__HAL_GPIO_EXTI_CLEAR_IT(EXTI9_Trigger_7_Pin);
+		fifo_clear(&fifo_midiRx);
+	}
+}
 #endif
 #else
 void USART2_IRQHandler(void)
@@ -169,7 +227,7 @@ void USART3_IRQHandler(void)
 }
 #endif
 //-----------------------------------------------------------------------------
-#if !EURORACK_MODULE
+#if !EURORACK_MODULE || LXR0_MIDI
 void uart_processMidi()
 {
 	uint8_t data;
@@ -178,6 +236,8 @@ void uart_processMidi()
 		midiParser_parseUartData(data);
 	}
 }
+#endif
+#if !EURORACK_MODULE
 
 void uart_sendMidi(MidiMsg msg)
 {

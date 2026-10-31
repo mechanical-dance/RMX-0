@@ -105,7 +105,7 @@ void soundengine_process()
 
 #endif
 #endif
-#if !EURORACK_MODULE
+#if !EURORACK_MODULE || LXR0_MIDI
 		//process midi on midi port
 		uart_processMidi();
 #endif

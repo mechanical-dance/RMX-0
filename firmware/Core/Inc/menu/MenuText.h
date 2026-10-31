@@ -523,6 +523,22 @@ const char shortNames[][4]  =
 	{"v/o"},
 	{"cv"},
 	{"mtg"},
+#if LXR0_MIDI
+	{"ch1"},
+	{"ch2"},
+	{"ch3"},
+	{"ch4"},
+	{"ch5"},
+	{"ch6"},
+	{"ch7"},
+	{"nt1"},
+	{"nt2"},
+	{"nt3"},
+	{"nt4"},
+	{"nt5"},
+	{"nt6"},
+	{"nt7"},
+#endif
 
 };
 //-----------------------------------------------------------------
@@ -560,6 +576,15 @@ const char catNames[][16] =
 	{"Clock"},
 	{"Fx"},
 	{"Mod"},
+#if LXR0_MIDI
+	{"Drum 1"},
+	{"Drum 2"},
+	{"Drum 3"},
+	{"Snare"},
+	{"Clp/Cym"},
+	{"Cl HH"},
+	{"Op HH"},
+#endif
 };
 //-----------------------------------------------------------------
 // these must correspond to longNamesEnum
@@ -658,6 +683,9 @@ const char longNames[][16] =
 	{"1V/Oct"},
 	{"CV Save"},
 	{"MrphTrgt"},
+#if LXR0_MIDI
+	{"MIDI In"},
+#endif
 };
 
 

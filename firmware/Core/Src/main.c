@@ -238,7 +238,11 @@ int main(void)
 
 	//print boot up message
 lcd_clear();
+#ifdef LXR0_VERSION
+lcd_string("lxr-0 " LXR0_VERSION); // lxr-0: which image is flashed
+#else
 lcd_string("Sonic Potions");
+#endif
 //goto 2nd line
 lcd_setcursor(0,2);
 lcd_string("LXR2 Drums V");

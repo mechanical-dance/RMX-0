@@ -1727,6 +1727,21 @@ static void midiParser_noteOn(uint8_t voice, uint8_t note, uint8_t vel, uint8_t 
 	}
 
 }
+#elif LXR0_MIDI
+// lxr-0: the module has no sequencer, so no record or echo. Note matching as above.
+static void midiParser_noteOn(uint8_t voice, uint8_t note, uint8_t vel, uint8_t do_rec)
+{
+	(void)do_rec;
+	if(activeParameters[PAR_MIDI_NOTE1 + voice] != 0) {
+		// looking for specific note
+		if(note==activeParameters[PAR_MIDI_NOTE1 + voice])
+			note=SEQ_DEFAULT_NOTE; // match found. Play default note
+		else
+			return; // note does not match. Do nothing
+	}
+
+	voiceControl_noteOn(voice,note,vel);
+}
 #endif
 //------------------------------------------------------
 //static void midiParser_noteOff(uint8_t voice, uint8_t note, uint8_t vel)
@@ -1867,7 +1882,7 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 		{ // channel specific message
 		const uint8_t msgonly =msg.status & 0xF0;
 		const uint8_t chanonly=msg.status & 0x0F;
-#if !EURORACK_MODULE
+#if !EURORACK_MODULE || LXR0_MIDI
 		if((msgonly & 0xE0) == 0x80) {
 			// note on or note off message (one of these two only)
 			if(midiParser_txRxFilter & MIDI_FILTER_NOTES) {
@@ -1963,7 +1978,7 @@ void midiParser_handleStatusByte(unsigned char data)
 	}
 }
 //-----------------------------------------------------------
-#if !EURORACK_MODULE
+#if !EURORACK_MODULE || LXR0_MIDI
 // This will build up the midi message and hand it off to
 // parseMidiMessage when it's complete
 void midiParser_parseUartData(unsigned char data)
