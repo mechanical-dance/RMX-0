@@ -169,3 +169,5 @@ endif()
 
 
 set_property(SOURCE Src/Soundengine/DSPAudio/ResonantFilter.c APPEND PROPERTY COMPILE_OPTIONS -fno-thread-jumps)
+# lxr-0: Reverb_process's constants are written as doubles, which costs float/double conversions per sample
+set_property(SOURCE Src/Soundengine/DSPAudio/FX/Reverb.c APPEND PROPERTY COMPILE_OPTIONS -fsingle-precision-constant)
