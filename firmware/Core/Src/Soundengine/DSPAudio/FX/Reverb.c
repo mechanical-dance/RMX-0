@@ -31,6 +31,9 @@ void Reverb_init(Reverb *r)
 
 	TiltEq_init(&r->eq);
 	TiltEq_init(&r->eqFb);
+#if LXR0_REVERB
+	TiltEq_init(&r->eqFbR);
+#endif
 
 	SineCosine_init(&r->lfo);
 	if(!r->reverbBufferSram) // lxr-0: the reverb bus sets its own buffer before init
@@ -439,12 +442,34 @@ void Reverb_process(Reverb *r, int16_t *fxBuffer,int16_t* outL, int16_t* outR, u
 
 			out= TiltEq_process(&r->eqFb,fmaf(early, r->earlyVolume, out2));
 
+#if LXR0_REVERB
+			// lxr-0: right output from the "right output" taps listed above, mapped to the same lines
+			// as the left (node24_30 = delay[0], node31_33 = apDelay[0], node33_39 = delay[1],
+			// node48_54 = delay[2], node55_59 = apDelay[1], node59_63 = delay[3]). Taps past the
+			// 2048-sample lines are dropped (3627) or shortened by 1000 (2673, 2111), as the left does.
+			float outR = out;
+			if(r->stereo)
+			{
+				float o  = VerbDelay_ReadTapSample(&r->delay[0], 353) * 0.6;
+				o -= VerbDelay_ReadTapSample(&r->apDelay[0].delay, 1228) * 0.6;
+				o += VerbDelay_ReadTapSample(&r->delay[1], 1673) * 0.6;
+				o -= VerbDelay_ReadTapSample(&r->delay[2], 1111) * 0.6;
+				o -= VerbDelay_ReadTapSample(&r->apDelay[1].delay, 335) * 0.6;
+				o -= VerbDelay_ReadTapSample(&r->delay[3], 121) * 0.6;
+				outR = TiltEq_process(&r->eqFbR,fmaf(early, r->earlyVolume, o));
+			}
+#endif
 #endif
 			int16_t wet =  __SSAT(out*32768, 16);
+#if LXR0_REVERB && !SPIN_SEMI
+			const int16_t wetR = __SSAT(outR*32768, 16);
+#else
+			const int16_t wetR = wet;
+#endif
 			//int16_t wet2 =  __SSAT(out*32768, 16);
 			//int16_t dw = fxBuffer[i] + __SSAT((wet - fxBuffer[i]) * dryWet,16);
 
-			x = __PKHBT(fxBuffer[idx1] + __SSAT((wet - fxBuffer[idx1]) * dryWet,16), fxBuffer[idx2] + __SSAT((wet - fxBuffer[idx2]) * dryWet,16), 16);
+			x = __PKHBT(fxBuffer[idx1] + __SSAT((wet - fxBuffer[idx1]) * dryWet,16), fxBuffer[idx2] + __SSAT((wetR - fxBuffer[idx2]) * dryWet,16), 16); // lxr-0: wetR
 			//LERP dryWet
 			*stereoOut = __QADD16(*stereoOut, x);
 			stereoOut++;
@@ -487,6 +512,9 @@ IN_ITCM_RAM void Reverb_setComposition(Reverb *r, float c)
 {
 	TiltEq_setParameter(&r->eq, -1+2*c);
 	TiltEq_setParameter(&r->eqFb, -1+2*c);
+#if LXR0_REVERB
+	TiltEq_setParameter(&r->eqFbR, -1+2*c);
+#endif
 	//compositionParameter = c;
 	setOnePoleCoef(&r->lpFeedback, c);
 //	setOnePoleCoef(&r->lpImpulse, c);

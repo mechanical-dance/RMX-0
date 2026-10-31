@@ -41,6 +41,7 @@ volatile uint8_t lxr0Verb_bypassed;
 void lxr0Verb_init(void)
 {
 	verb.reverbBufferSram = verbBuffer;
+	verb.stereo = 1;
 	Reverb_init(&verb);
 	budget = (uint32_t)(((uint64_t)SystemCoreClock * OUTPUT_DMA_SIZE) / 44100);
 	memset(lastParams, 0xff, sizeof(lastParams)); // apply every setting on the first block
@@ -110,15 +111,16 @@ static void mixWet(int16_t* output, int16_t* output2)
 
 	for(uint8_t i=0; i<OUTPUT_DMA_SIZE; i++)
 	{
-		const int16_t w = (int16_t)(wet[2*i] * amount); // the reverb is mono: both halves are equal
+		const int16_t l = (int16_t)(wet[2*i] * amount);
+		const int16_t r = (int16_t)(wet[2*i+1] * amount);
 		if(stereo)
 		{
 			int32_t* o = (int32_t*)&out[2*i];
-			*o = __QADD16(*o, __PKHBT(w, w, 16));
+			*o = __QADD16(*o, __PKHBT(l, r, 16));
 		}
 		else
 		{
-			out[2*i] = (int16_t)__SSAT(out[2*i] + w, 16);
+			out[2*i] = (int16_t)__SSAT(out[2*i] + (l + r)/2, 16); // mono out: sum of both sides
 		}
 	}
 }

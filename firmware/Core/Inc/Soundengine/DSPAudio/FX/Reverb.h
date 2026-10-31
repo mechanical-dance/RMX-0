@@ -15,6 +15,7 @@
 #ifndef REVERBALGO_H_
 #define REVERBALGO_H_
 #include "Soundengine/globals.h"
+#include "lxr0.h" // lxr-0
 #include "Soundengine/config.h"
 #include "Soundengine/DSPAudio/FX/FxRamBuffer.h"
 
@@ -73,6 +74,10 @@ typedef struct ReverbStruct
 
 	TiltEq eq;
 	TiltEq eqFb;
+#if LXR0_REVERB
+	TiltEq eqFbR;		// lxr-0: right output EQ
+	uint8_t stereo;		// lxr-0: 1 = separate right output taps (the reverb bus); 0 = mono, as before
+#endif
 
 } Reverb;
 

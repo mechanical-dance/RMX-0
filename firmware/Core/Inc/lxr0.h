@@ -10,6 +10,6 @@
 // parallel global reverb bus: per-voice sends, own buffer, bypassed above 95 % render load
 #define LXR0_REVERB 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.3.2"
+#define LXR0_VERSION "0.3.3"
 
 #endif /* LXR0_H_ */

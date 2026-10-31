@@ -41,7 +41,7 @@ If nothing plays in MIDI mode: the input stage may not pass 31.25 kbaud, or the 
 48 plays every voice until the notes are set.
 
 ## Global reverb (`LXR0_REVERB`, 0.3.2)
-- A second instance of Erica's `Reverb.c` (the FX bus reverb, `SPIN_SEMI 0`, mono out) with its own
+- A second instance of Erica's `Reverb.c` (the FX bus reverb, `SPIN_SEMI 0`) with its own
   56 KB buffer in SRAM1, so it runs alongside whatever the FX bus does. `Reverb_init` keeps a buffer
   set before init (the only change to their file).
 - Sends are post-fader (after decimation), per voice; both hats share voice 6's send.
@@ -58,6 +58,11 @@ If nothing plays in MIDI mode: the input stage may not pass 31.25 kbaud, or the 
   the perform page; pressing FX again after the FX type's screens opens the reverb page
   (`rev out` / `pre dcy ton ref`), and again returns to the FX type.
 - Host check (scratchpad, 2026-10-31): impulse at decay 90 falls ~33 dB/s; feedback 1.0 stays bounded.
+- Stereo (0.3.3): their code builds only the left output of the Dattorro/Spin tap table in the comment;
+  `Reverb.stereo` adds the right-output taps on the same lines (taps past 2048 samples dropped or
+  shortened by 1000, as the left does), with its own output EQ. Host check: L/R correlation 0.26,
+  levels within 1 dB. Mono outputs (L1/R1/L2/R2) get the sum. The FX-bus reverb stays mono.
+- Noted, not changed: both loops run `apDelay[1]`, so `apDelay[0]` is never written and its taps read 0.
 
 ### 0.3.2 hardware test
 | Check | Pass |
@@ -71,3 +76,4 @@ If nothing plays in MIDI mode: the input stage may not pass 31.25 kbaud, or the 
 | Same kit on stock firmware | loads, plays without reverb |
 | Heavy kit (Penalty) + all sends up | no dropouts; if load passes 95 % the reverb cuts out, returns when load drops |
 There is no load readout yet: if the reverb vanishes on a heavy kit, that's the guard.
+0.3.3 adds: the reverb is stereo on St1/St2 (different left and right tails).
