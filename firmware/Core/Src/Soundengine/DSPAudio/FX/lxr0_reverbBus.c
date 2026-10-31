@@ -18,7 +18,8 @@
 
 #define VERB_BUFFER_SIZE (14*MAX_ALLPASS_SIZE)	// Reverb_init (SPIN_SEMI 0) uses 14 lines of MAX_ALLPASS_SIZE
 #define NUM_VERB_PARAMS (PAR_LXR0_VERB_REFLECTION - PAR_LXR0_VERB_SEND1 + 1)
-#define LOAD_OFF 95		// bypass when a block takes more than this % of the block time
+#define LOAD_OFF 95		// bypass when blocks take more than this % of the block time...
+#define OFF_BLOCKS 8	// ...this many in a row, so one late block doesn't cut the reverb
 #define LOAD_ON 90		// back on when load + the reverb's own cost stays below this %...
 #define ON_BLOCKS 345	// ...for 0.5 s (64-sample blocks at 44.1 kHz)
 
@@ -33,7 +34,9 @@ static uint8_t lastParams[NUM_VERB_PARAMS];
 static uint32_t blockStart;
 static uint32_t budget;		// CPU cycles per block
 static uint32_t onCount;
-static float verbCost;		// % of the block the reverb itself takes, peak with slow decay
+static uint32_t overCount;
+static float verbCost;		// % of the block the reverb itself takes, averaged. Held while bypassed
+static uint8_t peakLoad;
 
 volatile uint8_t lxr0Verb_load;
 volatile uint8_t lxr0Verb_bypassed;
@@ -139,19 +142,23 @@ void lxr0Verb_endBlock(int16_t* output, int16_t* output2)
 
 	const uint32_t load = (DWT->CYCCNT - blockStart) * 100 / budget;
 	lxr0Verb_load = load > 255 ? 255 : (uint8_t)load;
+	if(lxr0Verb_load > peakLoad)
+		peakLoad = lxr0Verb_load;
 
 	if(verbCycles)
 	{
 		const float cost = verbCycles * 100.f / budget;
-		verbCost = cost > verbCost ? cost : verbCost * 0.999f;
+		verbCost = verbCost == 0.f ? cost : verbCost + (cost - verbCost)/64.f;
 	}
 
 	if(!lxr0Verb_bypassed)
 	{
-		if(load > LOAD_OFF)
+		overCount = load > LOAD_OFF ? overCount + 1 : 0;
+		if(overCount >= OFF_BLOCKS)
 		{
 			lxr0Verb_bypassed = 1;
 			onCount = 0;
+			overCount = 0;
 		}
 	}
 	else if(load + verbCost < LOAD_ON)
@@ -166,6 +173,18 @@ void lxr0Verb_endBlock(int16_t* output, int16_t* output2)
 	{
 		onCount = 0;
 	}
+}
+
+uint8_t lxr0Verb_takePeakLoad(void)
+{
+	const uint8_t peak = peakLoad;
+	peakLoad = lxr0Verb_load;
+	return peak;
+}
+
+uint8_t lxr0Verb_ownLoad(void)
+{
+	return verbCost > 255.f ? 255 : (uint8_t)verbCost;
 }
 
 void lxr0Verb_kitDefaults(uint8_t* para, uint32_t bytesRead)

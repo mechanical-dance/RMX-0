@@ -8,6 +8,7 @@
  */
 
 #include "lxr0_samples.h"
+#include "Soundengine/DSPAudio/FX/lxr0_reverbBus.h"
 #include "menu/menu.h"
 #include "lcd.h"
 #include <string.h>
@@ -2007,6 +2008,21 @@ void menu_repaintGeneric()
 			memcpy(&editDisplayBuffer[1][4*i],valueAsText,3);
 
 		}	// for 1 to 4 .. each menu item
+#if LXR0_REVERB
+		// lxr-0: reverb's 2nd screen, the free slots: peak render load, bus on/off, the bus's own average load
+		if(menu_activePage == FX_MODE_PAGE && activePage == LXR0_VERB_SUBPAGE && is2ndPage)
+		{
+			char readout[5];
+			memcpy(&editDisplayBuffer[0][4],"cpu",3);
+			numtostrpu(readout,lxr0Verb_takePeakLoad(),' ');
+			memcpy(&editDisplayBuffer[1][4],readout,3);
+			memcpy(&editDisplayBuffer[0][8],"rev",3);
+			memcpy(&editDisplayBuffer[1][8],lxr0Verb_bypassed ? "off" : "on ",3);
+			memcpy(&editDisplayBuffer[0][12],"own",3);
+			numtostrpu(readout,lxr0Verb_ownLoad(),' ');
+			memcpy(&editDisplayBuffer[1][12],readout,3);
+		}
+#endif
 	} // if editmode not active
 }
 
@@ -3070,9 +3086,34 @@ static void restartEncoder(int8_t inc)
 }
 #endif
 //-----------------------------------------------------------------
+void menu_lxr0RedrawScreen(void)
+{
+	memset(currentDisplayBuffer, 0, sizeof(currentDisplayBuffer)); // every character differs, so all are resent
+	menu_repaintAll();
+}
+//-----------------------------------------------------------------
+#if LXR0_REVERB
+// lxr-0: keeps the readout on the reverb's 2nd screen moving
+static void reverbReadoutTick(void)
+{
+	static uint32_t last = 0;
+	if(menu_activePage != FX_MODE_PAGE || editModeActive || screensaver_Active
+			|| ((menuIndex & MASK_PAGE)>>PAGE_SHIFT) != LXR0_VERB_SUBPAGE || (menuIndex & MASK_PARAMETER) < 4)
+		return;
+	if(HAL_GetTick() - last < 250)
+		return;
+	last = HAL_GetTick();
+	menu_repaint();
+	display_needs_refresh = 1;
+}
+#endif
+//-----------------------------------------------------------------
 void menu_parseEncoder(int8_t inc, uint8_t button)
 {
 	uint8_t btnClicked=0;
+#if LXR0_REVERB
+	reverbReadoutTick();
+#endif
 #if LXR0_RESTART
 	if(restartOpen)
 	{

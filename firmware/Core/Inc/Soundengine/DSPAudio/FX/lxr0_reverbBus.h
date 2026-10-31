@@ -24,6 +24,8 @@ void lxr0Verb_kitDefaults(uint8_t* para, uint32_t bytesRead);
 
 extern volatile uint8_t lxr0Verb_load;		// last block's render load, %
 extern volatile uint8_t lxr0Verb_bypassed;	// 1 while the load guard has the bus off
+uint8_t lxr0Verb_takePeakLoad(void);		// highest load since the last call, %
+uint8_t lxr0Verb_ownLoad(void);				// the bus's own average cost, %
 #endif
 
 #endif /* LXR0_REVERBBUS_H_ */

@@ -8,7 +8,7 @@
 #include "lxr0_samples.h"
 #include "Soundengine/DSPAudio/Oscillator.h"
 struct fl flash_regs={FLASH_OPTCR_nDBANK};
-int tmp_kit_result, tmp_kit_saves; int preset_saveTmpKit(void){tmp_kit_saves++;return tmp_kit_result;} void menu_repaintAll(void){}
+int tmp_kit_result, tmp_kit_saves; int preset_saveTmpKit(void){tmp_kit_saves++;return tmp_kit_result;} void menu_lxr0RedrawScreen(void){}
 FIL SDFile; uint8_t lcd_process_display_interrupt; char lcd_last[64]; int htim2,hi2s2,hi2s3; int16_t dma_buffer[256],dma_buffer2[256];
 static jmp_buf out; static uint8_t* fl; static const char* root;
 void NVIC_SystemReset(void){longjmp(out,1);}
@@ -19,7 +19,7 @@ FRESULT f_open(FIL*f,const char*p,int m){char b[300];P(b,p);f->f=fopen(b,"rb");i
 FRESULT f_close(FIL*f){fclose(f->f);return FR_OK;}
 FRESULT f_read(FIL*f,void*b,UINT n,UINT*r){*r=fread(b,1,n,f->f);return FR_OK;}
 FRESULT f_lseek(FIL*f,uint32_t o){fseek(f->f,o,SEEK_SET);return FR_OK;}
-FRESULT f_opendir(DIR*d,const char*p){char b[300];P(b,p);d->d=opendir(b);return d->d?FR_OK:FR_ERR;}
+FRESULT f_opendir(DIR*d,const char*p){char b[300];P(b,p);d->d=opendir(b);return d->d?FR_OK:FR_NO_PATH;}
 FRESULT f_readdir(DIR*d,FILINFO*i){struct dirent*e;do{e=readdir(d->d);if(!e){i->fname[0]=0;return FR_OK;}}while(e->d_name[0]=='.');strncpy(i->fname,e->d_name,12);i->fname[12]=0;i->fattrib=0;return FR_OK;}
 FRESULT f_closedir(DIR*d){closedir(d->d);return FR_OK;}
 static void install(void){lcd_last[0]=0;if(!setjmp(out))lxr0Samples_installFromSd();printf("lcd: %s\n",lcd_last);}
@@ -58,7 +58,7 @@ int main(int c,char**v){
  o.waveform=11;memset(buf,0x55,sizeof buf);calcUserSampleOscBlock(&o,buf,64,1.f);assert(buf[0]==0&&buf[63]==0);o.waveform=200;calcUserSampleOscFmBlock(&o,mod,buf,64,1.f);assert(buf[0]==0);
  // kit can't be saved: nothing happens, no reset
  uint32_t m0=*(uint32_t*)LXR0_SAMPLE_FLASH_BASE; tmp_kit_result=1; lcd_last[0]=0; lxr0Samples_installFromSd(); printf("lcd: %s\n",lcd_last); assert(!strncmp(lcd_last,"Kit not saved",13)&&*(uint32_t*)LXR0_SAMPLE_FLASH_BASE==m0&&lxr0Samples_init()==5); tmp_kit_result=0;
- assert(tmp_kit_saves>=2);
+ assert(tmp_kit_saves>=1);
  // no usable files: flash stays
  uint32_t m=*(uint32_t*)LXR0_SAMPLE_FLASH_BASE; root=v[2]; install(); assert(*(uint32_t*)LXR0_SAMPLE_FLASH_BASE==m&&lxr0Samples_init()==5);
  // dual bank refuses

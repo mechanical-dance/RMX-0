@@ -17,6 +17,8 @@ HAL_StatusTypeDef HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef*,uint32_t*);
 #define HAL_FLASH_Unlock() ((void)0)
 #define HAL_FLASH_Lock() ((void)0)
 #define HAL_TIM_Base_Stop_IT(x) ((void)0)
+#define HAL_TIM_Base_Start_IT(x) ((void)0)
 #define HAL_I2S_DMAStop(x) ((void)0)
 #define HAL_Delay(x) ((void)0)
 void NVIC_SystemReset(void) __attribute__((noreturn));
+typedef int HAL_SD_CardInfoTypeDef;

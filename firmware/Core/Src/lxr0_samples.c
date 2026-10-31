@@ -83,6 +83,8 @@ static uint8_t ioBuffer[IO_FRAMES*MAX_FRAME_BYTES] __attribute__((aligned(4)));
 static uintptr_t writeAddr;
 static uint32_t pendingWord;
 static uint8_t pendingHalf;
+static uint8_t foldersFound;
+static FRESULT scanError;
 
 static uint16_t le16(const uint8_t* p) { return (uint16_t)(p[0] | (p[1]<<8)); }
 static uint32_t le32(const uint8_t* p) { return p[0] | (p[1]<<8) | (p[2]<<16) | ((uint32_t)p[3]<<24); }
@@ -165,7 +167,8 @@ done:
 	return ok;
 }
 
-// adds the folder's wavs in name order, so waveform numbers don't depend on the directory order
+// adds the folder's wavs in name order, so waveform numbers don't depend on the directory order.
+// Two passes: _FS_LOCK is 1, so the folder must be closed before a file can be opened.
 static uint8_t scanFolder(const char* folder, uint8_t looped, uint8_t count, uint16_t* skipped)
 {
 	DIR dir;
@@ -173,25 +176,21 @@ static uint8_t scanFolder(const char* folder, uint8_t looped, uint8_t count, uin
 	char path[PATH_SIZE];
 	const uint8_t first = count;
 
-	if(f_opendir(&dir, folder) != FR_OK)
+	const FRESULT res = f_opendir(&dir, folder);
+	if(res == FR_NO_PATH || res == FR_NO_FILE)
 		return count;
+	if(res != FR_OK)
+	{
+		scanError = res;
+		return count;
+	}
+	foldersFound++;
 
 	while(f_readdir(&dir, &info) == FR_OK && info.fname[0])
 	{
 		const size_t len = strlen(info.fname);
 		if((info.fattrib & (AM_DIR | AM_HID)) || len < 5 || len > 12 || strcasecmp(&info.fname[len-4], ".wav"))
 			continue; // AM_HID: the "._" files macOS leaves next to each file
-
-		InstallEntry e;
-		memset(&e, 0, sizeof(e));
-		strcpy(e.file, info.fname);
-		e.looped = looped;
-		makePath(path, folder, e.file);
-		if(!parseWav(path, &e))
-		{
-			(*skipped)++;
-			continue;
-		}
 		if(count >= LXR0_SAMPLE_MAX)
 		{
 			(*skipped)++;
@@ -199,16 +198,32 @@ static uint8_t scanFolder(const char* folder, uint8_t looped, uint8_t count, uin
 		}
 
 		uint8_t at = count;
-		while(at > first && strcmp(entries[at-1].file, e.file) > 0)
+		while(at > first && strcmp(entries[at-1].file, info.fname) > 0)
 		{
 			entries[at] = entries[at-1];
 			at--;
 		}
-		entries[at] = e;
+		memset(&entries[at], 0, sizeof(entries[at]));
+		strcpy(entries[at].file, info.fname);
+		entries[at].looped = looped;
 		count++;
 	}
 	f_closedir(&dir);
-	return count;
+
+	uint8_t out = first;
+	for(uint8_t i=first; i<count; i++)
+	{
+		makePath(path, folder, entries[i].file);
+		if(!parseWav(path, &entries[i]))
+		{
+			(*skipped)++;
+			continue;
+		}
+		if(out != i)
+			entries[out] = entries[i];
+		out++;
+	}
+	return out;
 }
 
 static uint64_t flashBytes(const InstallEntry* e)
@@ -333,22 +348,55 @@ static uint8_t writeTable(uint8_t count)
 		&& programWord(LXR0_SAMPLE_FLASH_BASE, TABLE_MAGIC);
 }
 
-// runs from the menu with nothing else needed afterwards: reset restarts audio, caches and the card.
-// The current kit is autosaved first, so the reset brings it back as a power cycle does.
+// an install that can't start: the message, then back to the menu with audio still running
+static void refuse(const char* line1, const char* line2)
+{
+	show(line1, line2);
+	HAL_Delay(3000);
+	HAL_TIM_Base_Stop_IT(&htim2);
+	lcd_process_display_interrupt = 1;
+	menu_lxr0RedrawScreen();
+}
+
+// Audio runs from the timer while the card is scanned, as it does during a kit load. Only an install that
+// goes ahead stops it, and only that one resets (which restarts audio, caches and the card). The current
+// kit is autosaved first, so the reset brings it back as a power cycle does.
 void lxr0Samples_installFromSd(void)
 {
 	char line[17];
 	uint16_t skipped = 0;
 	uint8_t ok = 0;
 
-	if(preset_saveTmpKit() != FR_OK)
+	lcd_process_display_interrupt = 0;
+	while(sendDisplayBuffer() != 0);
+	HAL_TIM_Base_Start_IT(&htim2);
+
+	show("Samples", "Scanning...");
+	foldersFound = 0;
+	scanError = FR_OK;
+	const uint8_t scanned = scanFolder("/loops", 1, scanFolder("/samples", 0, 0, &skipped), &skipped);
+	const uint8_t count = fitToFlash(scanned, &skipped);
+
+	if(count == 0)
 	{
-		lcd_process_display_interrupt = 0;
-		while(sendDisplayBuffer() != 0);
-		show("Kit not saved", "Install stopped");
-		HAL_Delay(2000);
-		lcd_process_display_interrupt = 1;
-		menu_repaintAll();
+		if(scanError != FR_OK)
+			snprintf(line, sizeof(line), "Card error %u", scanError);
+		else if(foldersFound == 0)
+			snprintf(line, sizeof(line), "No /samples dir");
+		else
+			snprintf(line, sizeof(line), "%u wavs unusable", skipped);
+		refuse(line, "Flash unchanged");
+		return;
+	}
+	if(!(FLASH->OPTCR & FLASH_OPTCR_nDBANK)) // sector numbers below are the single bank layout
+	{
+		refuse("Flash dual bank", "Flash unchanged");
+		return;
+	}
+	if(preset_saveTmpKit() != FR_OK) // also stops the timer
+	{
+		HAL_TIM_Base_Start_IT(&htim2);
+		refuse("Kit not saved", "Flash unchanged");
 		return;
 	}
 
@@ -357,26 +405,6 @@ void lxr0Samples_installFromSd(void)
 	memset(dma_buffer2, 0, sizeof(dma_buffer2));
 	HAL_I2S_DMAStop(&hi2s2);
 	HAL_I2S_DMAStop(&hi2s3);
-	lcd_process_display_interrupt = 0;
-	while(sendDisplayBuffer() != 0);
-
-	show("Samples", "Scanning...");
-	const uint8_t scanned = scanFolder("/loops", 1, scanFolder("/samples", 0, 0, &skipped), &skipped);
-	const uint8_t count = fitToFlash(scanned, &skipped);
-
-	if(count == 0)
-	{
-		show("No usable wavs", "Flash unchanged");
-		HAL_Delay(3000);
-		NVIC_SystemReset();
-	}
-
-	if(!(FLASH->OPTCR & FLASH_OPTCR_nDBANK)) // sector numbers below are the single bank layout
-	{
-		show("Flash dual bank", "Flash unchanged");
-		HAL_Delay(3000);
-		NVIC_SystemReset();
-	}
 
 	show("Samples", "Erasing flash...");
 	HAL_FLASH_Unlock();

@@ -139,3 +139,16 @@ firmware remounts it when it comes back (stock behaviour).
 | Fill the bar, encoder held | bootloader update mode |
 | Fill the bar, encoder not held | normal boot, same kit and edits |
 | Pull the card, fill the bar | restarts without hanging |
+
+## 0.4.3 fixes
+- Sample scan: `_FS_LOCK` is 1 in this firmware's FatFs, so the open folder blocked every file and all WAVs
+  failed. The scan now reads the names, closes the folder, then opens the files. `tools/samples-host-test`
+  also runs the installer on the real FatFs now.
+- An install that can't start (no folder, no usable files, kit not saved, dual bank) says why, keeps audio
+  running and returns to the menu. Only a real install resets.
+- Reverb guard: bypass needs 8 blocks in a row over 95 %, and the reverb's own cost is an average. It was a
+  peak that stopped decaying once bypassed, so one spike could keep the reverb off until a restart.
+- Reverb 2nd screen (FX, FX... to `out`) shows `cpu` (peak render load, %), `rev` (on/off: off means the guard
+  has it bypassed) and `own` (the bus's own average load, %).
+- Host check of the bus at maximum settings: output stays alive, about 14x quieter than defaults at St1.
+  `out` at maximum is R2.

@@ -751,6 +751,7 @@ void menu_init();
 //-----------------------------------------------------------------
 /** takes the values received from the encoder and translates it to menu changes*/
 void menu_parseEncoder(int8_t inc, uint8_t button);
+void menu_lxr0RedrawScreen(void); // lxr-0: after writing to the LCD directly
 #if LXR0_RESTART
 void menu_lxr0RestartOpen(void);
 void menu_lxr0RestartClose(void);

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <dirent.h>
 typedef unsigned UINT;
-typedef enum {FR_OK,FR_ERR} FRESULT;
+typedef enum {FR_OK,FR_ERR,FR_NO_FILE,FR_NO_PATH} FRESULT;
 typedef struct {FILE*f; uint32_t size;} FIL;
 typedef struct {DIR*d; char p[300];} XDIR;
 #define DIR XDIR
