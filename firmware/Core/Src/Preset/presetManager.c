@@ -1110,7 +1110,8 @@ IN_ITCM_RAM void preset_sendDrumsetParametersImmediate()
 {
 	uint8_t i;
 		//special case mod targets
-		for(i=0;i<NUM_MOD_SLOTS;i++)
+		// lxr-0: 6 velocity and LFO settings. This loop ran NUM_MOD_SLOTS times, which set bytes after the LFO voices to 1
+		for(i=0;i<6;i++)
 		{
 			//**VELO load drumkit. translate to param value before sending
 			// parameter_values[PAR_VEL_DEST_1+i] is an index into modTargets, we need to send
@@ -1131,9 +1132,12 @@ IN_ITCM_RAM void preset_sendDrumsetParametersImmediate()
 			upper = (uint8_t)(((value&0x80)>>7) | (((i)&0x3f)<<1));
 			lower = value&0x7f;
 			frontPanel_sendData(CC_LFO_TARGET,upper,lower);
+		}
 
-			//CV
-			value = pgm_read_word(&modTargets[activeParameters[PAR_CV_DEST_1+i]].param);
+		//CV
+		for(i=0;i<NUM_MOD_SLOTS;i++)
+		{
+			const uint16_t value = pgm_read_word(&modTargets[activeParameters[PAR_CV_DEST_1+i]].param);
 			modNode_setDestination(&cvModulators[i], value);
 		}
 
@@ -1206,7 +1210,8 @@ void preset_sendDrumsetParameters()
 {
 	uint8_t i;
 	//special case mod targets
-	for(i=0;i<NUM_MOD_SLOTS;i++)
+	// lxr-0: 6 velocity and LFO settings. This loop ran NUM_MOD_SLOTS times, which set bytes after the LFO voices to 1
+	for(i=0;i<6;i++)
 	{
 		//**VELO load drumkit. translate to param value before sending
 		// parameter_values[PAR_VEL_DEST_1+i] is an index into modTargets, we need to send
@@ -1227,10 +1232,12 @@ void preset_sendDrumsetParameters()
 		upper = (uint8_t)(((value&0x80)>>7) | (((i)&0x3f)<<1));
 		lower = value&0x7f;
 		frontPanel_sendData(CC_LFO_TARGET,upper,lower);
+	}
 
-
-		//CV
-		value = pgm_read_word(&modTargets[activeParameters[PAR_CV_DEST_1+i]].param);
+	//CV
+	for(i=0;i<NUM_MOD_SLOTS;i++)
+	{
+		const uint16_t value = pgm_read_word(&modTargets[activeParameters[PAR_CV_DEST_1+i]].param);
 		modNode_setDestination(&cvModulators[i], value);
 	}
 

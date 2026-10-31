@@ -184,3 +184,11 @@ Host check on kit-like settings: staggered output is bit-identical to before; si
 negative frequency cast to an increment of 0, so a sample output its first frame as constant DC. It now branches on
 no CV as `osc_calcWavetableFreq` does. `tools/samples-host-test` missed this because it never ran the voice's pitch
 path; found by running the firmware's engine natively in PHX-D01.
+
+## 0.4.9 LFO settings on kit load
+Both `preset_sendDrumsetParameters` functions checked the 6 LFO voice settings in a loop of `NUM_MOD_SLOTS` (18), the
+count for the matrix destinations sharing that loop. Any of bytes 161-178 outside 1-6 became 1, so LFO target and
+retrigger were overwritten and an LFO with retrigger off restarted on every DRUM1 hit. Erica's eurorack source has the
+same loop; the desktop firmware loops 6. The loop is now split: 6 for velocity and LFO, `NUM_MOD_SLOTS` for the matrix.
+Kits saved by earlier versions may already hold those 1s, which can't be told apart from a chosen retrigger on DRUM1.
+Found by running the firmware natively in PHX-D01.
