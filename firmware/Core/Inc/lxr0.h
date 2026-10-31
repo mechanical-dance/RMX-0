@@ -12,6 +12,6 @@
 // user samples as oscillator waveforms: installed from the SD card (/samples, /loops) to sectors 6-11
 #define LXR0_SAMPLES 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.4.0"
+#define LXR0_VERSION "0.4.1"
 
 #endif /* LXR0_H_ */

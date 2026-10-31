@@ -32,6 +32,9 @@ typedef enum
 
 
 FRESULT preset_LoadTmpKit();
+#if LXR0_SAMPLES
+FRESULT preset_saveTmpKit(); // lxr-0: the install saves before its reset
+#endif
 void preset_initTmpFolder();
 void preset_touchTimer(PresetTimer type);
 void preset_processTimer();

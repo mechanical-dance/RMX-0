@@ -93,10 +93,12 @@ There is no load readout yet: if the reverb vanishes on a heavy kit, that's the 
   16 or 24 bit (24 keeps the top 16), mono or stereo (summed), any rate. Files that don't fit or don't
   parse are skipped and counted. Names are FAT 8.3 (LFN is off), so a long file name shows as `NAME~1`.
 - Install: LOAD/SAVE button cycles Load kit, Save kit, Save morph, `Load:Samples`; click the encoder.
-  Audio stops, flash is erased and rewritten, the module resets. Unsaved kit edits are lost. With no
-  usable files, or a chip set to dual bank, flash is left alone.
-- Playback: `osc.sampleHi` extends the phase past the old 32768-frame limit. Pitch: oscillator on F1 plays
-  a file at its own rate and pitch (the stock increment would be 22 cents sharp, this corrects it).
+  The current kit is autosaved first (`tmp.snd`, as the stock timer does), so the reset brings it back.
+  Then audio stops, flash is erased and rewritten, and the module resets. With no usable files, or a chip
+  set to dual bank, flash is left alone. If the kit can't be saved the install doesn't start.
+- Playback: `osc.sampleHi` extends the phase past the old 32768-frame limit. Pitch as the original LXR and
+  LXR02Open, so kits match PHX-D01: coarse 29 with fine 35 is original speed (-34 on the display). Other
+  rates scale from there. (0.4.0 had a correction that put these kits 22 cents off; removed in 0.4.1.)
   One-shots stop at the end; the voice's amp envelope still applies, so long samples need a long decay.
 - The waveform page shows `s<n>` and, while editing, the sample name.
 - Not done: modulating the waveform (LFO/velocity/CV) only reaches the six built-ins. Kits store the
@@ -104,13 +106,14 @@ There is no load readout yet: if the reverb vanishes on a heavy kit, that's the 
 - Host check: `tools/samples-host-test/run.sh` runs the installer on real WAV files against a simulated
   flash, plus playback. Not covered there: SD, flash and menu on hardware, CPU cost.
 
-### 0.4.0 hardware test
+### 0.4.x hardware test
 | Check | Pass |
 |------|------|
-| Boot, no samples installed | line 1 `lxr-0 0.4.0`; kits and reverb as in 0.3.4 |
+| Boot, no samples installed | line 1 `lxr-0 0.4.1`; kits and reverb as in 0.3.4 |
 | Card with `/samples`, press LOAD/SAVE to `Load:Samples`, click | `Erasing flash...`, file count, `Samples done`, restart |
 | Voice waveform past `Pwm` | `s0`, `s1`...; name while editing; sample plays on trigger |
-| Coarse on F1 | original pitch; a 22.05 kHz file too |
+| Coarse 29, fine 35 | original pitch; a 22.05 kHz file too |
+| Edit the kit, install samples right away | same edits still there after the restart |
 | Stereo file, 24-bit file | plays, nothing odd in level |
 | File over 1 s, long decay | plays to the end (stock limit was 0.74 s) |
 | File in `/loops`, long decay | loops without a jump in pitch |

@@ -22,3 +22,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.3.3 | `LXRE_LXR0_V0.3.3.img` | aaef184 | 0.3.2 + stereo reverb bus (right-output taps); built, not flashed |
 | 0.3.4 | `LXRE_LXR0_V0.3.4.img` | 794ac0b | 0.3.3 + reverb page fixed (sound settings reachable), second allpass loop fixed; built, not flashed |
 | 0.4.0 | `LXRE_LXR0_V0.4.0.img` | 5770662 | built: samples from SD to flash as oscillator waveforms; host test passed, not yet on hardware |
+| 0.4.1 | `LXRE_LXR0_V0.4.1.img` | COMMIT | 0.4.0 + current kit autosaved before the install reset; pitch back to stock so PHX-D01 kits match; host test passed, not yet on hardware |

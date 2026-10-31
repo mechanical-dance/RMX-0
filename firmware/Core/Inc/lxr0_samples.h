@@ -29,7 +29,7 @@ typedef struct
 
 uint8_t lxr0Samples_init(void);	// validates the flash table, returns the number of samples
 const Lxr0Sample* lxr0Samples_get(uint8_t waveform);	// 0 if this waveform has no sample
-void lxr0Samples_installFromSd(void);	// erases flash, installs /samples then /loops, resets; never returns
+void lxr0Samples_installFromSd(void);	// saves the current kit, erases flash, installs /samples then /loops, resets. Returns only if the kit can't be saved
 #endif
 
 #endif /* LXR0_SAMPLES_H_ */

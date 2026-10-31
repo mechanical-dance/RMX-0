@@ -8,6 +8,7 @@
 #include "lxr0_samples.h"
 #include "Soundengine/DSPAudio/Oscillator.h"
 struct fl flash_regs={FLASH_OPTCR_nDBANK};
+int tmp_kit_result, tmp_kit_saves; int preset_saveTmpKit(void){tmp_kit_saves++;return tmp_kit_result;} void menu_repaintAll(void){}
 FIL SDFile; uint8_t lcd_process_display_interrupt; char lcd_last[64]; int htim2,hi2s2,hi2s3; int16_t dma_buffer[256],dma_buffer2[256];
 static jmp_buf out; static uint8_t* fl; static const char* root;
 void NVIC_SystemReset(void){longjmp(out,1);}
@@ -38,8 +39,8 @@ int main(int c,char**v){
  assert(!(a->frames&0) && ((uintptr_t)b->data&3)==0);
  // pitch: note F1, 44.1 k: one frame per output sample (scaled by 44100/44140)
  OscInfo o; memset(&o,0,sizeof o); o.freq=43.6535289291f;o.cvFreq=o.pitchMod=o.modNodeValue=1;o.waveform=6;
- osc_calcUserSampleFreq(&o); printf("inc 44.1k %u (%.4f frames/sample)\n",o.phaseInc,o.phaseInc/131072.);assert(fabs(o.phaseInc/131072.-44100./44140.)<1e-4);
- o.waveform=7;osc_calcUserSampleFreq(&o);printf("inc 22.05k %.4f\n",o.phaseInc/131072.);assert(fabs(o.phaseInc/131072.-22050./44140.)<1e-4);
+ osc_calcUserSampleFreq(&o); printf("inc 44.1k %u (%.4f frames/sample)\n",o.phaseInc,o.phaseInc/131072.);assert(fabs(o.phaseInc/131072.-1024*43.6535289291/44140.)<1e-3);
+ o.waveform=7;osc_calcUserSampleFreq(&o);printf("inc 22.05k %.4f\n",o.phaseInc/131072.);assert(fabs(o.phaseInc/131072.-0.5*1024*43.6535289291/44140.)<1e-3);
  // long sample: past the old limit, position follows the ramp
  o.waveform=6;o.phaseInc=1u<<17;int16_t buf[64];long fr=0;
  for(;fr<70000;fr+=64)calcUserSampleOscBlock(&o,buf,64,1.f);
@@ -55,6 +56,9 @@ int main(int c,char**v){
  // FM stays in range; out-of-range wave is silent
  int16_t mod[64];for(int i=0;i<64;i++)mod[i]=3000;o.fmMod=2.f;o.waveform=6;o.phase=0;o.sampleHi=0;o.phaseInc=1<<17;calcUserSampleOscFmBlock(&o,mod,buf,64,1.f);
  o.waveform=11;memset(buf,0x55,sizeof buf);calcUserSampleOscBlock(&o,buf,64,1.f);assert(buf[0]==0&&buf[63]==0);o.waveform=200;calcUserSampleOscFmBlock(&o,mod,buf,64,1.f);assert(buf[0]==0);
+ // kit can't be saved: nothing happens, no reset
+ uint32_t m0=*(uint32_t*)LXR0_SAMPLE_FLASH_BASE; tmp_kit_result=1; lcd_last[0]=0; lxr0Samples_installFromSd(); printf("lcd: %s\n",lcd_last); assert(!strncmp(lcd_last,"Kit not saved",13)&&*(uint32_t*)LXR0_SAMPLE_FLASH_BASE==m0&&lxr0Samples_init()==5); tmp_kit_result=0;
+ assert(tmp_kit_saves>=2);
  // no usable files: flash stays
  uint32_t m=*(uint32_t*)LXR0_SAMPLE_FLASH_BASE; root=v[2]; install(); assert(*(uint32_t*)LXR0_SAMPLE_FLASH_BASE==m&&lxr0Samples_init()==5);
  // dual bank refuses

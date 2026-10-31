@@ -19,6 +19,7 @@
 #include "lcd.h"
 #include "main.h"
 #include "menu/menu.h"
+#include "Preset/PresetManager.h"
 #include "Soundengine/cs4344_cs5343.h"
 
 #ifndef LXR0_SAMPLE_FLASH_BASE
@@ -332,12 +333,24 @@ static uint8_t writeTable(uint8_t count)
 		&& programWord(LXR0_SAMPLE_FLASH_BASE, TABLE_MAGIC);
 }
 
-// runs from the menu with nothing else needed afterwards: reset restarts audio, caches and the card
+// runs from the menu with nothing else needed afterwards: reset restarts audio, caches and the card.
+// The current kit is autosaved first, so the reset brings it back as a power cycle does.
 void lxr0Samples_installFromSd(void)
 {
 	char line[17];
 	uint16_t skipped = 0;
 	uint8_t ok = 0;
+
+	if(preset_saveTmpKit() != FR_OK)
+	{
+		lcd_process_display_interrupt = 0;
+		while(sendDisplayBuffer() != 0);
+		show("Kit not saved", "Install stopped");
+		HAL_Delay(2000);
+		lcd_process_display_interrupt = 1;
+		menu_repaintAll();
+		return;
+	}
 
 	HAL_TIM_Base_Stop_IT(&htim2);
 	memset(dma_buffer, 0, sizeof(dma_buffer));

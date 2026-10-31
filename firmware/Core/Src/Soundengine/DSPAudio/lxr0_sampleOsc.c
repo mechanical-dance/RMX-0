@@ -92,12 +92,12 @@ IN_ITCM_RAM void calcUserSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_
 	}
 }
 
-// the increment that plays at the file's own rate and pitch when the oscillator is on F1 (43.65 Hz)
+// as stock for a 44.1 kHz file (coarse 29, fine 35 is the original speed); other rates scale from there
 void osc_calcUserSampleFreq(OscInfo* osc)
 {
 	const Lxr0Sample* sample = lxr0Samples_get(osc->waveform);
-	const float rate = sample ? (float)sample->rate : REAL_FS;
+	const float rate = sample ? (float)sample->rate : 44100.f;
 	const float currentFreq = osc->freq*osc->cvFreq*osc->pitchMod*osc->modNodeValue;
-	osc->phaseInc = (uint32_t)((currentFreq/43.6535289291f) * (rate/REAL_FS) * 131072.f);
+	osc->phaseInc = (uint32_t)(((1024*currentFreq)/REAL_FS) * 131072.f * (rate/44100.f));
 }
 #endif
