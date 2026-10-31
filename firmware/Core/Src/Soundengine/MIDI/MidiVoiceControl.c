@@ -31,18 +31,19 @@ uint8_t voiceStatus[NUM_DRUM_VOICES];
 
 static uint8_t active_voices=0;	// which voices are currently playing a note
 //----------------------------------------------------------------
-static uint8_t voiceQueue[7] = { 0,0,0,0,0,0,0 };
-static uint8_t voiceQueueNote[7] = { 0,0,0,0,0,0,0 };
-static uint8_t voiceQueueVel[7] = { 0,0,0,0,0,0,0 };
+static volatile uint8_t voiceQueue[7] = { 0,0,0,0,0,0,0 };
+static volatile uint8_t voiceQueueNote[7] = { 0,0,0,0,0,0,0 };
+static volatile uint8_t voiceQueueVel[7] = { 0,0,0,0,0,0,0 };
 uint8_t voiceControlStarted=0;
 
 void voiceControl_queueTrigger(uint8_t voice, uint8_t note, uint8_t vel)
 {
 	if(voice<7)
 	{
-		voiceQueue[voice] = 1;
+		// lxr-0: the flag goes last. MIDI queues from the main loop, where a render can interrupt this
 		voiceQueueNote[voice] = note;
 		voiceQueueVel[voice] = vel;
+		voiceQueue[voice] = 1;
 	}
 }
 

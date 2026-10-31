@@ -1983,6 +1983,14 @@ void midiParser_handleStatusByte(unsigned char data)
 // parseMidiMessage when it's complete
 void midiParser_parseUartData(unsigned char data)
 {
+#if LXR0_MIDI
+	if(data == LXR0_MIDI_RESYNC)
+	{
+		// bytes were lost: drop the partial message, keep the status for running status
+		parserState = MIDI_STATUS;
+		return;
+	}
+#endif
 
 	if(data&0x80) { // High bit is set -  its either a status or a system message.
 		// regardless of current state, we blindly start a new message without questioning it

@@ -2023,6 +2023,20 @@ void menu_repaintGeneric()
 			memcpy(&editDisplayBuffer[1][12],readout,3);
 		}
 #endif
+#if LXR0_MIDI
+		// lxr-0: MIDI's 2nd global screen, the free slots: overrun, framing and noise errors since boot
+		if(menu_activePage == MENU_MIDI_PAGE && activePage == 0 && activeParameter > 3)
+		{
+			char readout[5];
+			memcpy(&editDisplayBuffer[0][8],"ov fe n",7); // col 15 is the scroll sign
+			numtostrpu_2Bytes(readout,lxr0Midi_overruns,' ');
+			memcpy(&editDisplayBuffer[1][8],readout,2);
+			numtostrpu_2Bytes(readout,lxr0Midi_framing,' ');
+			memcpy(&editDisplayBuffer[1][11],readout,2);
+			numtostrpu_2Bytes(readout,lxr0Midi_noise,' ');
+			memcpy(&editDisplayBuffer[1][14],readout,2);
+		}
+#endif
 	} // if editmode not active
 }
 

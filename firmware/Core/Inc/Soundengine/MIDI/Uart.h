@@ -27,6 +27,7 @@ void uart_sendMidiByte(uint8_t data);
 void uart_processMidi();
 //lxr-0: OP HH jack as MIDI in (1) or trigger input (0)
 void lxr0_setOpHhMidi(uint8_t midiOn);
+extern volatile uint8_t lxr0Midi_overruns, lxr0Midi_framing, lxr0Midi_noise; // errors since boot, stop at 99
 
 void initFrontpanelUart();
 //check if there is data in the front panel Rx buffer and send it to the front panel parser

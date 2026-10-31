@@ -192,3 +192,17 @@ retrigger were overwritten and an LFO with retrigger off restarted on every DRUM
 same loop; the desktop firmware loops 6. The loop is now split: 6 for velocity and LFO, `NUM_MOD_SLOTS` for the matrix.
 Kits saved by earlier versions may already hold those 1s, which can't be told apart from a chosen retrigger on DRUM1.
 Found by running the firmware natively in PHX-D01.
+
+## 0.4.10 MIDI input
+Found by running the parser natively in PHX-D01; the first two match dropouts seen with a clock source and while editing.
+- Real-time bytes: `midiParser_parseUartData` treated `F8`-`FF` as new messages, so one inside a note lost it, and one
+  between notes ended running status. `USART3_IRQHandler` now drops them; nothing on the module uses them.
+- Priority: `USART3` shared priority 4 with `TIM2`, which renders a block when the main loop runs late. A byte is 320 us
+  and the port holds one more, so a longer render lost bytes. `USART3` is now 3. `TIM14`'s LCD writes are non-blocking.
+- Noise: bytes with `NE` are kept (the data is valid, only a sample disagreed). Framing errors are still dropped.
+- Recovery: after an overrun, framing error or full fifo, data bytes are dropped until a status byte or a 2 ms gap, then
+  `LXR0_MIDI_RESYNC` resets the parser and keeps its status, so a source using running status recovers.
+- Trigger queue: the flag is written after the note and velocity, as a render can interrupt the main loop's MIDI.
+- Global page, 2nd screen: `ov fe n` counts overruns (and fifo overflows), framing and noise errors since boot, stopping
+  at 99. Refreshes when the screen is redrawn.
+A kit load still holds MIDI in the fifo until the file read ends, so notes during it come late rather than lost.

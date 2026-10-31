@@ -7,6 +7,7 @@
 
 // MIDI in on the OP HH jack (PD9 = USART3_RX), switched by the PAR_MIDI_MODE global
 #define LXR0_MIDI 1
+#define LXR0_MIDI_RESYNC 0xFD // an undefined real-time byte: USART3_IRQHandler tells the parser that bytes were lost
 // parallel global reverb bus: per-voice sends, own buffer, bypassed above 95 % render load
 #define LXR0_REVERB 1
 // user samples as oscillator waveforms: installed from the SD card (/samples, /loops) to sectors 6-11
@@ -14,6 +15,6 @@
 // restart menu: shift + edit + perform, then fill the bar with the encoder
 #define LXR0_RESTART 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.4.9"
+#define LXR0_VERSION "0.4.10"
 
 #endif /* LXR0_H_ */
