@@ -178,3 +178,9 @@ recovers after it; dry peak 70 + 32 stays off. The `amt`/`in`/`wet` readout from
 - 0.4.7: `Reverb.c` builds with `-fsingle-precision-constant`. `Reverb_process` goes from 32 double conversions and 2 double multiplies to 1 conversion, 286 lines of disassembly to 258 (this
   also applies to the stock FX reverb).
 Host check on kit-like settings: staggered output is bit-identical to before; single-precision output differs by 0.
+
+## 0.4.8 sample pitch
+`osc_calcUserSampleFreq` multiplied by `cvFreq`, which is -1 when no CV is patched (stock has the same line). The
+negative frequency cast to an increment of 0, so a sample output its first frame as constant DC. It now branches on
+no CV as `osc_calcWavetableFreq` does. `tools/samples-host-test` missed this because it never ran the voice's pitch
+path; found by running the firmware's engine natively in PHX-D01.

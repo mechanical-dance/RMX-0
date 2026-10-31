@@ -12,7 +12,9 @@
 #include "Soundengine/DSPAudio/Oscillator.h"
 
 #if LXR0_SAMPLES
+#include <math.h>
 #include <string.h>
+#include "Soundengine/MIDI/MidiParser.h"
 #include "lxr0_samples.h"
 
 #define FRAC_BITS 17
@@ -97,7 +99,17 @@ void osc_calcUserSampleFreq(OscInfo* osc)
 {
 	const Lxr0Sample* sample = lxr0Samples_get(osc->waveform);
 	const float rate = sample ? (float)sample->rate : 44100.f;
-	const float currentFreq = osc->freq*osc->cvFreq*osc->pitchMod*osc->modNodeValue;
+	float currentFreq;
+	if(osc->cvFreq == -1.0) // no CV, as osc_calcWavetableFreq
+	{
+		currentFreq = osc->freq*osc->pitchMod*osc->modNodeValue;
+	}
+	else
+	{
+		const float cent = midiParser_calcDetune(osc->midiFreq&0xff);
+		const float detune = powf(2.f, ((osc->midiFreq>>8) - 60)/12.f);
+		currentFreq = detune*osc->cvFreq*cent*osc->pitchMod*osc->modNodeValue;
+	}
 	osc->phaseInc = (uint32_t)(((1024*currentFreq)/REAL_FS) * 131072.f * (rate/44100.f));
 }
 #endif

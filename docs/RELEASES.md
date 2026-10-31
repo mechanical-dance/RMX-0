@@ -29,3 +29,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.4.5 | `LXRE_LXR0_V0.4.5.img` | db405b7 | 0.4.3 readout back (`cpu`, `rev`, `own`); reverb guard comes back below 95 %, not 90 %, which kept the reverb off on kit 103 |
 | 0.4.6 | `LXRE_LXR0_V0.4.6.img` | 61a51c1 | 0.4.5 + delay lines staggered in the D-cache. The single-precision flag failed to apply here |
 | 0.4.7 | `LXRE_LXR0_V0.4.7.img` | e0b730b | 0.4.6 + single-precision constants in `Reverb.c` |
+| 0.4.8 | `LXRE_LXR0_V0.4.8.img` | COMMIT | 0.4.7 + samples play with no CV patched: the pitch ignored `cvFreq == -1` (no CV), so the increment was 0 and every sample sat on its first frame |
