@@ -169,3 +169,12 @@ Hardware on 0.4.3, kit 103: `cpu` 61, `rev` off, `own` 32. The guard had bypasse
 the peak 61 + 32 = 93 was over the 90 % return limit, though under the 95 % limit that turns it off. The return
 limit is now 95 %. A host test of the guard with a stubbed reverb reproduces the latch before the change and
 recovers after it; dry peak 70 + 32 stays off. The `amt`/`in`/`wet` readout from 0.4.4 is removed.
+
+## 0.4.6 reverb cost
+`own` read 32 % on 0.4.3, against a 56 KB buffer (11 % of RAM). Two changes that keep the sound:
+- All 14 lines start at write position 256, 4 KB apart. The buffer is in cached SRAM1 and a D-cache way is 4 KB, so
+  every write hit one 4-way set. `lxr0Verb_init` now offsets each line by 146 samples. A cache model of the access
+  order: 15 misses and 14 dirty evictions per sample before, about 2 and 1 after. Cycle saving is unmeasured.
+- `Reverb.c` builds with `-fsingle-precision-constant`, removing the double conversions in `Reverb_process` (this
+  also applies to the stock FX reverb).
+Host check on kit-like settings: staggered output is bit-identical to before; single-precision output differs by 0.

@@ -41,11 +41,38 @@ static uint8_t peakLoad;
 volatile uint8_t lxr0Verb_load;
 volatile uint8_t lxr0Verb_bypassed;
 
+// Reverb_init starts every line at the same write position, 4 KB apart. This buffer is cached (the FX bus's
+// is DTCM) and a cache way is 4 KB, so all the writes land in one 4-way set and evict each other. Reads are
+// relative to the write position, so offsetting each line doesn't change the sound.
+#define STAGGER_LINE(line) do { \
+		(line).writePtr = ((line).writePtr + offset) & (MAX_ALLPASS_SIZE - 1); \
+		(line).readPtr = ((line).readPtr + offset) & (MAX_ALLPASS_SIZE - 1); \
+		offset += STAGGER_STEP; \
+	} while(0)
+#define STAGGER_STEP 146	// samples, spreads the 14 lines evenly over a way
+
+static void staggerLines(void)
+{
+	uint16_t offset = 0;
+	for(uint8_t i=0; i<4; i++)
+		STAGGER_LINE(verb.inputAllpass[i].delay);
+	STAGGER_LINE(verb.preDelay);
+	STAGGER_LINE(verb.earlyReflectionDelay);
+	for(uint8_t i=0; i<2; i++)
+	{
+		STAGGER_LINE(verb.apDelay[i].delay);
+		STAGGER_LINE(verb.apModDelay[i].delay);
+	}
+	for(uint8_t i=0; i<4; i++)
+		STAGGER_LINE(verb.delay[i]);
+}
+
 void lxr0Verb_init(void)
 {
 	verb.reverbBufferSram = verbBuffer;
 	verb.stereo = 1;
 	Reverb_init(&verb);
+	staggerLines();
 	budget = (uint32_t)(((uint64_t)SystemCoreClock * OUTPUT_DMA_SIZE) / 44100);
 	memset(lastParams, 0xff, sizeof(lastParams)); // apply every setting on the first block
 }
