@@ -32,4 +32,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.4.8 | `LXRE_LXR0_V0.4.8.img` | 94aa5c4 | 0.4.7 + samples play with no CV patched: the pitch ignored `cvFreq == -1` (no CV), so the increment was 0 and every sample sat on its first frame |
 | 0.4.9 | `LXRE_LXR0_V0.4.9.img` | c69c5a2 | 0.4.8 + a kit load no longer sets LFO target and retrigger bytes to 1, which made LFOs with retrigger off restart on DRUM1 |
 | 0.4.10 | `LXRE_LXR0_V0.4.10.img` | 3ff39d5 | 0.4.9 + MIDI: clock and active sensing no longer break notes, `USART3` above the render interrupt, noisy bytes kept, recovery after a lost byte, error counts on the global page, trigger queue flag written last |
-| 0.4.11 | `LXRE_LXR0_V0.4.11.img` | COMMIT | 0.4.10 + the third pot scrolls waveforms in the name view, and each voice's envelope page has a 2nd screen trimming its sample's start and end |
+| 0.4.11 | `LXRE_LXR0_V0.4.11.img` | 19358da | 0.4.10 + the third pot scrolls waveforms in the name view, and each voice's envelope page has a 2nd screen trimming its sample's start and end |
