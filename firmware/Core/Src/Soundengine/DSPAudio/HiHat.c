@@ -20,6 +20,7 @@
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "IO/adcPots.h"
 #include "Soundengine/FxBus.h"
+#include "Soundengine/DSPAudio/lxr0_declick.h"
 
 INDTCMZ HiHatVoice hatVoice;
 
@@ -108,6 +109,10 @@ void HiHat_setCv1VOct(float oct)
 void HiHat_trigger( uint8_t vel, uint8_t isOpen, const uint8_t note)
 {
 	lfo_retrigger(5);
+#if LXR0_DECLICK
+	if(lxr0Declick_arm(5)) // the new note starts from a closed envelope, as it would from silence
+		hatVoice.oscVolEg.value = 0;
+#endif
 
 	//update velocity modulation
 #if OLD_LFO_ROUTING

@@ -1,10 +1,10 @@
 # Next work on lxr-0 (written 2026-11-01)
 
-State: `main` is at 0.4.12, flashed by the user only. Work serially on `main` with no branches. Local commits only; no pushes.
+State: `main` is at 0.4.13, flashed by the user only. Work serially on `main` with no branches. Local commits only; no pushes.
 The user flashes every image. Get a yes before changing behaviour beyond what's written here.
 
 Order:
-1. **0.4.13: retrigger clicks** (below). Approved in design.
+1. **0.4.13: retrigger clicks** (below). Built; waiting for the user to try it.
 2. **0.5.0: voice links** (below). Approved. Starts after the user has tried 0.4.13.
 
 The sequencer is dropped from the original plan. LFO shapes are still open (one-shot, exponential-triangle, noise), and need the user's sign-off on behaviour first.
@@ -40,11 +40,12 @@ Use the real engine (`tools/engine-tests/`, see below).
 Avoid long batches of reruns: the user asked for tests that work the first time. Run with a hard time limit and write output to a file.
 
 ### Test programs
+`retrig_test.c` is the 0.4.13 test: it renders block by block on one thread, drops replayed blocks and reports stalls with stacks; `make_tones.py` builds its card folder.
 `tools/engine-tests/` holds this session's programs, which load `engine-lxr0.dylib` from `~/code/synth/phx-d01/build` (`make -j8 build/engine-lxr0.dylib`). Build with `cc -O1`. Run them as `LXR0_DIR=<temp state dir> ./prog <dylib> <kit.SND> <folder with samples/ and loops/>`. Don't run with a shell `alarm` wrapper: one run ignored it and hung. Use a background kill loop.
 Lessons: the Arcade kit's FX and click layer mask the sample unless they're zeroed. Zeroing `PAR_VOICE_DECIMATION*` silences a voice (leave it at 127). `PAR_OSC_WAVE_SNARE` is byte 4, `PAR_WAVE1_CYM` 6, `PAR_WAVE1_HH` 7; byte 5 is not a waveform. Edits made through the panel aren't known to `lxr_fw_edit`'s change tracking, so read the kit back to check them.
 
 ### Open from earlier
-- One test run hung for over 7 minutes in 0.4.11 testing, and another run's kit read-back failed after writing wrong bytes (5 and 7). Neither came back, and the cause is unknown. Watch for it.
+- One test run hung for over 7 minutes in 0.4.11 testing, and another run's kit read-back failed after writing wrong bytes (5 and 7). The cause of both is unknown. In 0.4.13 testing, one run of both 0.4.12 and 0.4.13 gave identical readings whatever the settings for its last tests, as if blocks were being replayed. It did not come back in the later full runs, which have a stall detector. A kit's noise sources make renders differ between runs of the same build, so compare with noise removed.
 - Remove LXR-1 from PHX-D01 only on the user's clear go.
 
 ## 0.5.0: voice links

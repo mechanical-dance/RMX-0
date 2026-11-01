@@ -23,6 +23,7 @@
 #include "Soundengine/DSPAudio/modulationNode.h"
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "IO/adcPots.h"
+#include "Soundengine/DSPAudio/lxr0_declick.h"
 
 INDTCM static float ampSmoothValue = 0.1f;
 //---------------------------------------------------
@@ -134,6 +135,14 @@ void Drum_trigger(const uint8_t voiceNr, const uint8_t vol, const uint8_t note)
 {
 
 	lfo_retrigger(voiceNr);
+
+#if LXR0_DECLICK
+	if(lxr0Declick_arm(voiceNr)) // the new note starts from a closed envelope, as it would from silence
+	{
+		voiceArray[voiceNr].oscVolEg.value = 0;
+		voiceArray[voiceNr].ampFilterInput = 0;
+	}
+#endif
 
 	//update velocity modulation
 #if OLD_LFO_ROUTING

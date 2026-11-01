@@ -27,6 +27,7 @@
 #include "Soundengine/FxBus.h"
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "Soundengine/DSPAudio/FX/lxr0_reverbBus.h" // lxr-0
+#include "Soundengine/DSPAudio/lxr0_declick.h" // lxr-0
 
 	uint8_t r2_Available;
 	uint8_t l1_Available;
@@ -616,6 +617,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 
 	//calc voice 1
 	calcDrumVoiceSyncBlock(0, sampleData,OUTPUT_DMA_SIZE);
+#if LXR0_DECLICK
+	lxr0Declick_process(0, sampleData, OUTPUT_DMA_SIZE); // lxr-0: fade out what a retrigger cut
+#endif
 	//decimate voice
 	mixer_decimateBlock(0,sampleData);
 #if LXR0_REVERB
@@ -644,6 +648,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 
 	//calc voice 2
 	calcDrumVoiceSyncBlock(1, sampleData,OUTPUT_DMA_SIZE);
+#if LXR0_DECLICK
+	lxr0Declick_process(1, sampleData, OUTPUT_DMA_SIZE); // lxr-0: fade out what a retrigger cut
+#endif
 	//decimate voice
 	mixer_decimateBlock(1,sampleData);
 #if LXR0_REVERB
@@ -667,6 +674,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 #endif
 	//calc voice 3
 	calcDrumVoiceSyncBlock(2, sampleData,OUTPUT_DMA_SIZE);
+#if LXR0_DECLICK
+	lxr0Declick_process(2, sampleData, OUTPUT_DMA_SIZE); // lxr-0: fade out what a retrigger cut
+#endif
 	//decimate voice
 	mixer_decimateBlock(2,sampleData);
 #if LXR0_REVERB
@@ -689,6 +699,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 #endif
 	//calc snare
 	Snare_calcSyncBlock(sampleData,OUTPUT_DMA_SIZE);
+#if LXR0_DECLICK
+	lxr0Declick_process(3, sampleData, OUTPUT_DMA_SIZE); // lxr-0: fade out what a retrigger cut
+#endif
 	//decimate voice
 	mixer_decimateBlock(3,sampleData);
 #if LXR0_REVERB
@@ -707,6 +720,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 #endif
 	//calc cymbal
 	Cymbal_calcSyncBlock(sampleData,OUTPUT_DMA_SIZE);
+#if LXR0_DECLICK
+	lxr0Declick_process(4, sampleData, OUTPUT_DMA_SIZE); // lxr-0: fade out what a retrigger cut
+#endif
 	//decimate voice
 	mixer_decimateBlock(4,sampleData);
 #if LXR0_REVERB
@@ -726,6 +742,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 
 	//calc HiHat
 	HiHat_calcSyncBlock(sampleData,OUTPUT_DMA_SIZE);
+#if LXR0_DECLICK
+	lxr0Declick_process(5, sampleData, OUTPUT_DMA_SIZE); // lxr-0: fade out what a retrigger cut
+#endif
 	//decimate voice
 	mixer_decimateBlock(5,sampleData);
 #if LXR0_REVERB

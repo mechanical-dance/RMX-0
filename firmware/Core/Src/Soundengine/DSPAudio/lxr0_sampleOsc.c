@@ -23,6 +23,10 @@
 #define SAMPLE_ROOT_HZ 311.126984f // the oscillator on coarse 0, fine 0: a sample plays at its original speed
 #define FRAC_MASK ((1u<<FRAC_BITS)-1u)
 #define ONE_OVER_FRAC 0.00000762939453125f // 1 / 2^17
+// trims only: an untrimmed sample plays exactly as stored
+#define START_FADE_SAMPLES 44 // 1 ms at 44.1 kHz, whatever the pitch
+#define END_FADE_MS 3u
+#define LOOP_XFADE_MS 5u
 
 static __inline uint64_t getPosition(const OscInfo* osc)
 {
@@ -59,17 +63,99 @@ void osc_setSampleTrim(OscInfo* osc, uint8_t voice)
 	osc->trim = &activeParameters[PAR_LXR0_TRIM_START1 + voice];
 }
 
-// the part of the sample to play: the phase counts from *data. Returns 0 if the trims leave nothing.
-static __inline uint32_t trimSample(const OscInfo* osc, const Lxr0Sample* sample, const int16_t** data)
+// the part of the sample to play. An untrimmed sample takes the plain path, unchanged.
+typedef struct
 {
-	const uint32_t frames = sample->frames;
-	*data = sample->data;
-	if(!osc->trim)
-		return frames;
-	const uint32_t start = (uint64_t)frames*osc->trim[0]/255u;
-	const uint32_t end = frames - (uint64_t)frames*osc->trim[PAR_LXR0_TRIM_END1 - PAR_LXR0_TRIM_START1]/255u;
-	*data += start;
-	return end > start ? end - start : 0;
+	const int16_t* data; // the phase counts from here
+	uint32_t frames;
+	uint32_t looped;
+	uint32_t trimmed;
+	uint32_t fadeIn;     // a start trim: fade in over the first output samples
+	uint32_t fadeOut;    // a one shot's end trim: frames to fade out over
+	uint32_t xfade;      // a trimmed loop: frames to crossfade over before the end
+	uint32_t preroll;    // frames before the loop start to crossfade from, up to xfade
+} SampleSpan;
+
+static __inline void trimSample(const OscInfo* osc, const Lxr0Sample* sample, SampleSpan* s)
+{
+	const uint32_t all = sample->frames;
+	uint32_t start = 0, cut = 0;
+	if(osc->trim)
+	{
+		start = (uint64_t)all*osc->trim[0]/255u;
+		cut = (uint64_t)all*osc->trim[PAR_LXR0_TRIM_END1 - PAR_LXR0_TRIM_START1]/255u;
+	}
+	const uint32_t end = all - cut;
+	s->data = sample->data + start;
+	s->frames = end > start ? end - start : 0;
+	s->looped = sample->looped;
+	s->trimmed = start || cut;
+	s->fadeIn = start != 0;
+	s->fadeOut = s->xfade = s->preroll = 0;
+	if(!s->trimmed)
+		return;
+	const uint32_t half = s->frames/2;
+	if(s->looped)
+	{
+		const uint32_t x = sample->rate*LOOP_XFADE_MS/1000u;
+		s->xfade = x < half ? x : half;
+		s->preroll = start < s->xfade ? start : s->xfade;
+	}
+	else if(cut)
+	{
+		const uint32_t x = sample->rate*END_FADE_MS/1000u;
+		s->fadeOut = x < half ? x : half;
+	}
+}
+
+static __inline float lerpFrame(const int16_t* data, const int32_t itg, const float frac)
+{
+	return data[itg] + frac*(data[itg + 1] - data[itg]);
+}
+
+static __inline int16_t readTrimmed(OscInfo* osc, const SampleSpan* s, const uint64_t position)
+{
+	float out = readSample(s->data, s->frames, s->looped, position);
+	const uint32_t itg = (uint32_t)(position >> FRAC_BITS);
+	const float frac = ((uint32_t)position & FRAC_MASK) * ONE_OVER_FRAC;
+	if(itg + s->xfade >= s->frames && itg < s->frames && s->xfade)
+	{
+		// blend into what plays after the wrap, so the wrap itself lands on the same sample
+		const uint32_t k = itg + s->xfade - s->frames;
+		const float t = (k + frac)/s->xfade;
+		out += t*(lerpFrame(s->data, (int32_t)k - (int32_t)s->preroll, frac) - out);
+	}
+	else if(itg + s->fadeOut >= s->frames && itg < s->frames && s->fadeOut)
+	{
+		out *= (s->frames - itg - frac)/s->fadeOut;
+	}
+	if(s->fadeIn && osc->sampleFade < START_FADE_SAMPLES)
+	{
+		osc->sampleFade++;
+		out *= osc->sampleFade*(1.f/(START_FADE_SAMPLES + 1));
+	}
+	return (int16_t)out;
+}
+
+// after a trimmed loop's crossfade, play on from where its blend ended
+static __inline void advanceTrimmed(OscInfo* osc, const SampleSpan* s)
+{
+	const uint64_t end = (uint64_t)s->frames << FRAC_BITS;
+	uint64_t position = getPosition(osc) + osc->phaseInc;
+	if(position >= end)
+	{
+		if(s->looped)
+		{
+			const uint64_t restart = (uint64_t)(s->xfade - s->preroll) << FRAC_BITS;
+			position = restart + (position - end) % (end - restart);
+		}
+		else
+		{
+			position = end; // a one shot waits at the end
+		}
+	}
+	osc->phase = (uint32_t)position;
+	osc->sampleHi = (uint32_t)(position >> 32);
 }
 
 IN_ITCM_RAM void calcUserSampleOscFmBlock(OscInfo* osc, int16_t* modBuffer, int16_t* buf, uint8_t size, const float gain)
@@ -80,10 +166,9 @@ IN_ITCM_RAM void calcUserSampleOscFmBlock(OscInfo* osc, int16_t* modBuffer, int1
 		memset(buf, 0, size*sizeof(int16_t));
 		return;
 	}
-	const int16_t* data;
-	const uint32_t frames = trimSample(osc, sample, &data);
-	const uint32_t looped = sample->looped;
-	if(!frames)
+	SampleSpan s;
+	trimSample(osc, sample, &s);
+	if(!s.frames)
 	{
 		memset(buf, 0, size*sizeof(int16_t));
 		return;
@@ -92,8 +177,17 @@ IN_ITCM_RAM void calcUserSampleOscFmBlock(OscInfo* osc, int16_t* modBuffer, int1
 	for(uint8_t i=0; i<size; i++)
 	{
 		const uint32_t mod = ((uint32_t)(modBuffer[i]*osc->fmMod)) << 14;
-		const int16_t out = readSample(data, frames, looped, getPosition(osc) + mod);
-		advance(osc, frames, looped);
+		int16_t out;
+		if(s.trimmed)
+		{
+			out = readTrimmed(osc, &s, getPosition(osc) + mod);
+			advanceTrimmed(osc, &s);
+		}
+		else
+		{
+			out = readSample(s.data, s.frames, s.looped, getPosition(osc) + mod);
+			advance(osc, s.frames, s.looped);
+		}
 		osc->output = out;
 		buf[i] = out * gain;
 	}
@@ -107,10 +201,9 @@ IN_ITCM_RAM void calcUserSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_
 		memset(buf, 0, size*sizeof(int16_t));
 		return;
 	}
-	const int16_t* data;
-	const uint32_t frames = trimSample(osc, sample, &data);
-	const uint32_t looped = sample->looped;
-	if(!frames)
+	SampleSpan s;
+	trimSample(osc, sample, &s);
+	if(!s.frames)
 	{
 		memset(buf, 0, size*sizeof(int16_t));
 		return;
@@ -118,8 +211,17 @@ IN_ITCM_RAM void calcUserSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_
 
 	for(uint8_t i=0; i<size; i++)
 	{
-		const int16_t out = readSample(data, frames, looped, getPosition(osc));
-		advance(osc, frames, looped);
+		int16_t out;
+		if(s.trimmed)
+		{
+			out = readTrimmed(osc, &s, getPosition(osc));
+			advanceTrimmed(osc, &s);
+		}
+		else
+		{
+			out = readSample(s.data, s.frames, s.looped, getPosition(osc));
+			advance(osc, s.frames, s.looped);
+		}
 		osc->output = out;
 		buf[i] = out * gain;
 	}

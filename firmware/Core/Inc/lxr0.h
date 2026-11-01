@@ -14,7 +14,9 @@
 #define LXR0_SAMPLES 1
 // restart menu: shift + edit + perform, then fill the bar with the encoder
 #define LXR0_RESTART 1
+// a retrigger fades out the voice's last output sample instead of dropping it, and the note starts as from silence
+#define LXR0_DECLICK 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.4.12"
+#define LXR0_VERSION "0.4.13"
 
 #endif /* LXR0_H_ */

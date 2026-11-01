@@ -65,12 +65,13 @@ typedef struct OscStruct
 #if LXR0_SAMPLES
 	uint32_t sampleHi;			// lxr-0: upper bits of the sample position, phase holds the lower ones
 	const uint8_t* trim;		// lxr-0: the voice's start and end trim, main oscillators only
+	uint16_t sampleFade;		// lxr-0: output samples since the trigger, while a trimmed start fades in
 #endif
 } OscInfo;
 
 // lxr-0: wherever a voice resets its oscillator phase
 #if LXR0_SAMPLES
-#define OSC_RESTART_SAMPLE(o) ((o).sampleHi = 0)
+#define OSC_RESTART_SAMPLE(o) ((o).sampleHi = 0, (o).sampleFade = 0)
 void osc_setSampleTrim(OscInfo* osc, uint8_t voice);
 #else
 #define OSC_RESTART_SAMPLE(o) ((void)0)

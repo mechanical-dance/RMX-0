@@ -212,7 +212,7 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - Envelope page, 2nd screen: `sta` and `end`, per voice and saved in the kit. `PAR_LXR0_TRIM_START1-6` and
   `PAR_LXR0_TRIM_END1-6` follow the reverb, so a kit file is 333 bytes. Older kits load both as 0, which plays the whole sample.
 - Both run 0-255, as 1/255 of the sample's length. `end` is the amount cut from the end. If they meet, the voice is silent.
-- A loop repeats only the part between them. The cuts are hard: no fade is added.
+- A loop repeats only the part between them. The cuts were hard until 0.4.13, which adds fades.
 - Main oscillator only: a sample on a modulator oscillator plays whole. The hats share one trim.
 - Pages with an empty 4th slot use `TEXT_SKIP` so the encoder can reach the 2nd screen.
 
@@ -220,3 +220,12 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - Coarse 0, fine 0 plays a sample at its original speed, replacing stock's -34 (coarse 29, fine 35). Each coarse step is
   still a semitone, and other sample rates and CV pitch use the same reference. Built-in waveforms don't change.
 - A kit using a sample plays about 34 semitones lower than on 0.4.11, and differs from the LXR-2 and LXR-1 engines.
+
+## 0.4.13 retrigger clicks and trim fades
+- Retrigger: `lxr0_declick.c` keeps each voice's last output sample. A trigger on a voice whose last sample isn't 0 adds that level to the new note, fading over 3 ms (smoothstep). It runs before the decimator, which still holds the old level after a trigger. No delay is added.
+- The same trigger closes the amp envelope, so the new note starts as from silence. Before this the envelope carried on from its level, which is why raising attack didn't help. A slow attack retriggered quickly now restarts from zero each time, so it no longer builds up to full level.
+- A voice whose last sample is exactly 0 hits as before, including a finished one shot with its envelope still open.
+- `SVF_reset` stays: a ringing filter added no step beyond the note's own once the fade was in.
+- Length: 3 ms is the shortest where a longer fade stops reducing energy above 500 Hz (22-24 dB against a hard cut on a 42-62 Hz sine).
+- Trims, only on a trimmed side: start fades in over 1 ms of output whatever the pitch, a one shot's end fades over 3 ms, a loop crossfades over 5 ms. The crossfade reads frames before the loop start. If there are too few, the loop restarts later, so it can run up to 5 ms shorter.
+- Test: `tools/engine-tests/retrig_test.c`. Renders: `releases/renders-0.4.13/`.

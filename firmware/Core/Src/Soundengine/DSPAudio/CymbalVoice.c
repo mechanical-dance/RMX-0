@@ -20,6 +20,7 @@
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "IO/adcPots.h"
 #include "Soundengine/FxBus.h"
+#include "Soundengine/DSPAudio/lxr0_declick.h"
 
 INDTCMZ CymbalVoice cymbalVoice;
 //---------------------------------------------------
@@ -105,6 +106,10 @@ void Cymbal_setCv1VOct(float oct)
 void Cymbal_trigger( const uint8_t vel, const uint8_t note)
 {
 	lfo_retrigger(4);
+#if LXR0_DECLICK
+	if(lxr0Declick_arm(4)) // the new note starts from a closed envelope, as it would from silence
+		cymbalVoice.oscVolEg.value = 0;
+#endif
 	//update velocity modulation
 #if OLD_LFO_ROUTING
 	modNode_updateValue(&velocityModulators[4],vel/127.f);
