@@ -20,6 +20,7 @@
 #include "menu/menu.h"
 
 #define FRAC_BITS 17
+#define SAMPLE_ROOT_HZ 311.126984f // the oscillator on coarse 0, fine 0: a sample plays at its original speed
 #define FRAC_MASK ((1u<<FRAC_BITS)-1u)
 #define ONE_OVER_FRAC 0.00000762939453125f // 1 / 2^17
 
@@ -124,7 +125,7 @@ IN_ITCM_RAM void calcUserSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_
 	}
 }
 
-// as stock for a 44.1 kHz file (coarse 29, fine 35 is the original speed); other rates scale from there
+// coarse 0, fine 0 is a file's original speed at any sample rate; each coarse step is a semitone
 void osc_calcUserSampleFreq(OscInfo* osc)
 {
 	const Lxr0Sample* sample = lxr0Samples_get(osc->waveform);
@@ -140,6 +141,6 @@ void osc_calcUserSampleFreq(OscInfo* osc)
 		const float detune = powf(2.f, ((osc->midiFreq>>8) - 60)/12.f);
 		currentFreq = detune*osc->cvFreq*cent*osc->pitchMod*osc->modNodeValue;
 	}
-	osc->phaseInc = (uint32_t)(((1024*currentFreq)/REAL_FS) * 131072.f * (rate/44100.f));
+	osc->phaseInc = (uint32_t)((currentFreq/SAMPLE_ROOT_HZ) * (rate/44100.f) * 131072.f);
 }
 #endif

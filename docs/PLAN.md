@@ -96,8 +96,8 @@ There is no load readout yet: if the reverb vanishes on a heavy kit, that's the 
   The current kit is autosaved first (`tmp.snd`, as the stock timer does), so the reset brings it back.
   Then audio stops, flash is erased and rewritten, and the module resets. With no usable files, or a chip
   set to dual bank, flash is left alone. If the kit can't be saved the install doesn't start.
-- Playback: `osc.sampleHi` extends the phase past the old 32768-frame limit. Pitch as the original LXR and
-  LXR02Open, so kits match PHX-D01: coarse 29 with fine 35 is original speed (-34 on the display). Other
+- Playback: `osc.sampleHi` extends the phase past the old 32768-frame limit. Coarse 0, fine 0 is original speed since 0.4.12 (the original LXR and
+  LXR02Open have it at -34). Other
   rates scale from there. (0.4.0 had a correction that put these kits 22 cents off; removed in 0.4.1.)
   One-shots stop at the end; the voice's amp envelope still applies, so long samples need a long decay.
 - The waveform page shows `s<n>` and, while editing, the sample name.
@@ -112,7 +112,7 @@ There is no load readout yet: if the reverb vanishes on a heavy kit, that's the 
 | Boot, no samples installed | line 1 `lxr-0 0.4.1`; kits and reverb as in 0.3.4 |
 | Card with `/samples`, press LOAD/SAVE to `Load:Samples`, click | `Erasing flash...`, file count, `Samples done`, restart |
 | Voice waveform past `Pwm` | `s0`, `s1`...; name while editing; sample plays on trigger |
-| Coarse 29, fine 35 | original pitch; a 22.05 kHz file too |
+| Coarse 0, fine 0 | original pitch; a 22.05 kHz file too |
 | Edit the kit, install samples right away | same edits still there after the restart |
 | Stereo file, 24-bit file | plays, nothing odd in level |
 | File over 1 s, long decay | plays to the end (stock limit was 0.74 s) |
@@ -215,3 +215,8 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - A loop repeats only the part between them. The cuts are hard: no fade is added.
 - Main oscillator only: a sample on a modulator oscillator plays whole. The hats share one trim.
 - Pages with an empty 4th slot use `TEXT_SKIP` so the encoder can reach the 2nd screen.
+
+## 0.4.12 sample pitch reference
+- Coarse 0, fine 0 plays a sample at its original speed, replacing stock's -34 (coarse 29, fine 35). Each coarse step is
+  still a semitone, and other sample rates and CV pitch use the same reference. Built-in waveforms don't change.
+- A kit using a sample plays about 34 semitones lower than on 0.4.11, and differs from the LXR-2 and LXR-1 engines.

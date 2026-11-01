@@ -15,6 +15,6 @@
 // restart menu: shift + edit + perform, then fill the bar with the encoder
 #define LXR0_RESTART 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.4.11"
+#define LXR0_VERSION "0.4.12"
 
 #endif /* LXR0_H_ */
