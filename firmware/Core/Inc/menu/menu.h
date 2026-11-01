@@ -305,6 +305,10 @@ enum NamesEnum
 	TEXT_LXR0_VERB_TONE,
 	TEXT_LXR0_VERB_REFLECTION,
 #endif
+#if LXR0_SAMPLES
+	TEXT_LXR0_TRIM_START,
+	TEXT_LXR0_TRIM_END,
+#endif
 
 
 	NUM_NAMES
@@ -438,6 +442,10 @@ enum shortNamesEnum
 #if LXR0_REVERB
 	SHORT_LXR0_REV,
 #endif
+#if LXR0_SAMPLES
+	SHORT_LXR0_TRIM_START,
+	SHORT_LXR0_TRIM_END,
+#endif
 
 	
 };
@@ -486,6 +494,9 @@ enum catNamesEnum
 #endif
 #if LXR0_REVERB
 	CAT_LXR0_REVERB,
+#endif
+#if LXR0_SAMPLES
+	CAT_LXR0_TRIM,
 #endif
 };
 //-----------------------------------------------------------------
@@ -589,6 +600,10 @@ enum longNamesEnum
 #endif
 #if LXR0_REVERB
 	LONG_LXR0_SEND,
+#endif
+#if LXR0_SAMPLES
+	LONG_LXR0_TRIM_START,
+	LONG_LXR0_TRIM_END,
 #endif
 	
 };

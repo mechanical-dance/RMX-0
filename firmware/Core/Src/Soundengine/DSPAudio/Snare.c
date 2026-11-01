@@ -51,6 +51,9 @@ void Snare_init()
 	snareVoice.noiseOsc.cvFreq = -1.f;
 
 	snareVoice.osc.freq = 440;
+#if LXR0_SAMPLES
+	osc_setSampleTrim(&snareVoice.osc, 3);
+#endif
 	snareVoice.osc.waveform = 1;
 	snareVoice.osc.fmMod = 0;
 	snareVoice.osc.midiFreq = 70<<8 | 64;

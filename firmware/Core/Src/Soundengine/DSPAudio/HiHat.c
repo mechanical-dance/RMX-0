@@ -71,6 +71,9 @@ void HiHat_init()
 	hatVoice.modOsc2.cvFreq = -1.f;
 
 	hatVoice.osc.freq = 440;
+#if LXR0_SAMPLES
+	osc_setSampleTrim(&hatVoice.osc, 5);
+#endif
 	hatVoice.osc.waveform = 1;
 	hatVoice.osc.fmMod = 1;
 	hatVoice.osc.midiFreq = 70<<8 | 64;

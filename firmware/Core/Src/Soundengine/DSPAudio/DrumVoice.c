@@ -88,6 +88,9 @@ void initDrumVoice()
 		voiceArray[i].volumeMod = 1;
 
 		voiceArray[i].osc.freq = 440;
+#if LXR0_SAMPLES
+		osc_setSampleTrim(&voiceArray[i].osc, i);
+#endif
 		voiceArray[i].osc.modNodeValue = 1;
 		voiceArray[i].osc.waveform = TRI+i; //for testing init to tri,saw,rec
 		voiceArray[i].osc.fmMod = 0;

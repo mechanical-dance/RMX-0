@@ -206,3 +206,12 @@ Found by running the parser natively in PHX-D01; the first two match dropouts se
 - Global page, 2nd screen: `ov fe n` counts overruns (and fifo overflows), framing and noise errors since boot, stopping
   at 99. Refreshes when the screen is redrawn.
 A kit load still holds MIDI in the fifo until the file read ends, so notes during it come late rather than lost.
+
+## 0.4.11 waveform scrolling and sample trim
+- Waveform name view: the pot under the waveform now changes it without leaving the view. Other pots still leave it.
+- Envelope page, 2nd screen: `sta` and `end`, per voice and saved in the kit. `PAR_LXR0_TRIM_START1-6` and
+  `PAR_LXR0_TRIM_END1-6` follow the reverb, so a kit file is 333 bytes. Older kits load both as 0, which plays the whole sample.
+- Both run 0-255, as 1/255 of the sample's length. `end` is the amount cut from the end. If they meet, the voice is silent.
+- A loop repeats only the part between them. The cuts are hard: no fade is added.
+- Main oscillator only: a sample on a modulator oscillator plays whole. The hats share one trim.
+- Pages with an empty 4th slot use `TEXT_SKIP` so the encoder can reach the 2nd screen.

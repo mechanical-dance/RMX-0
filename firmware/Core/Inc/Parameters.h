@@ -412,6 +412,22 @@ enum ParamEnums
 	PAR_LXR0_VERB_TONE,
 	PAR_LXR0_VERB_REFLECTION,
 #endif
+#if LXR0_SAMPLES
+	// lxr-0: how much a voice's main oscillator cuts off its sample, in 1/255 of the sample. 0 is no trim,
+	// so older kits, which load these as 0, play whole samples. Read by lxr0_sampleOsc.c, not sent as CCs.
+	PAR_LXR0_TRIM_START1,
+	PAR_LXR0_TRIM_START2,
+	PAR_LXR0_TRIM_START3,
+	PAR_LXR0_TRIM_START4,
+	PAR_LXR0_TRIM_START5,
+	PAR_LXR0_TRIM_START6,
+	PAR_LXR0_TRIM_END1,
+	PAR_LXR0_TRIM_END2,
+	PAR_LXR0_TRIM_END3,
+	PAR_LXR0_TRIM_END4,
+	PAR_LXR0_TRIM_END5,
+	PAR_LXR0_TRIM_END6,
+#endif
 
 
 	//#########################################

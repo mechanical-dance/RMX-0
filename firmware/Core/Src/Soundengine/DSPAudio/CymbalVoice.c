@@ -67,6 +67,9 @@ void Cymbal_init()
 	cymbalVoice.modOsc2.cvFreq = -1.f;
 
 	cymbalVoice.osc.freq = 440;
+#if LXR0_SAMPLES
+	osc_setSampleTrim(&cymbalVoice.osc, 4);
+#endif
 	cymbalVoice.osc.waveform = 1;
 	cymbalVoice.osc.fmMod = 1;
 	cymbalVoice.osc.midiFreq = 70<<8 | 64;

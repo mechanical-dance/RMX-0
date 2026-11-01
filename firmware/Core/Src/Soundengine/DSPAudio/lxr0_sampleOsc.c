@@ -16,6 +16,8 @@
 #include <string.h>
 #include "Soundengine/MIDI/MidiParser.h"
 #include "lxr0_samples.h"
+#include "Parameters.h"
+#include "menu/menu.h"
 
 #define FRAC_BITS 17
 #define FRAC_MASK ((1u<<FRAC_BITS)-1u)
@@ -51,6 +53,24 @@ static __inline void advance(OscInfo* osc, const uint32_t frames, const uint32_t
 	osc->sampleHi = (uint32_t)(position >> 32);
 }
 
+void osc_setSampleTrim(OscInfo* osc, uint8_t voice)
+{
+	osc->trim = &activeParameters[PAR_LXR0_TRIM_START1 + voice];
+}
+
+// the part of the sample to play: the phase counts from *data. Returns 0 if the trims leave nothing.
+static __inline uint32_t trimSample(const OscInfo* osc, const Lxr0Sample* sample, const int16_t** data)
+{
+	const uint32_t frames = sample->frames;
+	*data = sample->data;
+	if(!osc->trim)
+		return frames;
+	const uint32_t start = (uint64_t)frames*osc->trim[0]/255u;
+	const uint32_t end = frames - (uint64_t)frames*osc->trim[PAR_LXR0_TRIM_END1 - PAR_LXR0_TRIM_START1]/255u;
+	*data += start;
+	return end > start ? end - start : 0;
+}
+
 IN_ITCM_RAM void calcUserSampleOscFmBlock(OscInfo* osc, int16_t* modBuffer, int16_t* buf, uint8_t size, const float gain)
 {
 	const Lxr0Sample* sample = lxr0Samples_get(osc->waveform);
@@ -59,9 +79,14 @@ IN_ITCM_RAM void calcUserSampleOscFmBlock(OscInfo* osc, int16_t* modBuffer, int1
 		memset(buf, 0, size*sizeof(int16_t));
 		return;
 	}
-	const int16_t* data = sample->data;
-	const uint32_t frames = sample->frames;
+	const int16_t* data;
+	const uint32_t frames = trimSample(osc, sample, &data);
 	const uint32_t looped = sample->looped;
+	if(!frames)
+	{
+		memset(buf, 0, size*sizeof(int16_t));
+		return;
+	}
 
 	for(uint8_t i=0; i<size; i++)
 	{
@@ -81,9 +106,14 @@ IN_ITCM_RAM void calcUserSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_
 		memset(buf, 0, size*sizeof(int16_t));
 		return;
 	}
-	const int16_t* data = sample->data;
-	const uint32_t frames = sample->frames;
+	const int16_t* data;
+	const uint32_t frames = trimSample(osc, sample, &data);
 	const uint32_t looped = sample->looped;
+	if(!frames)
+	{
+		memset(buf, 0, size*sizeof(int16_t));
+		return;
+	}
 
 	for(uint8_t i=0; i<size; i++)
 	{

@@ -294,6 +294,10 @@ const Name valueNames[NUM_NAMES] =
 		{SHORT_TONE, CAT_LXR0_REVERB, LONG_TONE},/*TEXT_LXR0_VERB_TONE*/
 		{SHORT_REF, CAT_LXR0_REVERB, LONG_REFLECTION},/*TEXT_LXR0_VERB_REFLECTION*/
 #endif
+#if LXR0_SAMPLES
+		{SHORT_LXR0_TRIM_START, CAT_LXR0_TRIM, LONG_LXR0_TRIM_START},/*TEXT_LXR0_TRIM_START*/
+		{SHORT_LXR0_TRIM_END, CAT_LXR0_TRIM, LONG_LXR0_TRIM_END},/*TEXT_LXR0_TRIM_END*/
+#endif
 
 
 
@@ -623,6 +627,10 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 		/*PAR_LXR0_VERB_DECAY*/		DTYPE_0B127,
 		/*PAR_LXR0_VERB_TONE*/		DTYPE_0B127,
 		/*PAR_LXR0_VERB_REFLECTION*/	DTYPE_0B127,
+#endif
+#if LXR0_SAMPLES
+		/*PAR_LXR0_TRIM_START1-6*/	DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255,
+		/*PAR_LXR0_TRIM_END1-6*/	DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255,
 #endif
 
 
@@ -4509,8 +4517,14 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 	//-------------------------------------------------
 
 	//leave edit mode if active
-	editModeActive = 0;
+#if LXR0_SAMPLES
+	// lxr-0: unless this pot turns the waveform being shown, so sample names can be read while scrolling
+	const uint8_t keepEditMode = editModeActive && potNr + isOn2ndPage == activeParameter
+			&& (parameter_dtypes[paramNr] >> 8) == MENU_WAVEFORM && (parameter_dtypes[paramNr] & 0xFF) == DTYPE_MENU;
+	if(!keepEditMode)
+#endif
 	{
+		editModeActive = 0;
 		//force complete repaint if edit mode is left
 		menu_repaintAll();
 	}

@@ -542,6 +542,10 @@ const char shortNames[][4]  =
 #if LXR0_REVERB
 	{"rev"},
 #endif
+#if LXR0_SAMPLES
+	{"sta"},
+	{"end"},
+#endif
 
 };
 //-----------------------------------------------------------------
@@ -590,6 +594,9 @@ const char catNames[][16] =
 #endif
 #if LXR0_REVERB
 	{"Reverb"},
+#endif
+#if LXR0_SAMPLES
+	{"Trim"},
 #endif
 };
 //-----------------------------------------------------------------
@@ -694,6 +701,10 @@ const char longNames[][16] =
 #endif
 #if LXR0_REVERB
 	{"Send"},
+#endif
+#if LXR0_SAMPLES
+	{"Start"},
+	{"End"},
 #endif
 };
 
