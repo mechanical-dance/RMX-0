@@ -6,8 +6,11 @@ The user flashes every image. Get a yes before changing behaviour beyond what's 
 Order:
 1. **0.4.13: retrigger clicks** (below). Built; waiting for the user to try it.
 2. **0.5.0: voice links** (below). Approved. Starts after the user has tried 0.4.13.
+3. **LFO shapes** (below). Approved in principle; behaviour needs the user's sign-off before any code.
 
-These two finish the project: after voice links the user is wrapping lxr-0 up. The sequencer and the LFO shapes from the original plan are dropped.
+These three finish the project; then the user is wrapping lxr-0 up. The sequencer from the original plan is dropped, and so are waveform modulation and trim modulation for samples (not needed).
+
+**Fast memory is nearly full:** 0.4.13 uses 15,896 of 16,384 bytes of ITCM (488 free; 0.4.12 used 14,144). New code goes in normal flash unless it runs per sample. Keep any per-sample additions tiny, and check render CPU for each one, using the reverb load guard's DWT timing.
 
 ## 0.4.13: retrigger clicks
 
@@ -102,3 +105,15 @@ One test program, run once per stage against the native engine, using the real p
 - **No regression:** with no link, renders match 0.4.12 exactly.
 
 You flash and test on hardware. The CV timing and the LED behaviour are the two things to check there first.
+
+## LFO shapes (after voice links)
+From the original plan: three new shapes, written from LXR02Open's `ENHANCED_FEATURES.md` description. That fork's code isn't in our trees, so this is new code.
+- **One-shot:** runs one cycle from the trigger, then stops and holds, so it works as an extra envelope on any LFO target (filter sweep, pitch drop, pan, drive, FM).
+- **Exponential-triangle:** a triangle with curved, snappier ramps.
+- **Noise:** smooth random movement, unlike stepped random.
+
+Steps:
+1. **First:** read the existing LFO code and its shape list, and check whether `ENHANCED_FEATURES.md` is available. Then write exact behaviour for each shape: what it holds at the end, what retrigger and sync do, the curve, how smooth the noise is and its rate range. **Get the user's sign-off on that before writing code.**
+2. **Kit:** the shapes should be new values of the existing LFO waveform parameter, so no new kit bytes. Older kits keep their shapes.
+3. **Code:** shape maths runs per LFO update, not per sample, so it can live in flash. Check CPU anyway.
+4. **Tests:** in the engine, plot each shape against the agreed behaviour, and confirm existing shapes are unchanged.
