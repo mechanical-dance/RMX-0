@@ -212,6 +212,10 @@ uint8_t buttonHandler_getSave();
 int8_t buttonHandler_getArmedAutomationStep();
 #else
 uint8_t buttonHandler_getDrumButton();
+#if LXR0_LINK
+// lxr-0: the voice link's LEDs while DRUM is held, from the main loop
+void buttonHandler_lxr0LinkTick(void);
+#endif
 uint8_t buttonHandler_getManualButton();
 uint8_t buttonHandler_getSaveButton ();
 uint8_t buttonHandler_getShiftButton ();

@@ -28,6 +28,9 @@
 #include "Soundengine/FxBus.h"
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include <Soundengine/TriggerProcessor.h>
+#if LXR0_LINK
+#include "Soundengine/lxr0_voiceLink.h"
+#endif
 
 #if LXR0_RESTART
 static uint8_t lxr0_editHeld = 0;
@@ -1600,8 +1603,14 @@ static void buttonHandler_partButtonReleased(uint8_t partNr)
 }
 #endif
 
+#if LXR0_LINK
+static void buttonHandler_lxr0LinkRelease(uint8_t voiceNr);
+#endif
 void buttonHandler_voiceButtonReleased(uint8_t voiceNr)
 {
+#if LXR0_LINK
+	buttonHandler_lxr0LinkRelease(voiceNr);
+#endif
 
 	if (menu_activePage == PERF_PAGE)
 	{
@@ -1613,6 +1622,73 @@ void buttonHandler_voiceButtonReleased(uint8_t voiceNr)
 	}
 
 }
+#if LXR0_LINK
+//--------------------------------------------------------
+// lxr-0: voice links from the panel, with DRUM held. The first press selects a drum as usual. A second
+// drum pressed while the first is held links them; a double-tap edits one linked drum on its own,
+// and a single press on a linked drum goes back to editing the group.
+#define LINK_DOUBLE_TAP_TICKS (400*4)	// systick runs at 4 kHz
+#define LINK_BLINK_TICKS (500*4)		// solo blinks once a second
+static uint8_t lxr0_heldDrums;			// drum 1-3 buttons held now (bit 0-2)
+static uint8_t lxr0_lastTap = 0xff;
+static uint32_t lxr0_lastTapTime;
+static uint8_t lxr0_soloVoice;
+
+// returns 1 if the press formed a group, so the normal selection doesn't run
+static uint8_t buttonHandler_lxr0LinkPress(const uint8_t voiceNr)
+{
+	if(voiceNr < 1 || voiceNr > 3 || buttonHandler_stateMemory.selectButtonMode != SELECT_MODE_VOICE)
+		return 0;
+	const uint8_t v = (uint8_t)(voiceNr - 1), bit = (uint8_t)(1 << v);
+	const uint8_t others = (uint8_t)(lxr0_heldDrums & ~bit);
+	lxr0_heldDrums |= bit;
+	if(others)
+	{
+		const uint8_t group = others | bit;
+		activeParameters[PAR_LXR0_LINK_VOICES] = group;
+		if(activeParameters[PAR_LXR0_LINK_MODE] == 0)
+			activeParameters[PAR_LXR0_LINK_MODE] = 1; // unison
+		lxr0Link_setSolo(0);
+		lxr0_lastTap = 0xff;
+		menu_lxr0OpenLink((uint8_t)__builtin_ctz(group));
+		led_setActiveSelectButton(menu_getSubPage()+1);
+		return 1;
+	}
+	if(lxr0Link_voices() & bit)
+	{
+		const uint8_t twice = lxr0_lastTap == v && (systick_ticks - lxr0_lastTapTime) < LINK_DOUBLE_TAP_TICKS;
+		lxr0Link_setSolo(twice);
+		lxr0_soloVoice = v;
+		lxr0_lastTap = twice ? 0xff : v;
+		lxr0_lastTapTime = systick_ticks;
+	}
+	return 0;
+}
+
+static void buttonHandler_lxr0LinkRelease(const uint8_t voiceNr)
+{
+	if(voiceNr >= 1 && voiceNr <= 3)
+		lxr0_heldDrums &= (uint8_t)~(1 << (voiceNr - 1));
+}
+
+// while DRUM is held in voice mode: the selected drum and the group lit, a solo drum blinking
+void buttonHandler_lxr0LinkTick(void)
+{
+	const uint8_t linked = lxr0Link_voices();
+	if(!linked || !buttonHandler_getDrumButton() || buttonHandler_stateMemory.selectButtonMode != SELECT_MODE_VOICE
+			|| menu_activePage > VOICE7_PAGE)
+		return;
+	const uint8_t blinkOn = (systick_ticks / LINK_BLINK_TICKS) & 1;
+	const uint8_t active = menu_getActiveVoice();
+	for(uint8_t i=0; i<7; i++)
+	{
+		uint8_t on = (i == active) || (i < 3 && (linked & (1 << i)));
+		if(i < 3 && lxr0Link_solo() && i == lxr0_soloVoice && (linked & (1 << i)))
+			on = blinkOn;
+		led_setValueTemp(on, (uint8_t)(LED_2 + i));
+	}
+}
+#endif
 //--------------------------------------------------------
 // one of the 7 voice buttons pressed
  void buttonHandler_voiceButtonPressed(uint8_t voiceNr)
@@ -1735,6 +1811,10 @@ void buttonHandler_voiceButtonReleased(uint8_t voiceNr)
 			}
 
 			else if (buttonHandler_getDrumButton()){ //when drum button is held, select active voice
+#if LXR0_LINK
+				if(buttonHandler_lxr0LinkPress(voiceNr))
+					return;
+#endif
 
 #if !EURORACK_MODULE
 				//check active bars of new track and make sure the view does not end up in inactive part

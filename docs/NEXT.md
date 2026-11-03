@@ -1,16 +1,16 @@
 # Next work on lxr-0 (written 2026-11-01)
 
-State: `main` is at 0.4.13, flashed by the user only. Work serially on `main` with no branches. Local commits only; no pushes.
+State: `main` is at 0.5.0, flashed by the user only. Work serially on `main` with no branches. Local commits only; no pushes.
 The user flashes every image. Get a yes before changing behaviour beyond what's written here.
 
 Order:
 1. **0.4.13: retrigger clicks** (below). Built; waiting for the user to try it.
-2. **0.5.0: voice links** (below). Approved. Starts after the user has tried 0.4.13.
+2. **0.5.0: voice links** (below). Built; waiting for the user to try it. What shipped is in `PLAN.md`; the settings went on the drum transient page, not the MIX page.
 3. **LFO shapes** (below). Approved in principle; behaviour needs the user's sign-off before any code.
 
 These three finish the project; then the user is wrapping lxr-0 up. The sequencer from the original plan is dropped, and so are waveform modulation and trim modulation for samples (not needed).
 
-**Fast memory:** 0.4.14 uses 14,752 of 16,384 bytes of ITCM (1,632 free; 0.4.13 used 15,896, 0.4.12 14,144). New code goes in normal flash unless it runs per sample. Keep any per-sample additions tiny, and check render CPU for each one, using the reverb load guard's DWT timing.
+**Fast memory:** 0.5.0 uses 14,824 of 16,384 bytes of ITCM (1,560 free; 0.4.14 used 14,752, 0.4.13 used 15,896, 0.4.12 14,144). New code goes in normal flash unless it runs per sample. Keep any per-sample additions tiny, and check render CPU for each one, using the reverb load guard's DWT timing.
 
 ## 0.4.13: retrigger clicks
 

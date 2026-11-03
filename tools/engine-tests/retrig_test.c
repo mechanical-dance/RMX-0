@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 325
+#define PARAMS 331 // 0.5.0; older engines read only the first 325
 #define BL 64
 #define MAXN (44100*8)
 #define TS 313

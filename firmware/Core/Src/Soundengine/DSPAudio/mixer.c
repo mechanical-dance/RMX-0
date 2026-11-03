@@ -28,6 +28,7 @@
 #include "Soundengine/MIDI/MidiVoiceControl.h"
 #include "Soundengine/DSPAudio/FX/lxr0_reverbBus.h" // lxr-0
 #include "Soundengine/DSPAudio/lxr0_declick.h" // lxr-0
+#include "Soundengine/lxr0_voiceLink.h" // lxr-0
 
 	uint8_t r2_Available;
 	uint8_t l1_Available;
@@ -555,6 +556,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 {
 #if LXR0_REVERB
 	lxr0Verb_beginBlock(); // lxr-0: load timer, reverb settings
+#endif
+#if LXR0_LINK
+	lxr0Link_poll(); // lxr-0: voice link settings, before this block's triggers
 #endif
 	voiceControl_processQueue();
 #if !EURORACK_MODULE

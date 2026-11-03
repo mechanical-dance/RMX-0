@@ -114,14 +114,27 @@ void initDrumVoice()
 #endif
 		voiceArray[i].decimationCnt = 0;
 		voiceArray[i].decimationRate = 1;
+#if LXR0_LINK
+		voiceArray[i].linkDetune = 1.f;
+		voiceArray[i].linkGain = 1.f;
+		voiceArray[i].linkPan = 0;
+#endif
 
 	}
 }
 //---------------------------------------------------
 void Drum_updatePan(const uint8_t voiceNr)
 {
+#if LXR0_LINK
+	// lxr-0: a link spreads its voices around their own pan
+	int16_t pan = voiceArray[voiceNr].pan + voiceArray[voiceNr].linkPan;
+	pan = pan < 0 ? 0 : pan > 127 ? 127 : pan;
+	voiceArray[voiceNr].triggeredPanL = sqrtf((127-pan)/127.f);
+	voiceArray[voiceNr].triggeredPanR = sqrtf(pan/127.f);
+#else
 	voiceArray[voiceNr].triggeredPanL = sqrtf((127-voiceArray[voiceNr].pan)/127.f);
 	voiceArray[voiceNr].triggeredPanR = sqrtf(voiceArray[voiceNr].pan/127.f);
+#endif
 }
 //---------------------------------------------------
 void Drum_setCv1VOct(const uint8_t voiceNr, float oct)
@@ -225,6 +238,11 @@ IN_ITCM_RAM void calcDrumVoiceAsync(const uint8_t voiceNr)
 		voiceArray[voiceNr].osc.pitchMod += snapVal*voiceArray[voiceNr].transGen.volume;
 	}
 
+#if LXR0_LINK
+	if(voiceArray[voiceNr].linkDetune != 1.f) // lxr-0: voice link spread
+		voiceArray[voiceNr].osc.pitchMod *= voiceArray[voiceNr].linkDetune;
+#endif
+
 	// fm amount with pitch eg
 	voiceArray[voiceNr].osc.fmMod = voiceArray[voiceNr].fmModAmount * egPitchVal;
 
@@ -327,11 +345,16 @@ IN_ITCM_RAM void calcDrumVoiceSyncBlock(const uint8_t voiceNr, int16_t* buf, con
 	//channel volume
 	//bufferTool_addGain(buf,voiceArray[voiceNr].combinedVolume  ,size);
 
+#if LXR0_LINK
+	const float volTarget = voiceArray[voiceNr].vol*voiceArray[voiceNr].linkGain; // lxr-0: 1 unless linked
+#else
+	const float volTarget = voiceArray[voiceNr].vol;
+#endif
 	for(int i=0; i< size; i++)
 	{
 #if SMOOTH_MIXER_VOL_PAN_DRIVE
 
-		float mixVol 	= calcOnePole( &voiceArray[voiceNr].MixerPageFilter[0], voiceArray[voiceNr].vol);
+		float mixVol 	= calcOnePole( &voiceArray[voiceNr].MixerPageFilter[0], volTarget);
 		voiceArray[voiceNr].combinedVolume = mixVol ;//* calcOnePole( &voiceArray[voiceNr].FaderVolumeFilter, adc_getFaderVolume(voiceNr));
 #else
 		voiceArray[voiceNr].combinedVolume = voiceArray[voiceNr].vol * calcOnePole( &voiceArray[voiceNr].FaderVolumeFilter, adc_getFaderVolume(voiceNr));

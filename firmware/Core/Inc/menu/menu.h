@@ -309,6 +309,14 @@ enum NamesEnum
 	TEXT_LXR0_TRIM_START,
 	TEXT_LXR0_TRIM_END,
 #endif
+#if LXR0_LINK
+	// lxr-0: voice links, on the drum transient page
+	TEXT_LXR0_LINK_MODE,
+	TEXT_LXR0_LINK_DETUNE,
+	TEXT_LXR0_LINK_WIDTH,
+	TEXT_LXR0_LINK_SYNC,
+	TEXT_LXR0_LINK_ALLOC,
+#endif
 
 
 	NUM_NAMES
@@ -446,6 +454,13 @@ enum shortNamesEnum
 	SHORT_LXR0_TRIM_START,
 	SHORT_LXR0_TRIM_END,
 #endif
+#if LXR0_LINK
+	SHORT_LXR0_LINK_MODE,
+	SHORT_LXR0_LINK_DETUNE,
+	SHORT_LXR0_LINK_WIDTH,
+	SHORT_LXR0_LINK_SYNC,
+	SHORT_LXR0_LINK_ALLOC,
+#endif
 
 	
 };
@@ -497,6 +512,9 @@ enum catNamesEnum
 #endif
 #if LXR0_SAMPLES
 	CAT_LXR0_TRIM,
+#endif
+#if LXR0_LINK
+	CAT_LXR0_LINK,
 #endif
 };
 //-----------------------------------------------------------------
@@ -604,6 +622,13 @@ enum longNamesEnum
 #if LXR0_SAMPLES
 	LONG_LXR0_TRIM_START,
 	LONG_LXR0_TRIM_END,
+#endif
+#if LXR0_LINK
+	LONG_LXR0_LINK_MODE,
+	LONG_LXR0_LINK_DETUNE,
+	LONG_LXR0_LINK_WIDTH,
+	LONG_LXR0_LINK_SYNC,
+	LONG_LXR0_LINK_ALLOC,
 #endif
 	
 };
@@ -769,6 +794,10 @@ void menu_parseEncoder(int8_t inc, uint8_t button);
 void menu_lxr0RedrawScreen(void); // lxr-0: after writing to the LCD directly
 #if LXR0_RESTART
 void menu_lxr0RestartOpen(void);
+#if LXR0_LINK
+// lxr-0: a voice link just formed: show the lead drum's link settings
+void menu_lxr0OpenLink(uint8_t voice);
+#endif
 void menu_lxr0RestartClose(void);
 uint8_t menu_lxr0RestartIsOpen(void);
 #endif

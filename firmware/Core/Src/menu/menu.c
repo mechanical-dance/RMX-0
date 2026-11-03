@@ -48,6 +48,9 @@ uint8_t saveScreenPots[4]; //hold absolute pot position for save page name editi
 
 
 #include "Soundengine/DSPAudio/modulationNode.h"
+#if LXR0_LINK
+#include "Soundengine/lxr0_voiceLink.h"
+#endif
 
 // uppercase 3 letters in buf
 static void upr_three(char *buf);
@@ -62,6 +65,9 @@ static void setNoteName(uint8_t num, char *buf);
 
 static void menu_moveToMenuItem(int8_t inc);
 static void menu_encoderChangeParameter(int8_t inc);
+#if LXR0_LINK
+static void menu_lxr0LinkEdit(uint8_t subPage, uint8_t slot, uint16_t paramNr, uint8_t oldValue, int8_t steps, uint8_t morph);
+#endif
 #if LXR0_RESTART
 static uint8_t restartOpen = 0;
 static void restartRepaint(void);
@@ -297,6 +303,13 @@ const Name valueNames[NUM_NAMES] =
 #if LXR0_SAMPLES
 		{SHORT_LXR0_TRIM_START, CAT_LXR0_TRIM, LONG_LXR0_TRIM_START},/*TEXT_LXR0_TRIM_START*/
 		{SHORT_LXR0_TRIM_END, CAT_LXR0_TRIM, LONG_LXR0_TRIM_END},/*TEXT_LXR0_TRIM_END*/
+#endif
+#if LXR0_LINK
+		{SHORT_LXR0_LINK_MODE, CAT_LXR0_LINK, LONG_LXR0_LINK_MODE},/*TEXT_LXR0_LINK_MODE*/
+		{SHORT_LXR0_LINK_DETUNE, CAT_LXR0_LINK, LONG_LXR0_LINK_DETUNE},/*TEXT_LXR0_LINK_DETUNE*/
+		{SHORT_LXR0_LINK_WIDTH, CAT_LXR0_LINK, LONG_LXR0_LINK_WIDTH},/*TEXT_LXR0_LINK_WIDTH*/
+		{SHORT_LXR0_LINK_SYNC, CAT_LXR0_LINK, LONG_LXR0_LINK_SYNC},/*TEXT_LXR0_LINK_SYNC*/
+		{SHORT_LXR0_LINK_ALLOC, CAT_LXR0_LINK, LONG_LXR0_LINK_ALLOC},/*TEXT_LXR0_LINK_ALLOC*/
 #endif
 
 
@@ -631,6 +644,14 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 #if LXR0_SAMPLES
 		/*PAR_LXR0_TRIM_START1-6*/	DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255,
 		/*PAR_LXR0_TRIM_END1-6*/	DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255, DTYPE_0B255,
+#endif
+#if LXR0_LINK
+		/*PAR_LXR0_LINK_VOICES*/	DTYPE_0B255,
+		/*PAR_LXR0_LINK_MODE*/		DTYPE_MENU | (MENU_LXR0_LINK_MODE<<8),
+		/*PAR_LXR0_LINK_DETUNE*/	DTYPE_0B127,
+		/*PAR_LXR0_LINK_WIDTH*/		DTYPE_0B127,
+		/*PAR_LXR0_LINK_SYNC*/		DTYPE_ON_OFF,
+		/*PAR_LXR0_LINK_ALLOC*/		DTYPE_MENU | (MENU_LXR0_LINK_ALLOC<<8),
 #endif
 
 
@@ -2924,6 +2945,10 @@ static uint8_t getMaxEntriesForMenu(uint8_t menuId)
 
 	case MENU_CV_SAVE:
 		return cvSaveNames[0][0];
+	case MENU_LXR0_LINK_MODE:
+		return linkModeNames[0][0];
+	case MENU_LXR0_LINK_ALLOC:
+		return linkAllocNames[0][0];
 
 	default:
 		return 0;
@@ -3038,6 +3063,12 @@ static void getMenuItemNameForValue(const uint8_t menuId, const uint8_t curParmV
 
 	case MENU_CV_SAVE:
 		p=cvSaveNames[curParmVal+1];
+		break;
+	case MENU_LXR0_LINK_MODE:
+		p=linkModeNames[curParmVal+1];
+		break;
+	case MENU_LXR0_LINK_ALLOC:
+		p=linkAllocNames[curParmVal+1];
 			break;
 
 
@@ -3278,6 +3309,9 @@ static void menu_encoderChangeParameter(int8_t inc)
 	uint8_t *paramValue;
 
 	paramValue = &activeParameters[paramNr];
+#if LXR0_LINK
+	const uint8_t linkOldValue = *paramValue;
+#endif
 
 	//increase parameter value
 	if(inc>0) //positive increase
@@ -3515,6 +3549,10 @@ static void menu_encoderChangeParameter(int8_t inc)
 		menu_parseGlobalParam(paramNr,activeParameters[paramNr]);
 
 	//frontPanel_sendData(0xb0,paramNr,*paramValue);
+#if LXR0_LINK
+	if(buttonHandler_getMode() != SELECT_MODE_MOD)
+		menu_lxr0LinkEdit(activePage, activeParameter, paramNr, linkOldValue, inc, 0);
+#endif
 }
 
 //-----------------------------------------------------------------
@@ -4493,6 +4531,116 @@ uint8_t menu_getDisplayParameterType(uint8_t pos)
 
 	return parameter_dtypes[paramNr] & 0xFF;
 }
+#if LXR0_LINK
+//-----------------------------------------------------------------
+// lxr-0: what a voice link shares. Everything on drums 1-3's pages but level, pan, outputs, the
+// reverb send, the link settings themselves and the LFO page; LFO and mod routes stay per drum.
+#define LINK_SUBPAGES 7	// osc, amp EG, pitch mod, FM, transient, filter, mix
+static uint8_t menu_lxr0LinkShares(const uint8_t subPage, const uint16_t p)
+{
+	if(p == PAR_NONE || subPage >= LINK_SUBPAGES)
+		return 0;
+	if((p >= PAR_LXR0_LINK_VOICES && p <= PAR_LXR0_LINK_ALLOC)
+			|| (p >= PAR_VOL1 && p <= PAR_VOL3) || (p >= PAR_PAN1 && p <= PAR_PAN3)
+			|| (p >= PAR_AUDIO_OUT1 && p <= PAR_AUDIO_OUT3))
+		return 0;
+#if LXR0_REVERB
+	if(p >= PAR_LXR0_VERB_SEND1 && p <= PAR_LXR0_VERB_SEND3)
+		return 0;
+#endif
+	switch(parameter_dtypes[p] & 0xFF)
+	{
+	case DTYPE_TARGET_SELECTION_CV:
+	case DTYPE_TARGET_SELECTION_VELO:
+	case DTYPE_TARGET_SELECTION_LFO:
+	case DTYPE_VOICE_LFO:
+		return 0;
+	default:
+		return 1;
+	}
+}
+
+// send a sound parameter the way the pot and encoder do
+static void menu_lxr0SendParam(const uint16_t p, const uint8_t morph)
+{
+	const uint8_t v = morph ? preset_getMorphValue(p, activeParameters[PAR_MORPH]) : activeParameters[p];
+	if(p < 128)
+		frontPanel_sendData(MIDI_CC, (uint8_t)p, v);
+	else if(p < 255)
+		frontPanel_sendData(CC_2, (uint8_t)(p - 128), v);
+	else if(p < END_OF_SOUND_PARAMETERS)
+		frontPanel_sendData(CC3, (uint8_t)(p - 255), v);
+}
+
+// the same parameter on another drum: same sub-page and slot on its page
+static uint16_t menu_lxr0LinkMatch(const uint8_t voice, const uint8_t subPage, const uint8_t slot, const uint16_t p)
+{
+	const uint16_t q = pgm_read_word(&menuPages[VOICE1_PAGE + voice][subPage].bot1 + slot);
+	return (q != PAR_NONE && parameter_dtypes[q] == parameter_dtypes[p]) ? q : PAR_NONE;
+}
+
+// turning sync on: the lead drum's sound goes to the other linked drums now
+static void menu_lxr0LinkSyncAll(void)
+{
+	const uint8_t linked = lxr0Link_voices(), lead = lxr0Link_lead();
+	for(uint8_t sub=0; sub<LINK_SUBPAGES; sub++)
+		for(uint8_t slot=0; slot<8; slot++)
+		{
+			const uint16_t p = pgm_read_word(&menuPages[VOICE1_PAGE + lead][sub].bot1 + slot);
+			if(!menu_lxr0LinkShares(sub, p))
+				continue;
+			for(uint8_t v=0; v<3; v++)
+			{
+				if(v == lead || !(linked & (1<<v)))
+					continue;
+				const uint16_t q = menu_lxr0LinkMatch(v, sub, slot, p);
+				if(q == PAR_NONE)
+					continue;
+				activeParameters[q] = activeParameters[p];
+				menu_lxr0SendParam(q, 1);
+			}
+		}
+}
+
+// an edit on a linked drum's page, in the group view: the other linked drums' parameter in the same
+// place moves by the same steps, each stopping at its own limit; with sync it takes the same value
+static void menu_lxr0LinkEdit(const uint8_t subPage, const uint8_t slot, const uint16_t paramNr, const uint8_t oldValue, const int8_t steps, const uint8_t morph)
+{
+	const uint8_t linked = lxr0Link_voices();
+	if(paramNr == PAR_LXR0_LINK_SYNC)
+	{
+		if(!oldValue && activeParameters[paramNr] && linked)
+			menu_lxr0LinkSyncAll();
+		return;
+	}
+	if(!linked || menu_activePage > VOICE3_PAGE || !(linked & (1<<menu_activePage)) || lxr0Link_solo())
+		return;
+	if(!menu_lxr0LinkShares(subPage, paramNr))
+		return;
+	const uint8_t sync = activeParameters[PAR_LXR0_LINK_SYNC];
+	for(uint8_t v=0; v<3; v++)
+	{
+		if(v == menu_activePage || !(linked & (1<<v)))
+			continue;
+		const uint16_t q = menu_lxr0LinkMatch(v, subPage, slot, paramNr);
+		if(q == PAR_NONE)
+			continue;
+		activeParameters[q] = sync ? activeParameters[paramNr] : limitPotValue(steps, q);
+		menu_lxr0SendParam(q, morph);
+	}
+}
+#endif
+#define LINK_SUBPAGE 4		// the transient page holds the link settings
+#define LINK_MODE_SLOT 3
+void menu_lxr0OpenLink(const uint8_t voice)
+{
+	menu_switchPage(VOICE1_PAGE + voice);
+	menu_setActiveVoice(voice);
+	frontPanel_sendData(SEQ_CC, SEQ_SET_ACTIVE_TRACK, voice);
+	editModeActive = 0;
+	menuIndex = (uint8_t)((LINK_SUBPAGE << PAGE_SHIFT) | LINK_MODE_SLOT);
+	menu_repaintAll();
+}
 //-----------------------------------------------------------------
 uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 {
@@ -4565,6 +4713,9 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 	}
 #endif
 
+#if LXR0_LINK
+	const uint8_t linkOldValue = activeParameters[paramNr];
+#endif
 	//update parameter value to the new value
 	//mainParameters[paramNr] = dtypeValue;
 	if(paramNr >= END_OF_SOUND_PARAMETERS)
@@ -4779,6 +4930,10 @@ uint8_t menu_parseKnobValue(uint8_t potNr, int16_t diff)
 		break;
 	}
 	}
+#if LXR0_LINK
+	if(buttonHandler_getMode() != SELECT_MODE_MOD)
+		menu_lxr0LinkEdit(activePage, (uint8_t)(potNr + isOn2ndPage), paramNr, linkOldValue, (int8_t)diff, 1);
+#endif
 
 	return 1;
 }

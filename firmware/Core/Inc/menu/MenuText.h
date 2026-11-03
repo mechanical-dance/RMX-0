@@ -45,6 +45,8 @@
 #define MENU_CV_SRC			26
 #define MENU_CV_SAVE		27
 #define MENU_AUDIO_OUT_FX	28
+#define MENU_LXR0_LINK_MODE		29 // lxr-0
+#define MENU_LXR0_LINK_ALLOC	30 // lxr-0
 
 //-----------------------------------------------------------------
 // Shared texts. Reduce mem usage by pooling common text
@@ -67,6 +69,22 @@ const char cvSaveNames[][4] =
 
 	//{"+8"},
 
+};
+//-----------------------------------------------------------------
+// lxr-0: voice links
+const char linkModeNames[][4] =
+{
+	{4},		//number of entries
+	{"off"},
+	{"uni"},
+	{"chd"},
+	{"ply"},
+};
+const char linkAllocNames[][4] =
+{
+	{2},		//number of entries
+	{"old"},
+	{"hi "},
 };
 //-----------------------------------------------------------------
 const char cvSrcNames[][4] =
@@ -546,6 +564,13 @@ const char shortNames[][4]  =
 	{"sta"},
 	{"end"},
 #endif
+#if LXR0_LINK
+	{"mod"},
+	{"det"},
+	{"wid"},
+	{"syn"},
+	{"alc"},
+#endif
 
 };
 //-----------------------------------------------------------------
@@ -597,6 +622,9 @@ const char catNames[][16] =
 #endif
 #if LXR0_SAMPLES
 	{"Trim"},
+#endif
+#if LXR0_LINK
+	{"Link"},
 #endif
 };
 //-----------------------------------------------------------------
@@ -705,6 +733,13 @@ const char longNames[][16] =
 #if LXR0_SAMPLES
 	{"Start"},
 	{"End"},
+#endif
+#if LXR0_LINK
+	{"Mode"},
+	{"Detune"},
+	{"Width"},
+	{"Sync"},
+	{"Alloc"},
 #endif
 };
 

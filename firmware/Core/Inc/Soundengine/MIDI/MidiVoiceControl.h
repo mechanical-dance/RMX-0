@@ -37,6 +37,7 @@ extern uint8_t voiceStatus[NUM_DRUM_VOICES];
 //---------------------------------------------------
 //------------- Functions ---------------------------
 void voiceControl_processQueue();
+void voiceControl_queueTrigger(uint8_t voice, uint8_t note, uint8_t vel); // lxr-0: also used by voice links
 void voiceControl_noteOn(uint8_t voice, uint8_t note, uint8_t vel);
 //void voiceControl_noteOff(uint8_t voice);//0xff == all voices
 void voiceControl_noteOff(uint8_t voice); // lxr-0: used when a MIDI channel changes

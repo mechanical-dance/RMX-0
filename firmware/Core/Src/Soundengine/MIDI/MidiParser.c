@@ -30,6 +30,7 @@
 #include "menu/menu.h"
 #include "Soundengine/FxBus.h"
 #include "IO/DIO.h"
+#include "Soundengine/lxr0_voiceLink.h"
 
 static uint16_t midiParser_activeNrpnNumber = 0;
 
@@ -1582,14 +1583,13 @@ void midiParser_ccHandler(MidiMsg msg, uint8_t updateOriginalValue, uint8_t isFl
 			case CC2_1VOCT_1:
 			case CC2_1VOCT_2:
 			case CC2_1VOCT_3:
-				if(isFloatModulator)
-				{
-					Drum_setCv1VOct(msg.data1-CC2_1VOCT_1, floatCvToFreq(value.flt));
-				}
-				else
-				{
-					Drum_setCv1VOct(msg.data1-CC2_1VOCT_1, floatCvToFreq(-1.0));
-				}
+			{
+				const float freq = floatCvToFreq(isFloatModulator ? value.flt : -1.0f);
+#if LXR0_LINK
+				if(!lxr0Link_cv(msg.data1-CC2_1VOCT_1, freq)) // lxr-0: a link takes the lead drum's CV
+#endif
+					Drum_setCv1VOct(msg.data1-CC2_1VOCT_1, freq);
+			}
 				break;
 			case CC2_1VOCT_4:
 				if(isFloatModulator)

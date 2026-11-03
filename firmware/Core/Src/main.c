@@ -490,6 +490,9 @@ voiceControl_start();
 	  soundengine_process();
 	//  menu_tick();
 	  led_tickHandler();
+#if LXR0_LINK
+	  buttonHandler_lxr0LinkTick();
+#endif
 	  soundengine_process();
 	//  menu_tick();
 	  adc_checkPots();

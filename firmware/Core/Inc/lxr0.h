@@ -16,7 +16,9 @@
 #define LXR0_RESTART 1
 // a retrigger fades out the voice's last output sample instead of dropping it, and the note starts as from silence
 #define LXR0_DECLICK 1
+// voice links: drums 1-3 grouped as unison, chord or poly (lxr0_voiceLink.c)
+#define LXR0_LINK 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.4.14"
+#define LXR0_VERSION "0.5.0"
 
 #endif /* LXR0_H_ */

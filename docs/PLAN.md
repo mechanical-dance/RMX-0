@@ -234,3 +234,15 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - The trimmed-sample path was copied into both sample functions. It is now one function (`calcTrimmedBlock`), still in ITCM and compiled for size, which also sets up the fade lengths. The untrimmed path is unchanged.
 - ITCM: 15,896 to 14,752 of 16,384 bytes (0.4.12: 14,144). Renders match 0.4.13, including every trim render.
 - `-Os` makes the trimmed path a little slower; check `cpu` with all six voices playing trimmed samples.
+
+## 0.5.0 voice links
+- Drums 1-3, any 2 or 3 of them, play as one instrument. Settings are kit-wide (`PAR_LXR0_LINK_*`, after the trims), so a kit file is 339 bytes. Older kits load unlinked, and with no link the sound is unchanged.
+- Transient page of each drum: screen 1 slot 4 is `mod` (`off uni chd ply`), screen 2 is `det wid syn alc` (`alc`: `old` or `hi`). All three pages show the same bytes.
+- Panel, in edit mode with DRUM held: hold one drum and press another to link them (a third adds it; holding a different pair replaces the group). If `mod` was off it becomes unison, and the lead drum's link screen opens on `mod`. While DRUM is held the group's LEDs and the selected drum are lit. A double-tap (400 ms) edits that drum alone and blinks it once a second; a single press goes back to the group. Selecting a drum outside the group leaves the link running. `mod off` unlinks.
+- The lowest linked drum is the lead: its trigger, accent, MIDI notes and pitch CV play the group; the others' triggers and CV are ignored while linked (`lxr0_voiceLink.c`, from `voiceControl_noteOn` and the 1V/oct CC2 handler).
+- Unison: every linked drum plays, `det` spreads the pitch up to ±50 cents at the outer drums, `wid` spreads the pan up to hard left and right. Chord: each drum keeps its own tuning, `wid` as in unison. Both scale each drum by 1/sqrt(drums). Poly: a free drum (amp envelope ended) first, the least recently used; if none is free the oldest (`old`) or the highest note (`hi`) is replaced, through the 0.4.13 declick. A new note takes the CV for 3 blocks (about 4 ms), then holds its pitch.
+- Group edits: a pot or encoder edit on a linked drum's page moves the same parameter on the other linked drums by the same steps, each stopping at its own limit. With `syn` on it copies the value instead, and turning `syn` on copies the lead's sound to the others (kit in memory only). Shared: oscillator, envelope (with trims), pitch modulation, FM, transient, filter, sample rate and drive. Per drum: level, pan, output, reverb send, the LFO page and mod routes.
+- `syn` works in every mode; in chord it copies coarse and fine as well, so the intervals go.
+- No per-sample code was added: detune and level are applied once per block. ITCM 14,824 of 16,384 bytes (0.4.14: 14,752).
+- Tests: `tools/engine-tests/link_test.c` (sound, poly, CV, steals, kits), `link_menu_test.c` (settings, group edits, sync), `link_buttons_test.c` (forming, solo, LEDs). With no link, `retrig_test` output matches 0.4.14 within its run-to-run spread.
+- On hardware, check first: poly CV timing with a real sequencer, and the LEDs.

@@ -96,6 +96,11 @@ typedef struct VoiceStruct
 	float cvFreq;
 
 	float velocity; //last accent value
+#if LXR0_LINK
+	float linkDetune;	// lxr-0: voice link pitch spread, 1 when unlinked
+	float linkGain;		// lxr-0: voice link level, 1 when unlinked
+	int8_t linkPan;		// lxr-0: voice link pan spread, added at the trigger
+#endif
 } DrumVoice;
 //------------------------------------------------------------------------
 

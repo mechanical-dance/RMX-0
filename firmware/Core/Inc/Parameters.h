@@ -428,6 +428,15 @@ enum ParamEnums
 	PAR_LXR0_TRIM_END5,
 	PAR_LXR0_TRIM_END6,
 #endif
+#if LXR0_LINK
+	// lxr-0: voice links. All 0 is unlinked, so older kits load unlinked. Read by lxr0_voiceLink.c.
+	PAR_LXR0_LINK_VOICES,	// bit 0-2: drums 1-3. A link needs 2 or 3 of them
+	PAR_LXR0_LINK_MODE,		// 0 off, 1 unison, 2 chord, 3 poly
+	PAR_LXR0_LINK_DETUNE,	// unison spread
+	PAR_LXR0_LINK_WIDTH,	// unison and chord pan spread
+	PAR_LXR0_LINK_SYNC,		// poly: every linked voice follows the lowest one's sound
+	PAR_LXR0_LINK_ALLOC,	// poly, when all voices are busy: 0 replaces the oldest note, 1 the highest
+#endif
 
 
 	//#########################################
