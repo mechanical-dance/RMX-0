@@ -1671,7 +1671,7 @@ static void buttonHandler_lxr0LinkRelease(const uint8_t voiceNr)
 		lxr0_heldDrums &= (uint8_t)~(1 << (voiceNr - 1));
 }
 
-// while DRUM is held in voice mode: the selected drum and the group lit, a solo drum blinking
+// while DRUM is held in voice mode: the selected drum lit, and its group if it's linked; a solo drum blinking
 void buttonHandler_lxr0LinkTick(void)
 {
 	const uint8_t linked = lxr0Link_voices();
@@ -1680,10 +1680,11 @@ void buttonHandler_lxr0LinkTick(void)
 		return;
 	const uint8_t blinkOn = (systick_ticks / LINK_BLINK_TICKS) & 1;
 	const uint8_t active = menu_getActiveVoice();
+	const uint8_t group = (active < 3 && (linked & (1 << active))) ? linked : 0; // the group shows only while one of its drums is selected
 	for(uint8_t i=0; i<7; i++)
 	{
-		uint8_t on = (i == active) || (i < 3 && (linked & (1 << i)));
-		if(i < 3 && lxr0Link_solo() && i == lxr0_soloVoice && (linked & (1 << i)))
+		uint8_t on = (i == active) || (i < 3 && (group & (1 << i)));
+		if(i < 3 && lxr0Link_solo() && i == lxr0_soloVoice && (group & (1 << i)))
 			on = blinkOn;
 		led_setValueTemp(on, (uint8_t)(LED_2 + i));
 	}

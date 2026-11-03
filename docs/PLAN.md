@@ -251,3 +251,8 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - The module dropped the panel's "selected voice" message, so notes on the global MIDI channel always played drum 1 (since 0.3.1). It now follows the selected drum, as the code intends (`CortexParser.c`).
 - A note on the global channel while a linked drum is selected plays the group through the lead, whichever linked drum is selected (`lxr0Link_route`). Before, a non-lead linked drum ignored it.
 - Test: `tools/engine-tests/link_midi_test.c`, real MIDI bytes through the OP HH MIDI input, with channels and notes set from the global page.
+
+## 0.5.2 global MIDI channel 0 is off; group LEDs
+- Global channel 0, the factory default, now means no global channel for notes. The menu can't send 0 to the module, so the module stayed on its power-on channel 1. Since 0.5.1 made the global channel follow the selected drum, channel 1 notes also played the selected drum: with drums 1–3 linked on channel 1 and the snare selected, the snare played with the group. CC and program change still listen on channel 1 as before. The knob range is 1–16, so 0 is only the untouched default (`MidiParser.c`).
+- With DRUM held, the group's LEDs light only while one of its drums is selected; a drum outside the group lights alone (`buttonHandler_lxr0LinkTick`).
+- Test: `tools/engine-tests/global_off_test.c`, drums 1–3 linked on channel 1, snare on 16, real MIDI bytes. Fails on 0.5.1 with the snare selected.

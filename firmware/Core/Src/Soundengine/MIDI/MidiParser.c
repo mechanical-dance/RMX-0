@@ -1889,7 +1889,13 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 				int8_t v, q=-1;
 				// if a note message comes in on global channel, then send that note to
 				// the voice that is currently active on the front.
+#if LXR0_MIDI
+				// lxr-0 0.5.2: global channel 0 is off for notes. The menu can't send 0 to the module, so it
+				// stayed on its power-on channel 1 and doubled whatever channel 1 already played.
+				if(activeParameters[PAR_MIDI_CHAN_GLOBAL] != 0 && midi_MidiChannels[7]==chanonly) {
+#else
 				if(midi_MidiChannels[7]==chanonly) {
+#endif
 					q=frontParser_activeTrack; // avoid sending it again later if the active track happens to have the same channel set
 											   // (this might not really matter. does sending a note on twice do any harm?)
 #if LXR0_LINK

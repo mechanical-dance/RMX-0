@@ -60,7 +60,7 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  down(DRUM);w(300);check("no blink: drum 2 steady",({int s=1;for(int i=0;i<8;i++){if(!led(1))s=0;w(100);}s;}));up(DRUM);
  puts("== a drum outside the group");
  drum(2);page(0);lcd("drum 3 osc");rd();check("the link keeps running",r[LV]==3&&r[LV+1]==1);check("edits move drum 3 only",moved()==4);
- down(DRUM);w(300);check("LEDs: group and selected drum lit",led(0)&&led(1)&&led(2));up(DRUM);
+ down(DRUM);w(300);check("LEDs: only the selected drum lit (0.5.2)",!led(0)&&!led(1)&&led(2));up(DRUM);
  puts("== three drums, and the mode kept");
  rd();memcpy(k,r,PARAMS);k[LV+1]=2;lxr_fw_edit(k);w(300);
  down(DRUM);down(5);down(6);down(7);rd();lcd("1, 2, 3 held");check("all three linked, chord kept",r[LV]==7&&r[LV+1]==2);up(7);up(6);up(5);up(DRUM);
