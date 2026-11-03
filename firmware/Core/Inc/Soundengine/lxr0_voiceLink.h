@@ -11,10 +11,15 @@
 
 // once per render block: picks up changed link settings, wherever they came from
 void lxr0Link_poll(void);
-// once per render block, after triggers and CV: glide the group's (or drum 1's) pitch
+// once per render block, after triggers and CV: glide each drum's, or group's, pitch
 void lxr0Link_glide(void);
 // a trigger for a voice. Returns 1 if the link handled it, 0 if it plays as usual.
 uint8_t lxr0Link_noteOn(uint8_t voice, uint8_t note, uint8_t vel);
+// 0.5.7: a MIDI note for a voice, after note matching (key is the note as it came in). Keeps the key held;
+// returns 1 if the link played it (legato, or a linked drum), 0 if it plays as usual.
+uint8_t lxr0Link_midiNoteOn(uint8_t voice, uint8_t chan, uint8_t key, uint8_t note, uint8_t vel);
+// a MIDI note-off (or note-on at velocity 0): lets go of the key wherever it is held
+void lxr0Link_midiNoteOff(uint8_t chan, uint8_t key);
 // pitch CV for drum 1-3. Returns 1 if the link handled it.
 uint8_t lxr0Link_cv(uint8_t voice, float freq);
 // the drums linked now (bit 0-2), 0 if none

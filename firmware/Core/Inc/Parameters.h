@@ -438,6 +438,14 @@ enum ParamEnums
 	PAR_LXR0_LINK_ALLOC,	// poly, when all voices are busy: 0 replaces the oldest note, 1 the highest
 	PAR_LXR0_LINK_GLIDE,	// 0.5.4: pitch glide, 0 off. The group in unison and chord, drum 1 when unlinked
 	PAR_LXR0_LINK_GLIDE_TYPE,	// 0.5.6: 0 linear constant rate, 1 linear constant time, 2 exponential
+	// 0.5.7: glide is per drum. The two above are drum 1's; a linked group plays its lead's
+	PAR_LXR0_LINK_GLIDE2,
+	PAR_LXR0_LINK_GLIDE3,
+	PAR_LXR0_LINK_GLIDE_TYPE2,
+	PAR_LXR0_LINK_GLIDE_TYPE3,
+	PAR_LXR0_LINK_LEGATO1,	// 0.5.7: a MIDI note while a key is held and the drum sounds changes only its pitch
+	PAR_LXR0_LINK_LEGATO2,
+	PAR_LXR0_LINK_LEGATO3,
 #endif
 
 

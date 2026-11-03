@@ -312,6 +312,7 @@ const Name valueNames[NUM_NAMES] =
 		{SHORT_LXR0_LINK_ALLOC, CAT_LXR0_LINK, LONG_LXR0_LINK_ALLOC},/*TEXT_LXR0_LINK_ALLOC*/
 		{SHORT_LXR0_LINK_GLIDE, CAT_LXR0_LINK, LONG_LXR0_LINK_GLIDE},/*TEXT_LXR0_LINK_GLIDE*/
 		{SHORT_LXR0_LINK_GLIDE_TYPE, CAT_LXR0_LINK, LONG_LXR0_LINK_GLIDE_TYPE},/*TEXT_LXR0_LINK_GLIDE_TYPE*/
+		{SHORT_LXR0_LINK_LEGATO, CAT_LXR0_LINK, LONG_LXR0_LINK_LEGATO},/*TEXT_LXR0_LINK_LEGATO*/
 #endif
 
 
@@ -656,6 +657,9 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 		/*PAR_LXR0_LINK_ALLOC*/		DTYPE_MENU | (MENU_LXR0_LINK_ALLOC<<8),
 		/*PAR_LXR0_LINK_GLIDE*/		DTYPE_0B127,
 		/*PAR_LXR0_LINK_GLIDE_TYPE*/	DTYPE_MENU | (MENU_LXR0_GLIDE_TYPE<<8),
+		/*PAR_LXR0_LINK_GLIDE2-3*/	DTYPE_0B127, DTYPE_0B127,
+		/*PAR_LXR0_LINK_GLIDE_TYPE2-3*/	DTYPE_MENU | (MENU_LXR0_GLIDE_TYPE<<8), DTYPE_MENU | (MENU_LXR0_GLIDE_TYPE<<8),
+		/*PAR_LXR0_LINK_LEGATO1-3*/	DTYPE_ON_OFF, DTYPE_ON_OFF, DTYPE_ON_OFF,
 #endif
 
 
@@ -4570,12 +4574,13 @@ uint8_t menu_getDisplayParameterType(uint8_t pos)
 //-----------------------------------------------------------------
 // lxr-0: what a voice link shares. Everything on drums 1-3's pages but level, pan, outputs, the
 // reverb send, the link settings themselves and the LFO page; LFO and mod routes stay per drum.
+// Glide and legato (0.5.7) are per drum, so they are shared like the sound.
 #define LINK_SUBPAGES 7	// osc, amp EG, pitch mod, FM, transient, filter, mix
 static uint8_t menu_lxr0LinkShares(const uint8_t subPage, const uint16_t p)
 {
 	if(p == PAR_NONE || subPage >= LINK_SUBPAGES)
 		return 0;
-	if((p >= PAR_LXR0_LINK_VOICES && p <= PAR_LXR0_LINK_GLIDE_TYPE)
+	if((p >= PAR_LXR0_LINK_VOICES && p <= PAR_LXR0_LINK_ALLOC)
 			|| (p >= PAR_VOL1 && p <= PAR_VOL3) || (p >= PAR_PAN1 && p <= PAR_PAN3)
 			|| (p >= PAR_AUDIO_OUT1 && p <= PAR_AUDIO_OUT3))
 		return 0;

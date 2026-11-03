@@ -1729,9 +1729,13 @@ static void midiParser_noteOn(uint8_t voice, uint8_t note, uint8_t vel, uint8_t 
 }
 #elif LXR0_MIDI
 // lxr-0: the module has no sequencer, so no record or echo. Note matching as above.
+static uint8_t lxr0NoteChan; // 0.5.7: the channel of the note being parsed, for held keys and legato
 static void midiParser_noteOn(uint8_t voice, uint8_t note, uint8_t vel, uint8_t do_rec)
 {
 	(void)do_rec;
+#if LXR0_LINK
+	const uint8_t key = note;
+#endif
 	if(activeParameters[PAR_MIDI_NOTE1 + voice] != 0) {
 		// looking for specific note
 		if(note==activeParameters[PAR_MIDI_NOTE1 + voice])
@@ -1740,6 +1744,10 @@ static void midiParser_noteOn(uint8_t voice, uint8_t note, uint8_t vel, uint8_t 
 			return; // note does not match. Do nothing
 	}
 
+#if LXR0_LINK
+	if(lxr0Link_midiNoteOn(voice, lxr0NoteChan, key, note, vel)) // a held key: legato, or a linked drum's poly note
+		return;
+#endif
 	voiceControl_noteOn(voice,note,vel);
 }
 #endif
@@ -1887,6 +1895,14 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 			// note on or note off message (one of these two only)
 			if(midiParser_txRxFilter & MIDI_FILTER_NOTES) {
 				int8_t v, q=-1;
+#if LXR0_MIDI
+				lxr0NoteChan = chanonly;
+#if LXR0_LINK
+				// lxr-0 0.5.7: a note-off releases its key on any drum it is held on, whatever is selected now
+				if(!(msgonly==NOTE_ON && msg.data2))
+					lxr0Link_midiNoteOff(chanonly, msg.data1);
+#endif
+#endif
 				// if a note message comes in on global channel, then send that note to
 				// the voice that is currently active on the front.
 #if LXR0_MIDI

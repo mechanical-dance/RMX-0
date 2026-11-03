@@ -1,6 +1,6 @@
-# lxr-0 features: voice links, glide, MIDI
+# lxr-0 features: voice links, glide, legato, MIDI
 
-This covers firmware 0.4.13 to 0.5.6. Drums 1–3 are the three drum voices; the snare, cymbal and hi-hat are not part of links.
+This covers firmware 0.4.13 to 0.5.7. Drums 1–3 are the three drum voices; the snare, cymbal and hi-hat are not part of links.
 
 ## Voice links
 
@@ -43,11 +43,11 @@ These are on the drum transient page of drums 1, 2 or 3. All three pages show th
 - **The lead:** the lowest-numbered linked drum takes the trigger, accent, pitch CV and MIDI notes for the group. The other linked drums ignore their own triggers, CV and MIDI channel while linked.
 - **Unison:** every linked drum plays each note, spread by detune and width. The level is scaled so that linking doesn't make the sound louder.
 - **Chord:** every linked drum plays each note. The intervals come from each drum's own tuning, so tune drums 2 and 3 to set the chord. Each coarse step is one semitone: drum 1 at N with drums 2 and 3 at N+4 and N+7 gives a major chord, and N+3 and N+7 a minor one.
-- **Poly:** each note goes to one drum and keeps its pitch. A drum whose note has ended is used first. When all are busy, `alc` decides which note is replaced.
+- **Poly:** each note goes to one drum and keeps its pitch. A drum whose note has ended is used first, then (0.5.7) one whose MIDI key has been released. When all are busy, `alc` decides which note is replaced. Triggers count as released at once.
 
-## Glide (0.5.4, types 0.5.6)
+## Glide (0.5.4, types 0.5.6, per drum 0.5.7)
 
-Glide is on the second screen of the pitch mod page of drums 1–3. Both settings are kit-wide.
+Glide is on the second screen of the pitch mod page of drums 1–3. Each drum has its own settings.
 
 - **`gld`, 0–127:** sets a time T from 25 ms (1) to 8 s (127), with about 0.45 s at 64. 0 is off.
 - **`typ`:** how the pitch moves.
@@ -60,13 +60,23 @@ Glide is on the second screen of the pitch mod page of drums 1–3. Both setting
 
 - **Always on:** like an analog portamento, it glides on every pitch change, through silence and repeated hits. A new note in the middle of a slide continues from wherever the pitch is.
 - **What slides:**
-  - Unison and chord: the whole group, with detune and chord intervals kept.
-  - No link: drum 1.
+  - Unison and chord: the whole group, with detune and chord intervals kept, using the lead's settings. Editing them on a linked drum edits the group, like any sound setting.
+  - A drum outside a link: that drum, with its own settings.
   - Poly: nothing slides.
 - **What it follows:** note pitch, pitch CV and tuning edits. A jump in pitch CV slides like a new note. Slow CV movement, such as vibrato, is smoothed more as glide goes up.
 - **On top of the slide:** the pitch envelope, transient and FM still play on every note.
 
-Kits are 341 bytes. 0.5.4–0.5.5 kits keep their glide setting and load as `lcr`; older kits load with glide off.
+## Legato (0.5.7)
+
+`lgt` (off, on) is next to glide, per drum. It works with MIDI notes only.
+
+- **On:** a note played while another key is still held, and while the drum still sounds, changes only the pitch. The envelopes, transient, LFO and filter carry on. Glide slides to the new pitch.
+- **Releasing the newest key** while others are held goes back to the newest one still held, the same way.
+- **A new note after all keys are up,** or after the sound has ended, plays as a new hit.
+- **Groups:** unison and chord play legato with the lead's setting. Poly doesn't play legato.
+- Triggers and CV always play a new hit.
+
+Kits are 348 bytes. 0.5.6 kits load unchanged, with their glide as drum 1's; drums 2–3 load with glide and legato off. 0.5.4–0.5.5 kits keep their glide setting and load as `lcr`; older kits load with glide off.
 
 ## LFO shapes (0.5.5)
 
@@ -91,7 +101,7 @@ The OP HH jack works as a MIDI input when MIDI in is turned on in the global set
 - **Drum channels:** each voice listens on its own channel. Channel and note are set per voice on the global page. The note `any` plays every note at its pitch; a specific note plays the voice only on that note.
 - **Global channel:** plays the drum that is currently selected on the panel. If that drum is linked, it plays the group. Set it to `off` to turn it off.
 - **Links:** a linked group plays from its lead drum's channel. For poly over MIDI, set the lead drum's note to `any`.
-- **Note-off:** ignored. Each note plays its envelope through.
+- **Note-off (0.5.7):** releases the key for legato and poly allocation. It doesn't stop the sound: each note plays its envelope through.
 
 To play a group from one keyboard, put the lead drum on the keyboard's channel. Keep the other voices, and the global channel, off that channel.
 

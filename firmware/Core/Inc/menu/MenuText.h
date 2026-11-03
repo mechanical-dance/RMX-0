@@ -597,6 +597,7 @@ const char shortNames[][4]  =
 	{"alc"},
 	{"gld"},
 	{"typ"},
+	{"lgt"},
 #endif
 
 };
@@ -769,6 +770,7 @@ const char longNames[][16] =
 	{"Alloc"},
 	{"Glide"},
 	{"Glide type"},
+	{"Legato"},
 #endif
 };
 

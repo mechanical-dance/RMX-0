@@ -295,3 +295,11 @@ After trying 0.5.4: glide wasn't noticeable below about 75, and drum notes often
   - `lct`: T per slide, from wherever the pitch is.
   - `exp`: RC lag, within 1 % of the target after T, snapping to it within 0.6 cents.
 - **Test:** `glide_test.c` covers each type's timing, glide after silence, re-hits during a slide, chasing from mid-slide, the old cases, and 339- and 340-byte kits. `link_menu_test.c` covers the `typ` knob.
+
+## 0.5.7 per-drum glide, legato, note-off
+- **Kit bytes 333–339** (348-byte kits): glide 2–3, glide type 2–3, legato 1–3. Bytes 331–332 stay drum 1's glide and type.
+- **Glide per drum:** one glide state per drum. Unlinked, a drum glides alone; a unison or chord lead glides its group with its own settings; poly doesn't. The menu shares the new bytes in group edits.
+- **Note-off:** `MidiParser.c` calls `lxr0Link_midiNoteOff(channel, key)` for every note-off, which releases the key on whichever drum holds it, whatever is selected now.
+- **Legato:** each drum keeps up to 8 held keys (channel, key, note). A note-on with a key held, `lgt` on and the drum's amp envelope still open queues a pitch-only change, applied at the next block before the trigger queue (`osc_setBaseNote` on both oscillators of each drum it plays). Releasing the newest key returns to the newest held one. Held keys are cleared when the link changes.
+- **Poly:** allocation takes a free drum, then one whose MIDI key is up (by `alc`), then any (by `alc`). Non-MIDI notes count as released, so trigger-only playing is unchanged.
+- **Code:** all in flash; ITCM is unchanged at 14,872 B.
