@@ -246,3 +246,8 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - No per-sample code was added: detune and level are applied once per block. ITCM 14,824 of 16,384 bytes (0.4.14: 14,752).
 - Tests: `tools/engine-tests/link_test.c` (sound, poly, CV, steals, kits), `link_menu_test.c` (settings, group edits, sync), `link_buttons_test.c` (forming, solo, LEDs). With no link, `retrig_test` output matches 0.4.14 within its run-to-run spread.
 - On hardware, check first: poly CV timing with a real sequencer, and the LEDs.
+
+## 0.5.1 voice links on the global MIDI channel
+- The module dropped the panel's "selected voice" message, so notes on the global MIDI channel always played drum 1 (since 0.3.1). It now follows the selected drum, as the code intends (`CortexParser.c`).
+- A note on the global channel while a linked drum is selected plays the group through the lead, whichever linked drum is selected (`lxr0Link_route`). Before, a non-lead linked drum ignored it.
+- Test: `tools/engine-tests/link_midi_test.c`, real MIDI bytes through the OP HH MIDI input, with channels and notes set from the global page.

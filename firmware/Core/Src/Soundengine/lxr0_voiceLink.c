@@ -48,6 +48,7 @@ uint8_t lxr0Link_voices(void) { return linked; }
 uint8_t lxr0Link_solo(void) { return solo; }
 void lxr0Link_setSolo(uint8_t on) { solo = on; }
 uint8_t lxr0Link_lead(void) { return lead; }
+uint8_t lxr0Link_route(uint8_t voice) { return (voice < DRUMS && (linked & (1<<voice))) ? lead : voice; }
 
 // detune, pan spread and level for each drum
 static void apply(void)

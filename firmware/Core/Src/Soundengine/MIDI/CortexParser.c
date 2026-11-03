@@ -420,6 +420,9 @@ void frontParser_handleMidiMessage( MidiMsg msg)
 			if(voice < 8)
 				midi_MidiChannels[voice] = channel;
 		}
+		// the selected voice, which notes on the global MIDI channel play (0.5.1: this was dropped, so it stayed drum 1)
+		else if(msg.data1 == FRONT_SEQ_SET_ACTIVE_TRACK && msg.data2 < 7)
+			frontParser_activeTrack = msg.data2;
 #endif
 		break;
 

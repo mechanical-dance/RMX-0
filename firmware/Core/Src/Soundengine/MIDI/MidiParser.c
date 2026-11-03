@@ -1892,8 +1892,11 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 				if(midi_MidiChannels[7]==chanonly) {
 					q=frontParser_activeTrack; // avoid sending it again later if the active track happens to have the same channel set
 											   // (this might not really matter. does sending a note on twice do any harm?)
+#if LXR0_LINK
+					q=lxr0Link_route(q); // lxr-0: a linked drum's notes play its group, through the lead
+#endif
 					if(msgonly==NOTE_ON && msg.data2) {
-						midiParser_noteOn(frontParser_activeTrack, msg.data1, msg.data2, 1);
+						midiParser_noteOn(q, msg.data1, msg.data2, 1);
 					} else { // NOTE_OFF or zero velocity note
 						//midiParser_noteOff(v, msg.data1, msg.data2);
 					}

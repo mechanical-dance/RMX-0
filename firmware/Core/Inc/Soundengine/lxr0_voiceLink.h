@@ -19,6 +19,8 @@ uint8_t lxr0Link_cv(uint8_t voice, float freq);
 uint8_t lxr0Link_voices(void);
 // the lowest linked drum, which takes the trigger, accent and pitch CV
 uint8_t lxr0Link_lead(void);
+// the voice that plays a note meant for this one: the lead if the voice is linked, else the voice itself
+uint8_t lxr0Link_route(uint8_t voice);
 // a linked drum edited on its own (double-tap): the menu's group edits stop while it's set
 uint8_t lxr0Link_solo(void);
 void lxr0Link_setSolo(uint8_t on);
