@@ -40,3 +40,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.5.1 | `LXRE_LXR0_V0.5.1.img` | 066459b | 0.5.0 + notes on the global MIDI channel follow the selected drum (they always played drum 1), and play the group when that drum is linked |
 | 0.5.2 | `LXRE_LXR0_V0.5.2.img` | ddef4b9 | 0.5.1 + global MIDI channel 0 is off for notes (it stayed on channel 1 and doubled the selected drum); group LEDs only while a group drum is selected |
 | 0.5.3 | `LXRE_LXR0_V0.5.3.img` | 3e2dae3 | 0.5.2 + the global MIDI channel can be turned to off (0) from the knob |
+| 0.5.4 | `LXRE_LXR0_V0.5.4.img` | d5da6eb | 0.5.3 + glide (pitch mod page, screen 2): constant rate, the group in unison and chord, drum 1 when unlinked; 340-byte kits |
