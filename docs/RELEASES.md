@@ -37,3 +37,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.4.13 | `LXRE_LXR0_V0.4.13.img` | eec2afb | 0.4.12 + retriggering a sounding voice no longer steps the output, and sample trims fade at their start and end and crossfade at a loop point. A hit from silence and an untrimmed sample are unchanged |
 | 0.4.14 | `LXRE_LXR0_V0.4.14.img` | aa44583 | 0.4.13 with the trim fade code shared between the two sample paths, so fast memory (ITCM) goes from 97 % to 90 % full. Sound unchanged: renders match 0.4.13 |
 | 0.5.0 | `LXRE_LXR0_V0.5.0.img` | 6c5c7dd | 0.4.14 + voice links: drums 1-3 in unison, chord or poly, set up from the drum transient page and DRUM + two drums. Kits grow to 339 bytes; with no link the sound is unchanged |
+| 0.5.1 | `LXRE_LXR0_V0.5.1.img` | 066459b | 0.5.0 + notes on the global MIDI channel follow the selected drum (they always played drum 1), and play the group when that drum is linked |
