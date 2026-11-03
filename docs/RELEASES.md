@@ -42,3 +42,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.5.3 | `LXRE_LXR0_V0.5.3.img` | 3e2dae3 | 0.5.2 + the global MIDI channel can be turned to off (0) from the knob |
 | 0.5.4 | `LXRE_LXR0_V0.5.4.img` | d5da6eb | 0.5.3 + glide (pitch mod page, screen 2): constant rate, the group in unison and chord, drum 1 when unlinked; 340-byte kits |
 | 0.5.5 | `LXRE_LXR0_V0.5.5.img` | 3095106 | 0.5.4 + LFO shapes: smooth random (nse), exponential triangle (xtr), one-shots (si1 tr1 su1 sd1 sq1 xu1 xd1 xt1) and random per hit (rn1). Kits unchanged |
+| 0.5.6 | `LXRE_LXR0_V0.5.6.img` | 5986a5e | 0.5.5 + glide types (lcr, lct, exp), glide always on, new glide scale (25 ms to 8 s); 341-byte kits |
