@@ -305,7 +305,11 @@ const char retriggerNames[][4]  =
 //-----------------------------------------------------------------
 const char lfoWaveNames[][4]  =
 {
+#if LXR0_LFO
+	{19},		//number of entries
+#else
 	{8},		//number of entries
+#endif
 	{"sin"},
 	{"tri"},
 	{"sup"},
@@ -314,6 +318,19 @@ const char lfoWaveNames[][4]  =
 	{"rnd"},
 	{"xup"},
 	{"xdn"},
+#if LXR0_LFO // lxr-0: lxr0_lfo.c
+	{"nse"},
+	{"xtr"},
+	{"si1"},
+	{"tr1"},
+	{"su1"},
+	{"sd1"},
+	{"sq1"},
+	{"xu1"},
+	{"xd1"},
+	{"xt1"},
+	{"rn1"},
+#endif
 };
 //-----------------------------------------------------------------
 const char rollRateNames[][4]  =

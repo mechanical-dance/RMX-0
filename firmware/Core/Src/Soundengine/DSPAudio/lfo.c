@@ -22,6 +22,9 @@
 #include "Soundengine/DSPAudio/HiHat.h"
 #include "Soundengine/DSPAudio/Snare.h"
 #include "Soundengine/MIDI/valueShaper.h"
+#if LXR0_LFO
+#include "Soundengine/DSPAudio/lxr0_lfo.h"
+#endif
 //-------------------------------------------------------------
 void lfo_init(Lfo *lfo)
 {
@@ -101,7 +104,11 @@ IN_ITCM_RAM float lfo_calc(Lfo *lfo)
 			break;
 	//---
 		default:
+#if LXR0_LFO
+		return lxr0Lfo_calc(lfo, incInt, overflow); // lxr-0: the shapes after these, from flash
+#else
 		return 0;
+#endif
 		break;
 	}
 	return 0;
@@ -231,26 +238,44 @@ void lfo_retrigger(uint8_t voice)
 	if(voiceArray[0].lfo.retrigger == voice+1)
 	{
 		voiceArray[0].lfo.phase = voiceArray[0].lfo.phaseOffset;
+		#if LXR0_LFO
+		lxr0Lfo_retrigger(&voiceArray[0].lfo);
+		#endif
 	}
 	if(voiceArray[1].lfo.retrigger == voice+1)
 	{
 		voiceArray[1].lfo.phase = voiceArray[1].lfo.phaseOffset;
+		#if LXR0_LFO
+		lxr0Lfo_retrigger(&voiceArray[1].lfo);
+		#endif
 	}
 	if(voiceArray[2].lfo.retrigger == voice+1)
 	{
 		voiceArray[2].lfo.phase = voiceArray[2].lfo.phaseOffset;
+		#if LXR0_LFO
+		lxr0Lfo_retrigger(&voiceArray[2].lfo);
+		#endif
 	}
 	if(snareVoice.lfo.retrigger == voice+1)
 	{
 		snareVoice.lfo.phase = snareVoice.lfo.phaseOffset;
+		#if LXR0_LFO
+		lxr0Lfo_retrigger(&snareVoice.lfo);
+		#endif
 	}
 	if(cymbalVoice.lfo.retrigger == voice+1)
 	{
 		cymbalVoice.lfo.phase = cymbalVoice.lfo.phaseOffset;
+		#if LXR0_LFO
+		lxr0Lfo_retrigger(&cymbalVoice.lfo);
+		#endif
 	}
 	if(hatVoice.lfo.retrigger == voice+1)
 	{
 		hatVoice.lfo.phase = hatVoice.lfo.phaseOffset;
+		#if LXR0_LFO
+		lxr0Lfo_retrigger(&hatVoice.lfo);
+		#endif
 	}
 }
 //-------------------------------------------------------------

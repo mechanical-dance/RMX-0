@@ -18,7 +18,9 @@
 #define LXR0_DECLICK 1
 // voice links: drums 1-3 grouped as unison, chord or poly (lxr0_voiceLink.c)
 #define LXR0_LINK 1
+// LFO shapes after the vendor's eight: smooth random, exponential triangle, one-shots (lxr0_lfo.c)
+#define LXR0_LFO 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.5.4"
+#define LXR0_VERSION "0.5.5"
 
 #endif /* LXR0_H_ */

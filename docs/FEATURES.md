@@ -1,6 +1,6 @@
 # lxr-0 features: voice links, glide, MIDI
 
-This covers firmware 0.4.13 to 0.5.4. Drums 1–3 are the three drum voices; the snare, cymbal and hi-hat are not part of links.
+This covers firmware 0.4.13 to 0.5.5. Drums 1–3 are the three drum voices; the snare, cymbal and hi-hat are not part of links.
 
 ## Voice links
 
@@ -42,7 +42,7 @@ These are on the drum transient page of drums 1, 2 or 3. All three pages show th
 
 - **The lead:** the lowest-numbered linked drum takes the trigger, accent, pitch CV and MIDI notes for the group. The other linked drums ignore their own triggers, CV and MIDI channel while linked.
 - **Unison:** every linked drum plays each note, spread by detune and width. The level is scaled so that linking doesn't make the sound louder.
-- **Chord:** every linked drum plays each note. The intervals come from each drum's own tuning (coarse and fine), so tune drums 2 and 3 to set the chord.
+- **Chord:** every linked drum plays each note. The intervals come from each drum's own tuning, so tune drums 2 and 3 to set the chord. Each coarse step is one semitone: drum 1 at N with drums 2 and 3 at N+4 and N+7 gives a major chord, and N+3 and N+7 a minor one.
 - **Poly:** each note goes to one drum and keeps its pitch. A drum whose note has ended is used first. When all are busy, `alc` decides which note is replaced.
 
 ## Glide (0.5.4)
@@ -59,6 +59,22 @@ These are on the drum transient page of drums 1, 2 or 3. All three pages show th
 - **On top of the slide:** the pitch envelope, transient and FM still play on every note.
 
 Kits are 340 bytes. Older kits load with glide off.
+
+## LFO shapes (0.5.5)
+
+Eleven shapes follow the original eight (`sin tri sup sdn sqr rnd xup xdn`) on the LFO waveform knob. Rate, retrigger voice and offset work as before, except where noted.
+
+| Shape | Behaviour |
+|---|---|
+| `nse` | Smooth random. Moves through a new random value each cycle on a smooth curve, with no steps and no pauses. A retrigger continues from where it is, with no jump. |
+| `xtr` | Exponential triangle. Curved rise to a sharp peak at half a cycle, then a curved fall. |
+| `si1 tr1 su1 sd1 xu1 xd1 xt1` | One-shot versions of sine, triangle, saw up, saw down, exponential up, exponential down and exponential triangle. Each hit of the retrigger voice runs one cycle, then the LFO holds its last value. Use them as extra envelopes. |
+| `sq1` | One-shot gate: on for the first half of the cycle, then off. |
+| `rn1` | Random per hit. Each hit moves smoothly to a new random value within one cycle, then holds. |
+
+For the one-shots and `rn1`:
+- **Offset:** a delay before the shot starts, up to one cycle.
+- **Retrigger off:** the LFO holds still.
 
 ## MIDI
 

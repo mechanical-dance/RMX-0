@@ -269,3 +269,19 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - It follows the oscillator's base pitch, so notes, pitch CV jumps and tuning edits all slide.
 - `lxr0Link_glide()` runs once a block from the mixer, after triggers and CV, and multiplies the link detune (`linkDetune`, `modOsc.pitchMod`). It runs from flash; the call costs 16 B of ITCM (14,840 B).
 - Test: `tools/engine-tests/glide_test.c`. It measures pitch over time: an octave and a semitone at the expected times, after silence, drum 2 unlinked, unison, chord, poly, a 2+3 link, CV jumps, and 339/340-byte kits. `link_menu_test.c` covers the knob and the boot screen.
+
+## 0.5.5 LFO shapes
+Eleven new shapes follow the vendor's eight, as values 8–18 of the LFO waveform parameter. Kits don't change, and the vendor's shapes are untouched.
+
+| Value | Name | Shape |
+|---|---|---|
+| 8 | `nse` | Smooth random: a Catmull-Rom spline through a new random value each cycle, clipped to 0–1. A retrigger starts a new stretch from the current value and slope. |
+| 9 | `xtr` | Exponential triangle: `xup`'s cubic up to the top at half a cycle, then `xdn`'s down. |
+| 10–17 | `si1 tr1 su1 sd1 sq1 xu1 xd1 xt1` | One-shots: one cycle per hit of the retrigger voice, then hold the last value. `sq1` is on, then off. Offset is a delay before the shot, up to one cycle. With retrigger off they hold still. |
+| 18 | `rn1` | Random per hit: an S-curve over one cycle from the current value to a new random one, then hold. Offset delays it. |
+
+- **Code:** `lxr0_lfo.c` runs from flash. Its hooks are the default case of `lfo_calc` and `lfo_retrigger`. ITCM is 14,872 B.
+- **Tests:**
+  - `lfo_test.c` reads drum 1's LFO from the engine each block. It checks the vendor shapes against `lfo.c` (identical on 0.5.4), `nse` smoothness and continuity through retriggers, `xtr`, each one-shot's cycle and hold, the `sq1` gate, the offset delay, retrigger off, and `rn1`.
+  - `lfo_menu_test.c` checks that the knob reaches all 19 shapes.
+- **Not done:** PHX-D01's own web editor (`app/web/pages.js`, generated from LXR-2 tables) still lists only 8 LFO shapes, and it doesn't show the link or glide settings. That's for polish.

@@ -93,6 +93,7 @@ add_library(lxr_dsp OBJECT
     Src/Soundengine/DSPAudio/FX/lxr0_reverbBus.c
     Src/Soundengine/DSPAudio/lxr0_declick.c
     Src/Soundengine/lxr0_voiceLink.c
+    Src/Soundengine/DSPAudio/lxr0_lfo.c
     Src/Soundengine/DSPAudio/lxr0_sampleOsc.c
     Src/lxr0_samples.c
     Src/Soundengine/DSPAudio/FX/Ringmod.c

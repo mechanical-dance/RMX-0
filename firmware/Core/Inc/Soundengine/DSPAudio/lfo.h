@@ -23,6 +23,7 @@
 #include "Soundengine/config.h"
 //#include "Soundengine/Sequencer/sequencer.h"
 #include "Soundengine/DSPAudio/modulationNode.h"
+#include "lxr0.h"
 //-------------------------------------------------------------
 enum
 {
@@ -34,6 +35,19 @@ enum
 	LFO_NOISE,
 	LFO_EXP_UP,
 	LFO_EXP_DOWN,
+#if LXR0_LFO // lxr-0 0.5.5: lxr0_lfo.c
+	LFO_NSE,		// smooth random
+	LFO_XTR,		// exponential triangle
+	LFO_SIN1,		// one-shots, in this order: lxr0_lfo.c shotShape()
+	LFO_TRI1,
+	LFO_SUP1,
+	LFO_SDN1,
+	LFO_SQR1,
+	LFO_XUP1,
+	LFO_XDN1,
+	LFO_XTR1,
+	LFO_RN1,		// a new random value per hit
+#endif
 	NUM_LFO_WAVEFORMS
 };
 
@@ -55,6 +69,16 @@ typedef struct LfoStruct
 	float		modNodeValue;
 
 	float value;
+#if LXR0_LFO
+	float nse[4];		// smooth random: the spline's points
+	float nseSlope;
+	uint8_t nsePrimed;
+	uint8_t shot;			// one-shots: holding, waiting out the offset delay, or running
+	uint32_t shotPhase;
+	uint32_t shotDelay;
+	float shotHeld;
+	float rnFrom, rnTo;	// rn1's move
+#endif
 } Lfo;
 //-------------------------------------------------------------
 void lfo_init(Lfo *lfo);
