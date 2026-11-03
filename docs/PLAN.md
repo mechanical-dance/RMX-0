@@ -229,3 +229,8 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - Length: 3 ms is the shortest where a longer fade stops reducing energy above 500 Hz (22-24 dB against a hard cut on a 42-62 Hz sine).
 - Trims, only on a trimmed side: start fades in over 1 ms of output whatever the pitch, a one shot's end fades over 3 ms, a loop crossfades over 5 ms. The crossfade reads frames before the loop start. If there are too few, the loop restarts later, so it can run up to 5 ms shorter.
 - Test: `tools/engine-tests/retrig_test.c`. Renders: `releases/renders-0.4.13/`.
+
+## 0.4.14 fast memory cleanup
+- The trimmed-sample path was copied into both sample functions. It is now one function (`calcTrimmedBlock`), still in ITCM and compiled for size, which also sets up the fade lengths. The untrimmed path is unchanged.
+- ITCM: 15,896 to 14,752 of 16,384 bytes (0.4.12: 14,144). Renders match 0.4.13, including every trim render.
+- `-Os` makes the trimmed path a little slower; check `cpu` with all six voices playing trimmed samples.

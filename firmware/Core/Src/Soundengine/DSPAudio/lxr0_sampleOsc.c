@@ -90,20 +90,26 @@ static __inline void trimSample(const OscInfo* osc, const Lxr0Sample* sample, Sa
 	s->frames = end > start ? end - start : 0;
 	s->looped = sample->looped;
 	s->trimmed = start || cut;
+	s->fadeIn = start; // the start frame until setTrimFades
+	s->fadeOut = cut;  // the cut frames until setTrimFades
+}
+
+// the fade lengths, for a trimmed sample only
+static __inline void setTrimFades(SampleSpan* s, const uint32_t rate)
+{
+	const uint32_t start = s->fadeIn, cut = s->fadeOut;
+	const uint32_t half = s->frames/2;
 	s->fadeIn = start != 0;
 	s->fadeOut = s->xfade = s->preroll = 0;
-	if(!s->trimmed)
-		return;
-	const uint32_t half = s->frames/2;
 	if(s->looped)
 	{
-		const uint32_t x = sample->rate*LOOP_XFADE_MS/1000u;
+		const uint32_t x = rate*LOOP_XFADE_MS/1000u;
 		s->xfade = x < half ? x : half;
 		s->preroll = start < s->xfade ? start : s->xfade;
 	}
 	else if(cut)
 	{
-		const uint32_t x = sample->rate*END_FADE_MS/1000u;
+		const uint32_t x = rate*END_FADE_MS/1000u;
 		s->fadeOut = x < half ? x : half;
 	}
 }
@@ -158,6 +164,20 @@ static __inline void advanceTrimmed(OscInfo* osc, const SampleSpan* s)
 	osc->sampleHi = (uint32_t)(position >> 32);
 }
 
+// a trimmed sample, with or without FM (modBuffer NULL): one shared copy, to keep ITCM free
+IN_ITCM_RAM __attribute__((noinline, optimize("Os"))) static void calcTrimmedBlock(OscInfo* osc, SampleSpan* s, const uint32_t rate, const int16_t* modBuffer, int16_t* buf, const uint8_t size, const float gain)
+{
+	setTrimFades(s, rate);
+	for(uint8_t i=0; i<size; i++)
+	{
+		const uint32_t mod = modBuffer ? ((uint32_t)(modBuffer[i]*osc->fmMod)) << 14 : 0;
+		const int16_t out = readTrimmed(osc, s, getPosition(osc) + mod);
+		advanceTrimmed(osc, s);
+		osc->output = out;
+		buf[i] = out * gain;
+	}
+}
+
 IN_ITCM_RAM void calcUserSampleOscFmBlock(OscInfo* osc, int16_t* modBuffer, int16_t* buf, uint8_t size, const float gain)
 {
 	const Lxr0Sample* sample = lxr0Samples_get(osc->waveform);
@@ -173,21 +193,17 @@ IN_ITCM_RAM void calcUserSampleOscFmBlock(OscInfo* osc, int16_t* modBuffer, int1
 		memset(buf, 0, size*sizeof(int16_t));
 		return;
 	}
+	if(s.trimmed)
+	{
+		calcTrimmedBlock(osc, &s, sample->rate, modBuffer, buf, size, gain);
+		return;
+	}
 
 	for(uint8_t i=0; i<size; i++)
 	{
 		const uint32_t mod = ((uint32_t)(modBuffer[i]*osc->fmMod)) << 14;
-		int16_t out;
-		if(s.trimmed)
-		{
-			out = readTrimmed(osc, &s, getPosition(osc) + mod);
-			advanceTrimmed(osc, &s);
-		}
-		else
-		{
-			out = readSample(s.data, s.frames, s.looped, getPosition(osc) + mod);
-			advance(osc, s.frames, s.looped);
-		}
+		const int16_t out = readSample(s.data, s.frames, s.looped, getPosition(osc) + mod);
+		advance(osc, s.frames, s.looped);
 		osc->output = out;
 		buf[i] = out * gain;
 	}
@@ -208,20 +224,16 @@ IN_ITCM_RAM void calcUserSampleOscBlock(OscInfo* osc, int16_t* buf, const uint8_
 		memset(buf, 0, size*sizeof(int16_t));
 		return;
 	}
+	if(s.trimmed)
+	{
+		calcTrimmedBlock(osc, &s, sample->rate, NULL, buf, size, gain);
+		return;
+	}
 
 	for(uint8_t i=0; i<size; i++)
 	{
-		int16_t out;
-		if(s.trimmed)
-		{
-			out = readTrimmed(osc, &s, getPosition(osc));
-			advanceTrimmed(osc, &s);
-		}
-		else
-		{
-			out = readSample(s.data, s.frames, s.looped, getPosition(osc));
-			advance(osc, s.frames, s.looped);
-		}
+		const int16_t out = readSample(s.data, s.frames, s.looped, getPosition(osc));
+		advance(osc, s.frames, s.looped);
 		osc->output = out;
 		buf[i] = out * gain;
 	}

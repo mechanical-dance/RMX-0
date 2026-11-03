@@ -10,7 +10,7 @@ Order:
 
 These three finish the project; then the user is wrapping lxr-0 up. The sequencer from the original plan is dropped, and so are waveform modulation and trim modulation for samples (not needed).
 
-**Fast memory is nearly full:** 0.4.13 uses 15,896 of 16,384 bytes of ITCM (488 free; 0.4.12 used 14,144). New code goes in normal flash unless it runs per sample. Keep any per-sample additions tiny, and check render CPU for each one, using the reverb load guard's DWT timing.
+**Fast memory:** 0.4.14 uses 14,752 of 16,384 bytes of ITCM (1,632 free; 0.4.13 used 15,896, 0.4.12 14,144). New code goes in normal flash unless it runs per sample. Keep any per-sample additions tiny, and check render CPU for each one, using the reverb load guard's DWT timing.
 
 ## 0.4.13: retrigger clicks
 
