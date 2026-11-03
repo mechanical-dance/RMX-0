@@ -593,6 +593,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 
 	//process CV
 	CV_process();
+#if LXR0_LINK
+	lxr0Link_glide(); // lxr-0: after this block's triggers and CV, before the drums' pitch
+#endif
 
 	//--- Calc async -----
 	calcDrumVoiceAsync(0);

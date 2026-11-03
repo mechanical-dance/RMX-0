@@ -570,6 +570,7 @@ const char shortNames[][4]  =
 	{"wid"},
 	{"syn"},
 	{"alc"},
+	{"gld"},
 #endif
 
 };
@@ -740,6 +741,7 @@ const char longNames[][16] =
 	{"Width"},
 	{"Sync"},
 	{"Alloc"},
+	{"Glide"},
 #endif
 };
 

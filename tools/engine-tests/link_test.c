@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 331
+#define PARAMS 332
 #define BL 64
 #define MAXN (44100*6)
 #define LV 325 /* link bytes: voices, mode, detune, width, sync, alloc */
@@ -132,7 +132,7 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  setlink(5,2,99,88,1);k[LV+4]=1;edit();rb(60);static uint8_t r[PARAMS];memset(r,0,PARAMS);int ok=lxr_fw_read_kit(r,0);printf(" read ok %d: %d %d %d %d %d %d\n",ok,r[LV],r[LV+1],r[LV+2],r[LV+3],r[LV+4],r[LV+5]);
  check("link bytes read back",r[LV]==5&&r[LV+1]==2&&r[LV+2]==99&&r[LV+3]==88&&r[LV+4]==1&&r[LV+5]==1);
  {static uint8_t fl[8+PARAMS],r1[PARAMS];memcpy(fl,a,8);memcpy(fl+8,r,PARAMS);lxr_fw_load_kit(fl,8+PARAMS,r);rb(400);memset(r1,0,PARAMS);ok=lxr_fw_read_kit(r1,0);int bad=0;for(int i=0;i<PARAMS;i++)if(r1[i]!=r[i])bad++;
-  printf(" 339-byte reload (read ok %d): %d bytes differ, link %d %d\n",ok,bad,r1[LV],r1[LV+1]);check("a linked kit reloads exactly",ok&&!bad);
+  printf(" 340-byte reload (read ok %d): %d bytes differ, link %d %d\n",ok,bad,r1[LV],r1[LV+1]);check("a linked kit reloads exactly",ok&&!bad);
   static const int sizes[]={8+325,8+313,255};for(int i=0;i<3;i++){uint8_t p2[PARAMS];memset(p2,0,PARAMS);memcpy(p2,r,sizes[i]-8);memcpy(fl+8,r,sizes[i]-8);lxr_fw_load_kit(fl,sizes[i],p2);rb(400);memset(r1,0x55,PARAMS);ok=lxr_fw_read_kit(r1,0);int z=0;for(int j=LV;j<LV+6;j++)z+=r1[j];
    printf(" %d-byte kit after a linked one (read ok %d): link byte sum %d\n",sizes[i],ok,z);check("loads unlinked",ok&&z==0);}}
  printf("%d failed\n",fails);puts("done");_exit(fails?2:0);}

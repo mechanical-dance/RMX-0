@@ -8,7 +8,7 @@
 #define _GNU_SOURCE
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 331
+#define PARAMS 332
 #define LV 325
 #define S(t,n,...) t (*n)(__VA_ARGS__)
 void *h;
@@ -40,6 +40,7 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  F(lxr_init);F(lxr_render);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_read_kit);F(lxr_fw_sample_root);F(lxr_fw_lcd);F(lxr_fw_button);F(lxr_fw_encoder);F(lxr_fw_encoder_button);F(lxr_fw_pot);
  static uint8_t a[400];FILE*fp=fopen(v[2],"rb");if(!fp){perror(v[2]);return 1;}int na=fread(a,1,400,fp);fclose(fp);memcpy(k,a+8,na-8);
  lxr_init();lxr_fw_sample_root(v[3]);pthread_t t;pthread_create(&t,0,aud,0);w(300);lxr_fw_load_kit(a,na,k);w(4000);
+ lcd("boot");check("boots on the osc page, screen 1",lcdHas("COA")&&lcdHas("pwm"));
  lxr_fw_read_kit(k,0);
  for(int d=0;d<3;d++){k[COARSE(d)]=40+10*d;k[DEC(d)]=60+10*d;k[VOL(d)]=100+d;k[PAN(d)]=60+d;}
  memset(k+LV,0,6);lxr_fw_edit(k);w(400);
@@ -85,4 +86,8 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  check("mode off: drum 1 only",r[COARSE(0)]!=b[COARSE(0)]&&r[COARSE(1)]==b[COARSE(1)]);
  rd();memcpy(k,r,PARAMS);k[LV]=1;k[LV+1]=1;lxr_fw_edit(k);w(300);rd();memcpy(b,r,PARAMS);pot(0,10);rd();
  check("one drum in the mask: drum 1 only",r[COARSE(0)]!=b[COARSE(0)]&&r[COARSE(1)]==b[COARSE(1)]);
+ puts("== glide on the pitch mod page, screen 2 (0.5.4)");
+ drum(1);page(2);enc(4);lcd("drum 2 pitch mod, 2nd screen");check("gld on screen 2",lcdHas("gld"));
+ rd();memcpy(b,r,PARAMS);pot(0,30);rd();lcd("pot 1 up");{int n=0;for(int i=0;i<PARAMS;i++)if(r[i]!=b[i])n++;printf("  glide %d -> %d, %d bytes changed\n",b[331],r[331],n);check("pot 1 sets glide, nothing else",r[331]>b[331]&&n==1);}
+ drum(0);page(2);enc(4);rd();int g1=r[331];pot(0,-200);rd();check("drum 1's page edits the same byte, down to 0",g1>0&&r[331]==0);enc(-4);
  printf("%d failed\n",fails);puts("done");_exit(fails?2:0);}

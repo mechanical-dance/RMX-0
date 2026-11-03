@@ -11,6 +11,8 @@
 
 // once per render block: picks up changed link settings, wherever they came from
 void lxr0Link_poll(void);
+// once per render block, after triggers and CV: glide the group's (or drum 1's) pitch
+void lxr0Link_glide(void);
 // a trigger for a voice. Returns 1 if the link handled it, 0 if it plays as usual.
 uint8_t lxr0Link_noteOn(uint8_t voice, uint8_t note, uint8_t vel);
 // pitch CV for drum 1-3. Returns 1 if the link handled it.

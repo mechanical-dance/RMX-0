@@ -260,3 +260,12 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 ## 0.5.3 global MIDI channel off from the knob
 - The global channel's knob and encoder now go down to 0, shown as "off" (they stopped at 1). Off isn't sent to the module; the MIDI parser reads it from the parameter (`menu.c`).
 - Test: `global_off_test.c` turns the global channel to 1 (channel 1 then plays the selected snare too) and back to off (the group only).
+
+## 0.5.4 glide
+- New kit byte `PAR_LXR0_LINK_GLIDE` (331); kits are 340 bytes, and older kits load with glide off. It's on screen 2 of drums 1–3's pitch mod page (`gld`), one kit-wide value like the link settings. It isn't on the osc page because the vendor boot presses the osc page button once (`buttonHandler_init`), which would open on the glide screen.
+- The rate is constant in octaves per second: glide 1 is 5 ms per octave, glide 127 is 4 s, on an exponential scale. The slide is even in pitch, so an octave takes 12 times as long as a semitone.
+- In unison and chord the group slides, keeping chord intervals and detune. With no link, drum 1 slides on its own. Poly doesn't slide, and neither does drum 1 while another pair is linked.
+- It slides only while the previous note still rings. A note after silence starts on its pitch, and silence also clears a slide in progress.
+- It follows the oscillator's base pitch, so notes, pitch CV jumps and tuning edits all slide.
+- `lxr0Link_glide()` runs once a block from the mixer, after triggers and CV, and multiplies the link detune (`linkDetune`, `modOsc.pitchMod`). It runs from flash; the call costs 16 B of ITCM (14,840 B).
+- Test: `tools/engine-tests/glide_test.c`. It measures pitch over time: an octave and a semitone at the expected times, after silence, drum 2 unlinked, unison, chord, poly, a 2+3 link, CV jumps, and 339/340-byte kits. `link_menu_test.c` covers the knob and the boot screen.

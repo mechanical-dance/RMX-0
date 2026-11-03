@@ -436,6 +436,7 @@ enum ParamEnums
 	PAR_LXR0_LINK_WIDTH,	// unison and chord pan spread
 	PAR_LXR0_LINK_SYNC,		// poly: every linked voice follows the lowest one's sound
 	PAR_LXR0_LINK_ALLOC,	// poly, when all voices are busy: 0 replaces the oldest note, 1 the highest
+	PAR_LXR0_LINK_GLIDE,	// 0.5.4: pitch glide, 0 off. The group in unison and chord, drum 1 when unlinked
 #endif
 
 
