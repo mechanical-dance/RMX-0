@@ -19,6 +19,6 @@
 // voice links: drums 1-3 grouped as unison, chord or poly (lxr0_voiceLink.c)
 #define LXR0_LINK 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.5.2"
+#define LXR0_VERSION "0.5.3"
 
 #endif /* LXR0_H_ */

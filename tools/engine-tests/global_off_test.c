@@ -1,4 +1,4 @@
-// 0.5.2: global MIDI channel 0 (the factory default) is off for notes. Before, it stayed on channel 1, so with drums 1-3
+// 0.5.2/0.5.3: global MIDI channel 0 (the factory default) is off for notes. Before, it stayed on channel 1, so with drums 1-3
 // linked on channel 1 and the snare selected, channel 1 also played the snare. Drums 1-3 + snare on L1, R1, L2, R2.
 // Drums on their own jacks (L1, R1, L2) as in link_test. Run: LXR0_DIR=<state> ./link_midi_test <dylib> <kit.SND> <card folder>
 #include <dlfcn.h>
@@ -59,7 +59,13 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  double f[4];int p[4];const uint8_t n60[]={60};
  for(int i=0;i<10;i++){char z[33];row(z);if(!strncmp(z,"CH1",3))break;config();}lcd("ch screen");check("snare ch 16",setTo(3," 16"));lcd("set");
  k[LV]=7;k[LV+1]=1;lxr_fw_edit(k);w(300);
- {char z[33];config();for(int i=0;i<10;i++){row(z);if(!strncmp(z,"MID",3))break;config();}row(z);printf("  global channel shows [%.4s]\n",z+20);check("global channel untouched: 0",!strncmp(z+20,"  0",3));}
+ {char z[33];config();for(int i=0;i<10;i++){row(z);if(!strncmp(z,"MID",3))break;config();}row(z);printf("  global channel shows [%.4s]\n",z+20);check("global channel untouched: off",!strncmp(z+20,"off",3));}
  for(int sel=0;sel<4;sel++){drum(sel);w(200);char t[64];sprintf(t,"1-3 unison, drum %d selected, ch 1",sel+1);play(t,n60,1,1,f,p);check("the group only",sounding(p)==7);}
  drum(3);w(200);play("snare selected, ch 16",n60,1,16,f,p);check("the snare on its own channel",sounding(p)==8);
+ puts("== 0.5.3: global channel turned to 1 and back to off from the knob");
+ {char z[33];config();for(int i=0;i<10;i++){row(z);if(!strncmp(z,"MID",3))break;config();}}
+ check("global channel 1",setTo(1,"  1"));lcd("global 1");drum(3);w(200);play("ch 1, snare selected, global 1",n60,1,1,f,p);check("group and snare",sounding(p)==15);
+ {char z[33];config();for(int i=0;i<10;i++){row(z);if(!strncmp(z,"MID",3))break;config();}}
+ lxr_fw_pot(1,-40);w(300);lcd("pot down");{char z[33];row(z);check("shows off",!strncmp(z+20,"off",3));}
+ drum(3);w(200);play("ch 1, snare selected, global off",n60,1,1,f,p);check("the group only",sounding(p)==7);
  printf("%d failed\n",fails);puts("done");_exit(fails?2:0);}

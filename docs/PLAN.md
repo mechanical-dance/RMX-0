@@ -256,3 +256,7 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - Global channel 0, the factory default, now means no global channel for notes. The menu can't send 0 to the module, so the module stayed on its power-on channel 1. Since 0.5.1 made the global channel follow the selected drum, channel 1 notes also played the selected drum: with drums 1–3 linked on channel 1 and the snare selected, the snare played with the group. CC and program change still listen on channel 1 as before. The knob range is 1–16, so 0 is only the untouched default (`MidiParser.c`).
 - With DRUM held, the group's LEDs light only while one of its drums is selected; a drum outside the group lights alone (`buttonHandler_lxr0LinkTick`).
 - Test: `tools/engine-tests/global_off_test.c`, drums 1–3 linked on channel 1, snare on 16, real MIDI bytes. Fails on 0.5.1 with the snare selected.
+
+## 0.5.3 global MIDI channel off from the knob
+- The global channel's knob and encoder now go down to 0, shown as "off" (they stopped at 1). Off isn't sent to the module; the MIDI parser reads it from the parameter (`menu.c`).
+- Test: `global_off_test.c` turns the global channel to 1 (channel 1 then plays the selected snare too) and back to off (the group only).

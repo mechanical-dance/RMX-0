@@ -1880,6 +1880,11 @@ void menu_repaintGeneric()
 						numtostrpu(&editDisplayBuffer[1][13],(uint8_t)(curParmVal),' ');
 					}
 				}
+#if LXR0_MIDI
+				if(parNr == PAR_MIDI_CHAN_GLOBAL && curParmVal == 0) // lxr-0 0.5.3: global channel off
+					memcpy(&editDisplayBuffer[1][13], "off", 3);
+				else
+#endif
 				if(parNr == PAR_MORPH_TARGET)
 				{
 					memcpy(&editDisplayBuffer[1][0], savefileNames[curParmVal][KIT_NAMES], 8);
@@ -2021,6 +2026,10 @@ void menu_repaintGeneric()
 							numtostrpu(valueAsText,curParmVal,' ');
 						}
 					}
+#if LXR0_MIDI
+					else if(parNr == PAR_MIDI_CHAN_GLOBAL && curParmVal == 0) // lxr-0 0.5.3: global channel off
+						memcpy(valueAsText, "off", 3);
+#endif
 					else
 					{
 						// fallthrough for the rest of the unsigned values
@@ -3474,6 +3483,12 @@ static void menu_encoderChangeParameter(int8_t inc)
 
 
 	case DTYPE_1B16://parameter_dtypes[paramNr] & 0x0F
+#if LXR0_MIDI
+		if(paramNr == PAR_MIDI_CHAN_GLOBAL && *paramValue > 16) // lxr-0 0.5.3: 0 is off
+			*paramValue = 16;
+		else if(paramNr == PAR_MIDI_CHAN_GLOBAL) {}
+		else
+#endif
 		if(*paramValue < 1)
 			*paramValue = 1;
 		else if(*paramValue > 16)
@@ -4042,6 +4057,10 @@ void menu_parseGlobalParam(uint16_t paramNr, uint8_t value)
 	case PAR_MIDI_CHAN_GLOBAL:
 	{
 		uint8_t voice;
+#if LXR0_MIDI
+		if(paramNr == PAR_MIDI_CHAN_GLOBAL && value == 0)
+			break; // lxr-0 0.5.3: off; the MIDI parser reads 0 from activeParameters
+#endif
 		uint8_t channel = (uint8_t)(value-1);
 		if(paramNr==PAR_MIDI_CHAN_GLOBAL)
 			voice= 7; // will be 7 for global channel
@@ -4389,6 +4408,9 @@ static uint8_t limitPotValue(int8_t diff, uint16_t paramNr)
 		break;
 	case DTYPE_1B16:
 		if(newValue > 16) newValue = 16;
+#if LXR0_MIDI
+		else if(paramNr == PAR_MIDI_CHAN_GLOBAL) {} // lxr-0 0.5.3: 0 is off
+#endif
 		else if(newValue < 1) newValue = 1;
 		break;
 	case DTYPE_1B64:
@@ -4479,6 +4501,10 @@ static uint8_t getDtypeValue(uint8_t value, uint16_t paramNr)
 		return (uint8_t)(1 + 5*frac);
 		break;
 	case DTYPE_1B16:
+#if LXR0_MIDI
+		if(paramNr == PAR_MIDI_CHAN_GLOBAL) // lxr-0 0.5.3: 0 is off
+			return (uint8_t)(16*frac);
+#endif
 		return (uint8_t)(1 + 15*frac);
 		break;
 	case DTYPE_0B15:
