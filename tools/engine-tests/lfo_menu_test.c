@@ -8,7 +8,7 @@
 #define _GNU_SOURCE
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 333
+#define PARAMS 340
 #define LV 325
 #define S(t,n,...) t (*n)(__VA_ARGS__)
 void *h;

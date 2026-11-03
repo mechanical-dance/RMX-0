@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 333
+#define PARAMS 340
 #define LV 325
 #define DRUM 4
 #define S(t,n,...) t (*n)(__VA_ARGS__)

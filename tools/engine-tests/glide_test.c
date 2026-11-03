@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 333
+#define PARAMS 340
 #define GL 331 /* glide */
 #define GT 332 /* glide type: 0 lcr, 1 lct, 2 exp */
 #define BL 64
@@ -49,7 +49,7 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  static const int zero[]={197,198,199,200,201,202,234,235,236,238,239,240,241,242,301,302,303,304,305,306,307,28,29,30,31,32,33,34,35,36,74,75,76,77,82,84,86,102,103,104,105,106,107,0};
  for(int i=0;zero[i];i++)k[zero[i]]=0;
  for(int i=88;i<94;i++)k[i]=110;for(int i=37;i<43;i++)k[i]=127;for(int i=43;i<49;i++)k[i]=0;for(int i=108;i<115;i++)k[i]=127;
- for(int i=121;i<127;i++)k[i]=0;for(int i=128;i<134;i++)k[i]=0;for(int i=143;i<149;i++)k[i]=0;for(int i=265;i<283;i++)k[i]=0;for(int i=313;i<332;i++)k[i]=0;
+ for(int i=121;i<127;i++)k[i]=0;for(int i=128;i<134;i++)k[i]=0;for(int i=143;i<149;i++)k[i]=0;for(int i=265;i<283;i++)k[i]=0;for(int i=313;i<PARAMS;i++)k[i]=0;
  static const int pan[]={94,95,96,99,100,101};for(int i=0;i<6;i++)k[pan[i]]=63;
  static const int WAVE[]={1,2,3},COARSE[]={8,10,12},ATK[]={49,51,53},DEC[]={50,52,54},FINE[]={9,11,13};
  for(int d=0;d<3;d++){k[WAVE[d]]=0;k[COARSE[d]]=64;k[FINE[d]]=63;k[ATK[d]]=0;k[DEC[d]]=110;k[215+d]=2+d;}
@@ -111,9 +111,10 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  puts("== poly: no glide");
  k[COARSE[1]]=64;k[COARSE[2]]=64;k[LV+1]=3;edit();silence();start();t=note(0,60);rb(100);long t2=note(0,72);rb(100);
  {int ok=0;for(int d=0;d<3;d++){double y=AT(jack[d],t2+MS(20));printf("  drum %d %.2f\n",d+1,y);if(near(y,2*R,0.01))ok=1;}check("the new note on pitch at once",ok);}capOn=0;
- puts("== linked 2+3: drum 1 doesn't glide");
- k[LV]=6;k[LV+1]=1;edit();silence();start();note(0,60);rb(200);t=note(0,72);rb(100);check("drum 1 on pitch at once",near(AT(jack[0],t+MS(20)),2*R,0.01));
+ puts("== linked 2+3: the group glides with drum 2's setting, drum 1 with its own (0.5.7)");
+ k[333]=k[GL];k[GL]=0;k[LV]=6;k[LV+1]=1;edit();silence();start();note(0,60);rb(200);t=note(0,72);rb(100);check("drum 1 on pitch at once",near(AT(jack[0],t+MS(20)),2*R,0.01));
  start();note(1,60);rb(450);t=note(1,72);rb((int)(tOct*1000/1.45)+100);check("the group slides",near(AT(jack[1],t+MS(tOct*500)),R*sqrt(2),0.03)&&near(AT(jack[2],t+MS(tOct*500)),R*sqrt(2),0.03));capOn=0;
+ k[GL]=k[333];k[333]=0;
  puts("== CV jumps glide (drum 1, no link)");
  k[LV]=0;k[LV+1]=0;edit();
  {LxrMod m;memset(&m,0,sizeof m);m.on=1;m.dst[0]=2;m.amt[0]=100;m.src[0]=0;lxr_set_mod(&m);lxr_fw_cv(0,4.f);rb(100);
@@ -126,9 +127,12 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
   check("a 1 V jump slides",near(x,sqrt(c4*c5),0.03)&&near(y,c5,0.01));memset(&m,0,sizeof m);lxr_set_mod(&m);}capOn=0;
  {static uint8_t r[PARAMS],r1[PARAMS],fl[8+PARAMS];lxr_fw_read_kit(r,0);check("glide in the kit",r[GL]==64&&r[GT]==0);
   // a 0.5.0-0.5.3 kit (339 bytes) with a link: keeps the link, loads with glide off
-  r[LV]=3;r[LV+1]=2;memcpy(fl,a,8);memcpy(fl+8,r,PARAMS-2);uint8_t p2[PARAMS];memcpy(p2,r,PARAMS);p2[GL]=0;p2[GT]=0;lxr_fw_load_kit(fl,8+PARAMS-2,p2);rb(400);memset(r1,0x55,PARAMS);lxr_fw_read_kit(r1,0);
+  r[LV]=3;r[LV+1]=2;memcpy(fl,a,8);memcpy(fl+8,r,331);uint8_t p2[PARAMS];memcpy(p2,r,PARAMS);p2[GL]=0;p2[GT]=0;lxr_fw_load_kit(fl,8+331,p2);rb(400);memset(r1,0x55,PARAMS);lxr_fw_read_kit(r1,0);
   printf("  339-byte kit: link %d %d, glide %d\n",r1[LV],r1[LV+1],r1[GL]);check("339-byte kit: link kept, glide off",r1[LV]==3&&r1[LV+1]==2&&r1[GL]==0&&r1[GT]==0);
   // a 0.5.4-0.5.5 kit (340 bytes) with glide: keeps it, type lcr
-  r[GL]=70;r[GT]=2;memcpy(fl+8,r,PARAMS-1);memcpy(p2,r,PARAMS);p2[GT]=0;lxr_fw_load_kit(fl,8+PARAMS-1,p2);rb(400);memset(r1,0x55,PARAMS);lxr_fw_read_kit(r1,0);
-  printf("  340-byte kit: glide %d, type %d\n",r1[GL],r1[GT]);check("340-byte kit: glide kept, type lcr",r1[GL]==70&&r1[GT]==0);}
+  r[GL]=70;r[GT]=2;memcpy(fl+8,r,332);memcpy(p2,r,PARAMS);p2[GT]=0;lxr_fw_load_kit(fl,8+332,p2);rb(400);memset(r1,0x55,PARAMS);lxr_fw_read_kit(r1,0);
+  printf("  340-byte kit: glide %d, type %d\n",r1[GL],r1[GT]);check("340-byte kit: glide kept, type lcr",r1[GL]==70&&r1[GT]==0);
+  // a 0.5.6 kit (341 bytes): drum 1's glide and type kept, drums 2-3's glide and all legato off
+  r[GL]=70;r[GT]=2;for(int i=333;i<340;i++)r[i]=1;memcpy(fl+8,r,333);memcpy(p2,r,PARAMS);for(int i=333;i<340;i++)p2[i]=0;lxr_fw_load_kit(fl,8+333,p2);rb(400);memset(r1,0x55,PARAMS);lxr_fw_read_kit(r1,0);
+  {int z=1;for(int i=333;i<340;i++)if(r1[i])z=0;printf("  341-byte kit: glide %d, type %d, new bytes zero %d\n",r1[GL],r1[GT],z);check("341-byte kit: drum 1's glide and type kept, the rest off",r1[GL]==70&&r1[GT]==2&&z);}}
  printf("%d failed\n",fails);puts("done");_exit(fails?2:0);}

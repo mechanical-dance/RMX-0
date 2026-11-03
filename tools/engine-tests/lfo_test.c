@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 333
+#define PARAMS 340
 #define FREQ 115
 #define WAVE 155
 #define RETRIG 173

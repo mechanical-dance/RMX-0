@@ -8,7 +8,7 @@
 #define _GNU_SOURCE
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 333
+#define PARAMS 340
 #define LV 325
 #define S(t,n,...) t (*n)(__VA_ARGS__)
 void *h;
@@ -88,10 +88,22 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  check("one drum in the mask: drum 1 only",r[COARSE(0)]!=b[COARSE(0)]&&r[COARSE(1)]==b[COARSE(1)]);
  puts("== glide on the pitch mod page, screen 2 (0.5.4)");
  drum(1);page(2);enc(4);lcd("drum 2 pitch mod, 2nd screen");check("gld on screen 2",lcdHas("gld"));
- rd();memcpy(b,r,PARAMS);pot(0,30);rd();lcd("pot 1 up");{int n=0;for(int i=0;i<PARAMS;i++)if(r[i]!=b[i])n++;printf("  glide %d -> %d, %d bytes changed\n",b[331],r[331],n);check("pot 1 sets glide, nothing else",r[331]>b[331]&&n==1);}
- drum(0);page(2);enc(4);rd();int g1=r[331];pot(0,-200);rd();check("drum 1's page edits the same byte, down to 0",g1>0&&r[331]==0);
+ rd();memcpy(b,r,PARAMS);pot(0,30);rd();lcd("pot 1 up");{int n=0;for(int i=0;i<PARAMS;i++)if(r[i]!=b[i])n++;printf("  glide %d -> %d, %d bytes changed\n",b[331],r[331],n);printf("  drum 2's glide %d -> %d\n",b[333],r[333]);check("pot 1 sets drum 2's glide (0.5.7), nothing else",r[333]>b[333]&&n==1);}
+ drum(0);page(2);enc(4);rd();memcpy(b,r,PARAMS);pot(0,30);rd();check("drum 1's page edits drum 1's glide only",r[331]>b[331]&&r[333]==b[333]);pot(0,-200);rd();check("down to 0",r[331]==0);
  puts("== glide type next to it (0.5.6)");
  lcd("drum 1 pitch mod, 2nd screen");check("typ on screen 2, lcr",lcdHas("typ")&&lcdHas("lcr"));
  pot(1,-200);rd();int t0=r[332];pot(1,200);rd();lcd("pot 2 up");int t1=r[332];check("pot 2 runs lcr to exp (0-2)",t0==0&&t1==2&&lcdHas("exp"));
- pot(1,-200);rd();check("back to lcr",r[332]==0);enc(-4);
+ pot(1,-200);rd();check("back to lcr",r[332]==0);
+ puts("== legato next to it (0.5.7), per drum");
+ lcd("drum 1 pitch mod, 2nd screen");check("lgt on screen 2, off",lcdHas("lgt")&&lcdHas("off"));
+ rd();memcpy(b,r,PARAMS);pot(2,20);rd();lcd("pot 3 up");check("pot 3 turns drum 1's legato on, nothing else",r[337]==1&&r[338]==0&&r[339]==0&&lcdHas("on"));
+ pot(2,-20);rd();check("and off",r[337]==0);
+ drum(2);page(2);enc(4);pot(2,20);rd();check("drum 3's page: drum 3's legato",r[339]==1&&r[337]==0);pot(2,-20);
+ drum(1);page(2);enc(4);pot(1,200);rd();check("drum 2's page: drum 2's glide type",r[335]==2&&r[332]==0);pot(1,-200);
+ puts("== glide and legato edit the group, like the sound (0.5.7)");
+ rd();memcpy(k,r,PARAMS);k[LV]=3;k[LV+1]=1;k[331]=k[333]=k[334]=10;lxr_fw_edit(k);w(300);
+ drum(0);page(2);enc(4);rd();memcpy(b,r,PARAMS);pot(0,20);rd();printf("  glide %d %d %d -> %d %d %d\n",b[331],b[333],b[334],r[331],r[333],r[334]);
+ check("drum 1's glide knob moves drums 1 and 2, not 3",r[331]>b[331]&&r[333]-b[333]==r[331]-b[331]&&r[334]==b[334]);
+ pot(2,20);rd();check("legato on for drums 1 and 2",r[337]==1&&r[338]==1&&r[339]==0);pot(2,-20);rd();check("and off",r[337]==0&&r[338]==0);
+ enc(-4);
  printf("%d failed\n",fails);puts("done");_exit(fails?2:0);}
