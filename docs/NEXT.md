@@ -8,6 +8,8 @@ Order:
 2. **0.5.0: voice links** (below). Built, plus 0.5.1 (global MIDI channel) and 0.5.2 (global channel 0 off, group LEDs) 0.5.3 (off on the knob) and 0.5.4 (glide); waiting for the user to try it. What shipped is in `PLAN.md`; the settings went on the drum transient page, not the MIX page.
 3. **LFO shapes** (below). Approved in principle; behaviour needs the user's sign-off before any code.
 
+**2026-11-03:** the user said features are complete. If 0.5.4 works on hardware, the next session is docs, polish and publishing. User-facing feature docs so far: `FEATURES.md`. Whether LFO shapes (3) are dropped is unconfirmed; ask before starting them.
+
 These three finish the project; then the user is wrapping lxr-0 up. The sequencer from the original plan is dropped, and so are waveform modulation and trim modulation for samples (not needed).
 
 **Fast memory:** 0.5.4 uses 14,840 of 16,384 bytes of ITCM (1,544 free; 0.5.0 used 14,824, 0.4.14 used 14,752, 0.4.13 used 15,896, 0.4.12 14,144). New code goes in normal flash unless it runs per sample. Keep any per-sample additions tiny, and check render CPU for each one, using the reverb load guard's DWT timing.
