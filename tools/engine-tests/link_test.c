@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 332
+#define PARAMS 333
 #define BL 64
 #define MAXN (44100*6)
 #define LV 325 /* link bytes: voices, mode, detune, width, sync, alloc */

@@ -311,6 +311,7 @@ const Name valueNames[NUM_NAMES] =
 		{SHORT_LXR0_LINK_SYNC, CAT_LXR0_LINK, LONG_LXR0_LINK_SYNC},/*TEXT_LXR0_LINK_SYNC*/
 		{SHORT_LXR0_LINK_ALLOC, CAT_LXR0_LINK, LONG_LXR0_LINK_ALLOC},/*TEXT_LXR0_LINK_ALLOC*/
 		{SHORT_LXR0_LINK_GLIDE, CAT_LXR0_LINK, LONG_LXR0_LINK_GLIDE},/*TEXT_LXR0_LINK_GLIDE*/
+		{SHORT_LXR0_LINK_GLIDE_TYPE, CAT_LXR0_LINK, LONG_LXR0_LINK_GLIDE_TYPE},/*TEXT_LXR0_LINK_GLIDE_TYPE*/
 #endif
 
 
@@ -654,6 +655,7 @@ const enum Datatypes PROGMEM parameter_dtypes[NUM_PARAMS] = {
 		/*PAR_LXR0_LINK_SYNC*/		DTYPE_ON_OFF,
 		/*PAR_LXR0_LINK_ALLOC*/		DTYPE_MENU | (MENU_LXR0_LINK_ALLOC<<8),
 		/*PAR_LXR0_LINK_GLIDE*/		DTYPE_0B127,
+		/*PAR_LXR0_LINK_GLIDE_TYPE*/	DTYPE_MENU | (MENU_LXR0_GLIDE_TYPE<<8),
 #endif
 
 
@@ -2960,6 +2962,8 @@ static uint8_t getMaxEntriesForMenu(uint8_t menuId)
 		return linkModeNames[0][0];
 	case MENU_LXR0_LINK_ALLOC:
 		return linkAllocNames[0][0];
+	case MENU_LXR0_GLIDE_TYPE:
+		return glideTypeNames[0][0];
 
 	default:
 		return 0;
@@ -3080,6 +3084,9 @@ static void getMenuItemNameForValue(const uint8_t menuId, const uint8_t curParmV
 		break;
 	case MENU_LXR0_LINK_ALLOC:
 		p=linkAllocNames[curParmVal+1];
+		break;
+	case MENU_LXR0_GLIDE_TYPE:
+		p=glideTypeNames[curParmVal+1];
 			break;
 
 
@@ -4568,7 +4575,7 @@ static uint8_t menu_lxr0LinkShares(const uint8_t subPage, const uint16_t p)
 {
 	if(p == PAR_NONE || subPage >= LINK_SUBPAGES)
 		return 0;
-	if((p >= PAR_LXR0_LINK_VOICES && p <= PAR_LXR0_LINK_GLIDE)
+	if((p >= PAR_LXR0_LINK_VOICES && p <= PAR_LXR0_LINK_GLIDE_TYPE)
 			|| (p >= PAR_VOL1 && p <= PAR_VOL3) || (p >= PAR_PAN1 && p <= PAR_PAN3)
 			|| (p >= PAR_AUDIO_OUT1 && p <= PAR_AUDIO_OUT3))
 		return 0;

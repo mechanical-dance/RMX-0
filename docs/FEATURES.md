@@ -1,6 +1,6 @@
 # lxr-0 features: voice links, glide, MIDI
 
-This covers firmware 0.4.13 to 0.5.5. Drums 1–3 are the three drum voices; the snare, cymbal and hi-hat are not part of links.
+This covers firmware 0.4.13 to 0.5.6. Drums 1–3 are the three drum voices; the snare, cymbal and hi-hat are not part of links.
 
 ## Voice links
 
@@ -45,20 +45,28 @@ These are on the drum transient page of drums 1, 2 or 3. All three pages show th
 - **Chord:** every linked drum plays each note. The intervals come from each drum's own tuning, so tune drums 2 and 3 to set the chord. Each coarse step is one semitone: drum 1 at N with drums 2 and 3 at N+4 and N+7 gives a major chord, and N+3 and N+7 a minor one.
 - **Poly:** each note goes to one drum and keeps its pitch. A drum whose note has ended is used first. When all are busy, `alc` decides which note is replaced.
 
-## Glide (0.5.4)
+## Glide (0.5.4, types 0.5.6)
 
-`gld`, 0–127, is on the second screen of the pitch mod page of drums 1–3. It's one kit-wide value. 0 is off.
+Glide is on the second screen of the pitch mod page of drums 1–3. Both settings are kit-wide.
 
-- **Rate:** constant. 1 is 5 ms per octave and 127 is 4 s per octave. An octave takes 12 times as long as a semitone.
+- **`gld`, 0–127:** sets a time T from 25 ms (1) to 8 s (127), with about 0.45 s at 64. 0 is off.
+- **`typ`:** how the pitch moves.
+
+| Type | Behaviour |
+|---|---|
+| `lcr` Linear constant rate | T per octave, even in pitch. Bigger jumps take longer: an octave takes 12 times as long as a semitone. Minimoog-style lead glide. |
+| `lct` Linear constant time | Every slide takes T, whatever the interval. Good for acid-style slides at low settings. |
+| `exp` Exponential | An RC lag: fast at first, then easing into the note, within 1 % of it after T. Classic analog portamento. |
+
+- **Always on:** like an analog portamento, it glides on every pitch change, through silence and repeated hits. A new note in the middle of a slide continues from wherever the pitch is.
 - **What slides:**
   - Unison and chord: the whole group, with detune and chord intervals kept.
   - No link: drum 1.
   - Poly: nothing slides.
-- **When:** only while the previous note is still sounding. A note after silence starts on its own pitch.
 - **What it follows:** note pitch, pitch CV and tuning edits. A jump in pitch CV slides like a new note. Slow CV movement, such as vibrato, is smoothed more as glide goes up.
 - **On top of the slide:** the pitch envelope, transient and FM still play on every note.
 
-Kits are 340 bytes. Older kits load with glide off.
+Kits are 341 bytes. 0.5.4–0.5.5 kits keep their glide setting and load as `lcr`; older kits load with glide off.
 
 ## LFO shapes (0.5.5)
 

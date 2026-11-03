@@ -285,3 +285,13 @@ Eleven new shapes follow the vendor's eight, as values 8–18 of the LFO wavefor
   - `lfo_test.c` reads drum 1's LFO from the engine each block. It checks the vendor shapes against `lfo.c` (identical on 0.5.4), `nse` smoothness and continuity through retriggers, `xtr`, each one-shot's cycle and hold, the `sq1` gate, the offset delay, retrigger off, and `rn1`.
   - `lfo_menu_test.c` checks that the knob reaches all 19 shapes.
 - **Not done:** PHX-D01's own web editor (`app/web/pages.js`, generated from LXR-2 tables) still lists only 8 LFO shapes, and it doesn't show the link or glide settings. That's for polish.
+
+## 0.5.6 glide types, always on
+After trying 0.5.4: glide wasn't noticeable below about 75, and drum notes often started after silence, so they didn't slide.
+- **Always glides**, like an analog portamento. The "only while ringing" rule is gone.
+- **New knob scale:** T runs from 25 ms to 8 s, exponentially, with about 0.45 s at 64.
+- **Type** (`typ`, kit byte 332, so kits are 341 bytes), from Moog's Sub 37 set:
+  - `lcr`: T per octave.
+  - `lct`: T per slide, from wherever the pitch is.
+  - `exp`: RC lag, within 1 % of the target after T, snapping to it within 0.6 cents.
+- **Test:** `glide_test.c` covers each type's timing, glide after silence, re-hits during a slide, chasing from mid-slide, the old cases, and 339- and 340-byte kits. `link_menu_test.c` covers the `typ` knob.

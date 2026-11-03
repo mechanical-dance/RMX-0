@@ -21,6 +21,6 @@
 // LFO shapes after the vendor's eight: smooth random, exponential triangle, one-shots (lxr0_lfo.c)
 #define LXR0_LFO 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.5.5"
+#define LXR0_VERSION "0.5.6"
 
 #endif /* LXR0_H_ */

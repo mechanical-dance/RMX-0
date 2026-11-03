@@ -1,6 +1,6 @@
 # Next work on lxr-0 (written 2026-11-01)
 
-State: `main` is at 0.5.5, flashed by the user only. Work serially on `main` with no branches. Local commits only; no pushes.
+State: `main` is at 0.5.6, flashed by the user only. Work serially on `main` with no branches. Local commits only; no pushes.
 The user flashes every image. Get a yes before changing behaviour beyond what's written here.
 
 Order:
@@ -8,7 +8,7 @@ Order:
 2. **0.5.0: voice links** (below). Built, plus 0.5.1 (global MIDI channel) and 0.5.2 (global channel 0 off, group LEDs) 0.5.3 (off on the knob) and 0.5.4 (glide); waiting for the user to try it. What shipped is in `PLAN.md`; the settings went on the drum transient page, not the MIX page.
 3. **LFO shapes** (below). Approved in principle; behaviour needs the user's sign-off before any code.
 
-**2026-11-03:** the user said features are complete. If 0.5.4 and 0.5.5 work on hardware, the next session is docs, polish and publishing. User-facing feature docs so far: `FEATURES.md`. LFO shapes (3) are done in 0.5.5. All features are now complete.
+**2026-11-03:** the user said features are complete. If 0.5.6 works on hardware, the next session is docs, polish and publishing. User-facing feature docs so far: `FEATURES.md`. LFO shapes (3) are done in 0.5.5. All features are now complete.
 
 These three finish the project; then the user is wrapping lxr-0 up. The sequencer from the original plan is dropped, and so are waveform modulation and trim modulation for samples (not needed).
 

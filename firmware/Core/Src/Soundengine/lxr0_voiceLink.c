@@ -9,11 +9,13 @@
  * highest note is replaced, through the retrigger declick. The other linked drums' triggers and
  * pitch CV are ignored while linked. All of this runs at trigger and block rate, from flash.
  *
- * Glide (0.5.4): in unison and chord the group slides to each new pitch, from wherever it is, at a
- * constant rate in octaves per second (so the slide is even in pitch and an octave takes 12 times a
- * semitone); with no link drum 1 does; poly doesn't glide. It slides only when the pitch changes while
- * the previous note still rings, so a note after silence starts on its pitch. Note, pitch CV and tuning
- * changes all glide, as it follows the oscillator's base pitch. It rides on the link detune multiplier.
+ * Glide (0.5.4, types 0.5.6): in unison and chord the group slides to each new pitch, from wherever it
+ * is; with no link drum 1 does; poly doesn't glide. It always glides, through silence and repeated hits,
+ * as an analog portamento does. Note, pitch CV and tuning changes all glide, as it follows the
+ * oscillator's base pitch. It rides on the link detune multiplier. The knob sets a time T, 25 ms to 8 s:
+ *   lcr  linear constant rate: T per octave, even in pitch, so bigger jumps take longer
+ *   lct  linear constant time: every slide takes T from where it is, whatever the interval
+ *   exp  exponential (RC lag): fast, then easing in; T to within 1% of the interval
  *
  * Copyright (C) 2026 lxr-0, on top of the LXR firmware (C) 2012-2026 Erica Synths
  * SPDX-License-Identifier: GPL-3.0-only
@@ -35,12 +37,14 @@
 
 #define DRUMS 3
 #define DETUNE_MAX_CENTS 50.f	// det 127: the outer drums sit this far either side
-#define GLIDE_FAST_S 0.005f		// glide 1: seconds per octave
-#define GLIDE_SLOW_S 4.f		// glide 127
+#define GLIDE_FAST_S 0.025f		// glide 1: T in seconds
+#define GLIDE_SLOW_S 8.f		// glide 127
+#define GLIDE_SNAP 0.0005f		// exp: closer than this (octaves, 0.6 cents) is there
+enum { GLIDE_LCR, GLIDE_LCT, GLIDE_EXP };
 #define FOLLOW_BLOCKS 3			// poly: the newest note takes CV for ~4 ms (blocks), as the CV can trail its trigger
 enum { MODE_OFF, MODE_UNISON, MODE_CHORD, MODE_POLY };
 
-static uint8_t settings[PAR_LXR0_LINK_GLIDE - PAR_LXR0_LINK_VOICES + 1];
+static uint8_t settings[PAR_LXR0_LINK_GLIDE_TYPE - PAR_LXR0_LINK_VOICES + 1];
 static uint8_t linked;		// drums in the link now, 0 if it's off
 static uint8_t mode;
 static uint8_t lead;
@@ -50,10 +54,13 @@ static uint32_t age[DRUMS];
 static float pitchKey[DRUMS];
 static uint8_t follow[DRUMS];
 static float detuneOf[DRUMS] = {1.f, 1.f, 1.f};	// each drum's link detune, which glide multiplies
-static float glideStep;		// octaves per block, 0 when glide is off
+static uint8_t glideOn, glideType;
+static float glideStep;		// lcr: octaves per block
+static float glideBlocks;	// lct: blocks a slide takes
+static float glideRate;		// lct: this slide's octaves per block
+static float glideDecay;	// exp: what's left of the distance after a block
 static float glideOffset;	// octaves the gliding drums sit from their pitch now
 static float glidePitch;	// their base pitch last block, in octaves; 0 before the first block
-static uint8_t glideRinging;	// their note was still sounding last block
 
 static uint8_t countBits(uint8_t m) { return (m&1) + ((m>>1)&1) + ((m>>2)&1); }
 
@@ -94,7 +101,14 @@ static void apply(void)
 		d->linkGain = gain;
 	}
 	const uint8_t g = settings[PAR_LXR0_LINK_GLIDE - PAR_LXR0_LINK_VOICES];
-	glideStep = g ? (OUTPUT_DMA_SIZE/44100.f)/(GLIDE_FAST_S*powf(GLIDE_SLOW_S/GLIDE_FAST_S, (g - 1)/126.f)) : 0.f;
+	const float t = GLIDE_FAST_S*powf(GLIDE_SLOW_S/GLIDE_FAST_S, (g > 0 ? g - 1 : 0)/126.f), dt = OUTPUT_DMA_SIZE/44100.f;
+	glideOn = g > 0;
+	glideType = settings[PAR_LXR0_LINK_GLIDE_TYPE - PAR_LXR0_LINK_VOICES];
+	if(glideType > GLIDE_EXP)
+		glideType = GLIDE_LCR;
+	glideStep = dt/t;
+	glideBlocks = t/dt;
+	glideDecay = expf(-dt*4.6052f/t); // 1% left after t
 }
 
 void lxr0Link_poll(void)
@@ -226,17 +240,30 @@ void lxr0Link_glide(void)
 	if(voices != lastVoices) // another drum leads now: nothing to glide from
 		glidePitch = 0.f;
 	lastVoices = voices;
-	if(!voices || !glideStep || !glideRinging) // silent: a slide doesn't carry into the next note
+	if(!voices || !glideOn)
 		glideOffset = 0.f;
 	else if(glidePitch != 0.f && pitch != glidePitch)
-		glideOffset += glidePitch - pitch;
+	{
+		glideOffset += glidePitch - pitch; // from wherever it is now
+		glideRate = fabsf(glideOffset)/glideBlocks;
+	}
 	glidePitch = pitch;
-	if(glideOffset > glideStep)
-		glideOffset -= glideStep;
-	else if(glideOffset < -glideStep)
-		glideOffset += glideStep;
+	if(glideType == GLIDE_EXP)
+	{
+		glideOffset *= glideDecay;
+		if(fabsf(glideOffset) < GLIDE_SNAP)
+			glideOffset = 0.f;
+	}
 	else
-		glideOffset = 0.f;
+	{
+		const float step = glideType == GLIDE_LCT ? glideRate : glideStep;
+		if(glideOffset > step)
+			glideOffset -= step;
+		else if(glideOffset < -step)
+			glideOffset += step;
+		else
+			glideOffset = 0.f;
+	}
 	const float ratio = glideOffset != 0.f ? exp2f(glideOffset) : 1.f;
 	for(uint8_t v=0; v<DRUMS; v++)
 	{
@@ -244,6 +271,5 @@ void lxr0Link_glide(void)
 		voiceArray[v].linkDetune = m;
 		voiceArray[v].modOsc.pitchMod = m;
 	}
-	glideRinging = voices && !isFree(v0);
 }
 #endif

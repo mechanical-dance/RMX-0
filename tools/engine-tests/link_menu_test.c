@@ -8,7 +8,7 @@
 #define _GNU_SOURCE
 #include <string.h>
 #include <unistd.h>
-#define PARAMS 332
+#define PARAMS 333
 #define LV 325
 #define S(t,n,...) t (*n)(__VA_ARGS__)
 void *h;
@@ -89,5 +89,9 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  puts("== glide on the pitch mod page, screen 2 (0.5.4)");
  drum(1);page(2);enc(4);lcd("drum 2 pitch mod, 2nd screen");check("gld on screen 2",lcdHas("gld"));
  rd();memcpy(b,r,PARAMS);pot(0,30);rd();lcd("pot 1 up");{int n=0;for(int i=0;i<PARAMS;i++)if(r[i]!=b[i])n++;printf("  glide %d -> %d, %d bytes changed\n",b[331],r[331],n);check("pot 1 sets glide, nothing else",r[331]>b[331]&&n==1);}
- drum(0);page(2);enc(4);rd();int g1=r[331];pot(0,-200);rd();check("drum 1's page edits the same byte, down to 0",g1>0&&r[331]==0);enc(-4);
+ drum(0);page(2);enc(4);rd();int g1=r[331];pot(0,-200);rd();check("drum 1's page edits the same byte, down to 0",g1>0&&r[331]==0);
+ puts("== glide type next to it (0.5.6)");
+ lcd("drum 1 pitch mod, 2nd screen");check("typ on screen 2, lcr",lcdHas("typ")&&lcdHas("lcr"));
+ pot(1,-200);rd();int t0=r[332];pot(1,200);rd();lcd("pot 2 up");int t1=r[332];check("pot 2 runs lcr to exp (0-2)",t0==0&&t1==2&&lcdHas("exp"));
+ pot(1,-200);rd();check("back to lcr",r[332]==0);enc(-4);
  printf("%d failed\n",fails);puts("done");_exit(fails?2:0);}
