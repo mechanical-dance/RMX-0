@@ -7,7 +7,7 @@ Order:
 1. **0.4.13: retrigger clicks** (below). Built; waiting for the user to try it.
 2. **0.5.0: voice links** (below). Approved. Starts after the user has tried 0.4.13.
 
-The sequencer is dropped from the original plan. LFO shapes are still open (one-shot, exponential-triangle, noise), and need the user's sign-off on behaviour first.
+These two finish the project: after voice links the user is wrapping lxr-0 up. The sequencer and the LFO shapes from the original plan are dropped.
 
 ## 0.4.13: retrigger clicks
 
