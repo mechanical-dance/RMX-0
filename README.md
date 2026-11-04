@@ -4,6 +4,12 @@ Custom firmware for the Erica Synths LXR Eurorack drum module. It is built on Er
 
 RMX-0 is unofficial. It is not made, approved or supported by Erica Synths.
 
+*PRS are welcome!* Feel free to fork this and do whatever you want, if it works and is well tested i have no issues merging it back if that's what you'd like.
+
+### Things i didn't get around to
+- Multiple projects: The desktop LXR-02 allows you to group kits into projects. Because kits are stored on the SD card, there's really no reason to not have this feature on the module. Super easy fix, just not priority to me
+- Sample Streaming: Samples could potentially stream from the SD card, bringing full-res sample time way past the ~17 seconds available in flash memory. The samples would need a few cycles preloaded, so that playback could start from flash while the stream starts from the card. This is a more involved implementation, but there's plenty of headroom
+
 ## Features
 
 - **MIDI input** on the OP HH jack, with a channel and note per voice
@@ -41,7 +47,7 @@ Download `LXRE_RMX0_V<version>.img` from Releases and install it with the module
 
 More in [docs/credits.md](docs/credits.md).
 
-## Licence
+## License
 
 GPL-3.0-only, with Erica Synths' additional terms in [`firmware/NOTICE.md`](firmware/NOTICE.md). Full text: [`LICENSE`](LICENSE).
 
