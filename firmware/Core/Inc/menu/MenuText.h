@@ -567,20 +567,20 @@ const char shortNames[][4]  =
 	{"cv"},
 	{"mtg"},
 #if LXR0_MIDI
-	{"ch1"},
-	{"ch2"},
-	{"ch3"},
-	{"ch4"},
-	{"ch5"},
-	{"ch6"},
-	{"ch7"},
-	{"nt1"},
-	{"nt2"},
-	{"nt3"},
-	{"nt4"},
-	{"nt5"},
-	{"nt6"},
-	{"nt7"},
+	{"t1"},
+	{"t2"},
+	{"t3"},
+	{"t4"},
+	{"t5"},
+	{"t6"},
+	{"t7"},
+	{"n1"},
+	{"n2"},
+	{"n3"},
+	{"n4"},
+	{"n5"},
+	{"n6"},
+	{"n7"},
 #endif
 #if LXR0_REVERB
 	{"rev"},
@@ -590,7 +590,7 @@ const char shortNames[][4]  =
 	{"end"},
 #endif
 #if LXR0_LINK
-	{"mod"},
+	{"lnk"},
 	{"det"},
 	{"wid"},
 	{"syn"},
@@ -649,10 +649,11 @@ const char catNames[][16] =
 	{"Reverb"},
 #endif
 #if LXR0_SAMPLES
-	{"Trim"},
+	{"Sample"},
 #endif
 #if LXR0_LINK
 	{"Link"},
+	{"Glide"},
 #endif
 };
 //-----------------------------------------------------------------
@@ -768,8 +769,8 @@ const char longNames[][16] =
 	{"Width"},
 	{"Sync"},
 	{"Alloc"},
-	{"Glide"},
-	{"Glide type"},
+	{"Time"},
+	{"Type"},
 	{"Legato"},
 #endif
 };

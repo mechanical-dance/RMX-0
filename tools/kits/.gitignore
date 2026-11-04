@@ -13,3 +13,4 @@ level.py
 all.sh
 peaks.txt
 __pycache__/
+out-*/

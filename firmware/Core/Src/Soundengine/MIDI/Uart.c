@@ -113,15 +113,8 @@ void USART3_IRQHandler(void)
 }
 #elif LXR0_MIDI
 // lxr-0: MIDI in on the OP HH jack (PD9 = USART3_RX, AF7). Receive only, the module has no MIDI out.
-volatile uint8_t lxr0Midi_overruns, lxr0Midi_framing, lxr0Midi_noise;
 
 #define LXR0_MIDI_GAP_MS 2 // bytes of one message are 320 us apart, so a gap this long is between messages
-
-static void countError(volatile uint8_t* count)
-{
-	if(*count < 99)
-		(*count)++;
-}
 
 void USART3_IRQHandler(void)
 {
@@ -131,10 +124,6 @@ void USART3_IRQHandler(void)
 	const uint32_t isrflags = USART3->ISR;
 	const uint8_t data = (uint8_t)(USART3->RDR & 0xFF); // reading RDR clears RXNE
 	USART3->ICR = USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NCF | USART_ICR_PECF;
-
-	if(isrflags & USART_ISR_ORE) countError(&lxr0Midi_overruns);
-	if(isrflags & USART_ISR_FE) countError(&lxr0Midi_framing);
-	if(isrflags & USART_ISR_NE) countError(&lxr0Midi_noise); // noise means a suspect sample, the byte is still good
 
 	// Framing errors are dropped (an unpatched jack reads as a held break). Real-time bytes (clock, active
 	// sensing) may land inside a message and nothing on the module uses them, so the parser never sees them.
@@ -149,10 +138,7 @@ void USART3_IRQHandler(void)
 		if(lost && newMessage && fifo_bufferIn(&fifo_midiRx,LXR0_MIDI_RESYNC))
 			lost = 0;
 		if(!lost && !fifo_bufferIn(&fifo_midiRx,data))
-		{
-			countError(&lxr0Midi_overruns);
 			lost = 1;
-		}
 	}
 
 	if(failed)

@@ -1,9 +1,12 @@
-# lxr-0 plan (from 2026-10-31)
+# RMX-0 design notes
 
-Erica Synths published the module firmware (`~/code/vendor/lxr-02/lxr-eurorack-app`, GPL-3.0, v1.51).
-`firmware/` is a copy of it (vendor e752339). No more reverse engineering: their implementation is the
-reference, including accents. Every change is a small diff marked `lxr-0`, behind a flag in `main.h`,
-so newer Erica releases can be merged.
+How each feature was designed, built and tested, in the order it was added (0.3.1 to 0.5.8). The
+project was called lxr-0 during development: code comments are marked `lxr-0` and the feature flags
+are `LXR0_*`. User documentation is in [`docs/`](../docs/).
+
+`firmware/` is Erica Synths' LXR Eurorack module firmware (GPL-3.0, v1.51), unchanged except for these
+additions. Their implementation is the reference for module behaviour. Every change is a small diff
+marked `lxr-0`, behind a flag in `Core/Inc/lxr0.h`, so newer Erica releases can be merged.
 
 Order of work:
 1. **MIDI** (0.3.1): the engine's own MIDI code, on the OP HH trigger jack.
@@ -12,7 +15,7 @@ Order of work:
 3. **Samples** (0.4.0): an oscillator waveform, as on the original LXR. Files live on the SD card and
    are installed to internal flash.
 
-Images: `releases/LXRE_LXR0_V0.<n>.<build>.img`, logged in `RELEASES.md`.
+Release notes: [`docs/release-notes.md`](../docs/release-notes.md).
 
 ## MIDI (`LXR0_MIDI`)
 - OP HH (PD9) becomes USART3_RX (AF7), 31250 baud, receive only. `RXINV` is set because the trigger
@@ -84,8 +87,7 @@ There is no load readout yet: if the reverb vanishes on a heavy kit, that's the 
 
 ## Samples (`LXR0_SAMPLES`, 0.4.0)
 - Design from the original LXR (`calcUserSampleOscBlock`, samples as waveforms from number 6 up, global,
-  in flash). LXR02Open is its F765 port and confirmed the flash layout. Its code isn't copied: the
-  installer uses this firmware's FatFs and HAL.
+  in flash). The installer is new code on this firmware's FatFs and HAL.
 - Storage: sectors 6-11 (1.5 MB, about 17 s at 44.1 kHz or 34 s at 22 kHz). The linker now stops the app
   at sector 6. Table header written last, so an interrupted install reads as no samples. A firmware
   update erases these sectors (the bootloader erases 2-11): reinstall from the card afterwards.
@@ -96,9 +98,8 @@ There is no load readout yet: if the reverb vanishes on a heavy kit, that's the 
   The current kit is autosaved first (`tmp.snd`, as the stock timer does), so the reset brings it back.
   Then audio stops, flash is erased and rewritten, and the module resets. With no usable files, or a chip
   set to dual bank, flash is left alone. If the kit can't be saved the install doesn't start.
-- Playback: `osc.sampleHi` extends the phase past the old 32768-frame limit. Coarse 0, fine 0 is original speed since 0.4.12 (the original LXR and
-  LXR02Open have it at -34). Other
-  rates scale from there. (0.4.0 had a correction that put these kits 22 cents off; removed in 0.4.1.)
+- Playback: `osc.sampleHi` extends the phase past the old 32768-frame limit. Coarse 0, fine 0 is original speed since 0.4.12 (the original LXR has it
+  at -34). Other rates scale from there. (0.4.0 had a correction that put these kits 22 cents off; removed in 0.4.1.)
   One-shots stop at the end; the voice's amp envelope still applies, so long samples need a long decay.
 - The waveform page shows `s<n>` and, while editing, the sample name.
 - Not done: modulating the waveform (LFO/velocity/CV) only reaches the six built-ins. Kits store the
@@ -183,7 +184,7 @@ Host check on kit-like settings: staggered output is bit-identical to before; si
 `osc_calcUserSampleFreq` multiplied by `cvFreq`, which is -1 when no CV is patched (stock has the same line). The
 negative frequency cast to an increment of 0, so a sample output its first frame as constant DC. It now branches on
 no CV as `osc_calcWavetableFreq` does. `tools/samples-host-test` missed this because it never ran the voice's pitch
-path; found by running the firmware's engine natively in PHX-D01.
+path; found by running the firmware's engine natively in [PHX-D01](https://github.com/mechanical-dance/PHX-D01).
 
 ## 0.4.9 LFO settings on kit load
 Both `preset_sendDrumsetParameters` functions checked the 6 LFO voice settings in a loop of `NUM_MOD_SLOTS` (18), the
@@ -219,7 +220,7 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 ## 0.4.12 sample pitch reference
 - Coarse 0, fine 0 plays a sample at its original speed, replacing stock's -34 (coarse 29, fine 35). Each coarse step is
   still a semitone, and other sample rates and CV pitch use the same reference. Built-in waveforms don't change.
-- A kit using a sample plays about 34 semitones lower than on 0.4.11, and differs from the LXR-2 and LXR-1 engines.
+- A kit using a sample plays about 34 semitones lower than on 0.4.11 and on stock firmware.
 
 ## 0.4.13 retrigger clicks and trim fades
 - Retrigger: `lxr0_declick.c` keeps each voice's last output sample. A trigger on a voice whose last sample isn't 0 adds that level to the new note, fading over 3 ms (smoothstep). It runs before the decimator, which still holds the old level after a trigger. No delay is added.
@@ -228,7 +229,7 @@ A kit load still holds MIDI in the fifo until the file read ends, so notes durin
 - `SVF_reset` stays: a ringing filter added no step beyond the note's own once the fade was in.
 - Length: 3 ms is the shortest where a longer fade stops reducing energy above 500 Hz (22-24 dB against a hard cut on a 42-62 Hz sine).
 - Trims, only on a trimmed side: start fades in over 1 ms of output whatever the pitch, a one shot's end fades over 3 ms, a loop crossfades over 5 ms. The crossfade reads frames before the loop start. If there are too few, the loop restarts later, so it can run up to 5 ms shorter.
-- Test: `tools/engine-tests/retrig_test.c`. Renders: `releases/renders-0.4.13/`.
+- Test: `tools/engine-tests/retrig_test.c`.
 
 ## 0.4.14 fast memory cleanup
 - The trimmed-sample path was copied into both sample functions. It is now one function (`calcTrimmedBlock`), still in ITCM and compiled for size, which also sets up the fade lengths. The untrimmed path is unchanged.
@@ -284,13 +285,12 @@ Eleven new shapes follow the vendor's eight, as values 8–18 of the LFO wavefor
 - **Tests:**
   - `lfo_test.c` reads drum 1's LFO from the engine each block. It checks the vendor shapes against `lfo.c` (identical on 0.5.4), `nse` smoothness and continuity through retriggers, `xtr`, each one-shot's cycle and hold, the `sq1` gate, the offset delay, retrigger off, and `rn1`.
   - `lfo_menu_test.c` checks that the knob reaches all 19 shapes.
-- **Not done:** PHX-D01's own web editor (`app/web/pages.js`, generated from LXR-2 tables) still lists only 8 LFO shapes, and it doesn't show the link or glide settings. That's for polish.
 
 ## 0.5.6 glide types, always on
 After trying 0.5.4: glide wasn't noticeable below about 75, and drum notes often started after silence, so they didn't slide.
 - **Always glides**, like an analog portamento. The "only while ringing" rule is gone.
 - **New knob scale:** T runs from 25 ms to 8 s, exponentially, with about 0.45 s at 64.
-- **Type** (`typ`, kit byte 332, so kits are 341 bytes), from Moog's Sub 37 set:
+- **Type** (`typ`, kit byte 332, so kits are 341 bytes):
   - `lcr`: T per octave.
   - `lct`: T per slide, from wherever the pitch is.
   - `exp`: RC lag, within 1 % of the target after T, snapping to it within 0.6 cents.
@@ -307,6 +307,11 @@ After trying 0.5.4: glide wasn't noticeable below about 75, and drum notes often
 
 ## 0.5.8 live pan, no link level scaling
 - **Pan:** the vendor computes each voice's left/right gains (`triggeredPanL/R`) only in its trigger function, so pan changes reached only the next hit. `lxr0_pan.c` recomputes them once per block for any voice whose pan (plus the link pan, for drums 1-3) changed, with the triggers' formula and no ramp. Called from the mixer after `lxr0Link_glide`; flash, ITCM 14,888 B (+16 for the call).
-- **Link level:** unison and chord no longer scale linked drums by 1/√n; each plays at its own volume. Requested by the user, who trims on the device.
+- **Link level:** unison and chord no longer scale linked drums by 1/√n; each plays at its own volume, so levels are set on the device.
 - **Found while building kits:** in this firmware the LFO page's target and amount are dead (`OLD_LFO_ROUTING` is off; `Lfo.modTarget` is commented out). LFOs route only through the mod matrix (sources `lf1`-`lf6`). Velocity destinations (`VEL_DEST`) are dead for the same reason; velocity scales volume only. Matrix routes take effect when a kit loads or the menu sets them; live edits of parameters above 255 aren't applied.
 - **Tests:** `pan_test.c` (new): the knob moves a ringing drum and snare, a matrix LFO sweeps a held note end to end, link width spreads a ringing group. `link_test.c` now expects full level. Every test can write what it renders to a WAV (`LISTEN=file.wav`, `listen.h`).
+
+## 1.0 public release
+- **Name:** RMX-0. Erica's licence terms (`firmware/NOTICE.md`, GPL-3.0 section 7) reserve "LXR" and require the start-up screen to mark modified firmware. The splash draws `RMX-0` two rows tall from the eight custom characters, with the version at the right. Update files are `LXRE_RMX0_V<version>.img` (`firmware/CMakeLists.txt` reads `LXR0_VERSION`); the updater needs the `LXRE` prefix.
+- **Labels:** MIDI sub-pages `t1`–`t7` and `n1`–`n7`; link mode `lnk`; full names *Sample Start/End* (category `Sample`) and *Glide Time/Type/Legato* (new category `CAT_LXR0_GLIDE`, since glide and legato work without a link). The old 10-character *Glide type* overran the 8 columns for the long name.
+- **Diagnostics removed:** the global page's `ov fe n` counts (and the counters in `Uart.c`) and the reverb page's `cpu`/`rev`/`own` readout. The reverb load guard is unchanged.

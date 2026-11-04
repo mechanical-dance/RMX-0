@@ -54,6 +54,9 @@ float debugWatch = 0;
 void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void init_gpio(void);
+#ifdef LXR0_VERSION
+static void lxr0_splash(void);
+#endif
 static void init_dma(void);
 static void init_adc1(void);
 static void init_i2s(I2S_HandleTypeDef *hi2s, SPI_TypeDef *instance);
@@ -240,17 +243,17 @@ int main(void)
 	//print boot up message
 lcd_clear();
 #ifdef LXR0_VERSION
-lcd_string("lxr-0 " LXR0_VERSION); // lxr-0: which image is flashed
 #if LXR0_SAMPLES
 menu_setNumSamples(lxr0Samples_init());
 #endif
+lxr0_splash(); // the RMX-0 logo and which version is flashed
 #else
 lcd_string("Sonic Potions");
-#endif
 //goto 2nd line
 lcd_setcursor(0,2);
 lcd_string("LXR2 Drums V");
 lcd_string(FIRMWARE_VERSION);
+#endif
 
 lcd_showSplash();
 
@@ -615,6 +618,34 @@ static const struct
 	{ADC_CHANNEL_0,  ADC_SAMPLETIME_28CYCLES},	// PA0 CV 5
 };
 
+#ifdef LXR0_VERSION
+// boot screen: RMX-0 two rows tall from custom characters on the left, the version on the right.
+// GPL-3.0 section 7(c) (NOTICE.md): the start-up screen shows that this is modified firmware.
+//    R M X _ 0
+//    R M X   0       v1.0
+static void lxr0_splash(void)
+{
+	static const uint8_t glyphs[8][8] = {
+		{0x1E,0x1B,0x1B,0x1B,0x1B,0x1B,0x1E,0x1C},	// R top
+		{0x1C,0x1E,0x1B,0x1B,0x1B,0x1B,0x1B,0x1B},	// R bottom
+		{0x11,0x1B,0x1F,0x1F,0x1F,0x1B,0x1B,0x1B},	// M top
+		{0x1B,0x1B,0x1B,0x1B,0x1B,0x1B,0x1B,0x1B},	// M bottom
+		{0x1B,0x1B,0x1B,0x0E,0x0E,0x0E,0x04,0x04},	// X top
+		{0x04,0x04,0x0E,0x0E,0x0E,0x1B,0x1B,0x1B},	// X bottom
+		{0x0E,0x1B,0x1B,0x1B,0x1B,0x1B,0x1B,0x1B},	// 0 top
+		{0x1B,0x1B,0x1B,0x1B,0x1B,0x1B,0x1B,0x0E},	// 0 bottom
+	};
+	for(uint8_t i=0; i<8; i++)
+		lcd_generatechar(i, glyphs[i]);
+	lcd_clear();
+	lcd_setcursor(0,1);
+	lcd_data(0); lcd_data(2); lcd_data(4); lcd_data('_'); lcd_data(6);
+	lcd_setcursor(0,2);
+	lcd_data(1); lcd_data(3); lcd_data(5); lcd_data(' '); lcd_data(7);
+	lcd_setcursor(16 - (sizeof("v" LXR0_VERSION) - 1),2);
+	lcd_string("v" LXR0_VERSION);
+}
+#endif
 static void init_adc1(void)
 {
 	hadc1.Instance = ADC1;

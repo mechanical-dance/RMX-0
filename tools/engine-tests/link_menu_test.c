@@ -46,7 +46,7 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  for(int d=0;d<3;d++){k[COARSE(d)]=40+10*d;k[DEC(d)]=60+10*d;k[VOL(d)]=100+d;k[PAN(d)]=60+d;}
  memset(k+LV,0,6);lxr_fw_edit(k);w(400);
  puts("== link settings on the transient page");
- drum(0);page(4);lcd("drum 1 transient");check("screen 1 ends in mod",lcdHas("mod"));
+ drum(0);page(4);lcd("drum 1 transient");check("screen 1 ends in lnk",lcdHas("lnk"));
  enc(4);lcd("2nd screen");check("screen 2: det wid syn alc",lcdHas("det")&&lcdHas("wid")&&lcdHas("syn")&&lcdHas("alc"));
  enc(-4);lcd("back");
  rd();int m0=r[LV+1];pot(3,40);rd();lcd("pot 4 up");printf("  mode %d -> %d\n",m0,r[LV+1]);check("pot 4 sets the link mode",r[LV+1]!=m0&&r[LV+1]<=3);

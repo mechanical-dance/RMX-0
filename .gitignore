@@ -6,3 +6,9 @@ recon/ghidra/*.gpr
 recon/ghidra/*.rep/
 build/
 releases/
+.DS_Store
+# local only: reverse-engineering notes, dev logs, renders, editor caches
+recon/
+local/
+renders/
+.cache/

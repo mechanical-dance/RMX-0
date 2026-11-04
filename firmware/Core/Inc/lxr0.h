@@ -23,6 +23,6 @@
 // pan follows its value while a note sounds, on all six voices (lxr0_pan.c)
 #define LXR0_PAN 1
 // version on the boot screen (docs/RELEASES.md)
-#define LXR0_VERSION "0.5.8"
+#define LXR0_VERSION "1.0"
 
 #endif /* LXR0_H_ */

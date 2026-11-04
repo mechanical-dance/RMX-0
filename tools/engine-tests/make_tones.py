@@ -1,4 +1,5 @@
-# Builds the card folder retrig_test needs: 100 Hz test tones plus the user's MODBASS and AMENX4. Args: <lxr-0-card> <out>
+# Builds the card folder retrig_test needs: 100 Hz test tones, plus samples/MODBASS.WAV and loops/AMENX4.WAV copied from
+# your own card (any mono 16-bit WAVs under those names). Args: <card> <out>
 import math, os, shutil, struct, sys, wave
 src, out = sys.argv[1:3]
 for d in ('samples', 'loops'):

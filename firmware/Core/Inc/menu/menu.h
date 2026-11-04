@@ -521,6 +521,7 @@ enum catNamesEnum
 #endif
 #if LXR0_LINK
 	CAT_LXR0_LINK,
+	CAT_LXR0_GLIDE, // glide and legato: per drum, not part of the link
 #endif
 };
 //-----------------------------------------------------------------

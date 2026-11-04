@@ -2,7 +2,7 @@ import os
 HERE=os.path.dirname(os.path.abspath(__file__))
 IDX={l.split()[1][4:]:int(l.split()[0]) for l in open(os.path.join(HERE,'params.txt'))}
 N=340
-BACKUP=os.path.expanduser('~/Documents/Gear/lxr-02/card-2026-10-25/PROJ00/')
+BACKUP=os.path.join(os.environ.get('KIT_BASE_DIR','.'),'')  # a card's PROJ00 folder with the stock kits
 def load(path):
     d=open(path,'rb').read()
     p=bytearray(N); p[:len(d)-8]=d[8:8+N]
