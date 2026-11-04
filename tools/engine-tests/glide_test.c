@@ -18,6 +18,7 @@
 void *h;
 typedef struct { uint8_t on; uint8_t dst[18], amt[18], src[18]; float cv[5]; uint8_t acc[6]; } LxrMod;
 S(void,lxr_init,void);S(void,lxr_render,int16_t[4][64]);S(void,lxr_note,int,uint8_t,uint8_t);S(void,lxr_fw_load_kit,const uint8_t*,int,const uint8_t*);S(void,lxr_fw_edit,const uint8_t*);
+#include "listen.h"
 S(void,lxr_fw_sample_root,const char*);S(void,lxr_fw_cv,int,float);S(void,lxr_set_mod,const LxrMod*);S(int,lxr_fw_read_kit,uint8_t*,int);
 #define F(n) n = dlsym(h,#n); if(!n){printf("missing %s\n",#n);return 1;}
 static int16_t cap[4][MAXN]; static long capN; static int capOn; static int16_t prevB[4][64]; static int fails;
@@ -42,7 +43,7 @@ static void silence(void){k[50]=k[52]=k[54]=1;edit();rb(150);k[50]=k[52]=k[54]=1
 static void setlink(int mask,int mode,int det,int wid,int alloc){k[LV]=mask;k[LV+1]=mode;k[LV+2]=det;k[LV+3]=wid;k[LV+4]=0;k[LV+5]=alloc;edit();}
 int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return 1;}
  h=dlopen(v[1],RTLD_NOW);if(!h){puts(dlerror());return 1;}
- F(lxr_init);F(lxr_render);F(lxr_note);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_sample_root);F(lxr_fw_cv);F(lxr_set_mod);F(lxr_fw_read_kit);
+ F(lxr_init);F(lxr_render);LISTEN_WRAP();F(lxr_note);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_sample_root);F(lxr_fw_cv);F(lxr_set_mod);F(lxr_fw_read_kit);
  static uint8_t a[400];FILE*fp=fopen(v[2],"rb");if(!fp){perror(v[2]);return 1;}int na=fread(a,1,400,fp);fclose(fp);memcpy(k,a+8,na-8);
  lxr_init();lxr_fw_sample_root(v[3]);rb(50);lxr_fw_load_kit(a,na,k);rb(2500);
  // a clean kit: no LFOs, filters open, drive off, sines, attack 0, long decay, centred

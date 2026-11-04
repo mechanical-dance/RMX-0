@@ -17,6 +17,7 @@
 #define S(t,n,...) t (*n)(__VA_ARGS__)
 void *h;
 S(void,lxr_init,void);S(void,lxr_render,int16_t[4][64]);S(void,lxr_hit,int,uint8_t);S(void,lxr_fw_load_kit,const uint8_t*,int,const uint8_t*);S(void,lxr_fw_edit,const uint8_t*);
+#include "listen.h"
 S(void,lxr_fw_sample_root,const char*);S(void,lxr_fw_install_samples,void);S(int,lxr_fw_install_state,char*);S(int,lxr_fw_sample_count,void);S(void,lxr_fw_sample_info,int,char*,uint32_t*,uint32_t*,uint32_t*);
 #define F(n) n = dlsym(h,#n); if(!n){printf("missing %s\n",#n);return 1;}
 static int16_t cap[4][MAXN]; static long capN; static int capOn; static const char *out;
@@ -60,7 +61,7 @@ static void sweep(const char *name,int v,int n,int spaced,int own1,int own2,cons
  if(save)wav(save,c);capOn=0;}
 int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<5){puts("args");return 1;}out=v[4];
  h=dlopen(v[1],RTLD_NOW);if(!h){puts(dlerror());return 1;}
- F(lxr_init);F(lxr_render);F(lxr_hit);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_sample_root);F(lxr_fw_install_samples);F(lxr_fw_install_state);F(lxr_fw_sample_count);F(lxr_fw_sample_info);
+ F(lxr_init);F(lxr_render);LISTEN_WRAP();F(lxr_hit);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_sample_root);F(lxr_fw_install_samples);F(lxr_fw_install_state);F(lxr_fw_sample_count);F(lxr_fw_sample_info);
  static uint8_t a[400],k[PARAMS];FILE*f=fopen(v[2],"rb");if(!f){perror(v[2]);return 1;}int na=fread(a,1,400,f);fclose(f);memcpy(k,a+8,na-8);
  lxr_init();lxr_fw_sample_root(v[3]);rb(50);lxr_fw_load_kit(a,na,k);rb(2500);
  lxr_fw_install_samples();char m[33]={0};int s=0;while(lxr_fw_install_state(m)!=2&&s<80){rb(350);s++;}printf("install [%s]\n",m);rb(3500);

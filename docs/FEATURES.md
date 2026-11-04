@@ -1,6 +1,6 @@
 # lxr-0 features: voice links, glide, legato, MIDI
 
-This covers firmware 0.4.13 to 0.5.7. Drums 1–3 are the three drum voices; the snare, cymbal and hi-hat are not part of links.
+This covers firmware 0.4.13 to 0.5.8. Drums 1–3 are the three drum voices; the snare, cymbal and hi-hat are not part of links.
 
 ## Voice links
 
@@ -41,7 +41,7 @@ These are on the drum transient page of drums 1, 2 or 3. All three pages show th
 ### How a group plays
 
 - **The lead:** the lowest-numbered linked drum takes the trigger, accent, pitch CV and MIDI notes for the group. The other linked drums ignore their own triggers, CV and MIDI channel while linked.
-- **Unison:** every linked drum plays each note, spread by detune and width. The level is scaled so that linking doesn't make the sound louder.
+- **Unison:** every linked drum plays each note, spread by detune and width. Each drum plays at its own volume (0.5.8; earlier versions scaled the group down by 1/√drums), so a group is louder than one drum.
 - **Chord:** every linked drum plays each note. The intervals come from each drum's own tuning, so tune drums 2 and 3 to set the chord. Each coarse step is one semitone: drum 1 at N with drums 2 and 3 at N+4 and N+7 gives a major chord, and N+3 and N+7 a minor one.
 - **Poly:** each note goes to one drum and keeps its pitch. A drum whose note has ended is used first, then (0.5.7) one whose MIDI key has been released. When all are busy, `alc` decides which note is replaced. Triggers count as released at once.
 
@@ -77,6 +77,14 @@ Glide is on the second screen of the pitch mod page of drums 1–3. Each drum ha
 - Triggers and CV always play a new hit.
 
 Kits are 348 bytes. 0.5.6 kits load unchanged, with their glide as drum 1's; drums 2–3 load with glide and legato off. 0.5.4–0.5.5 kits keep their glide setting and load as `lcr`; older kits load with glide off.
+
+## Pan follows while a note sounds (0.5.8)
+
+On all six voices, pan now moves a note that is already sounding: the pan knob, an LFO or CV through the mod matrix, and the link's width. Before, pan was read only when a note started, so it moved only the next hit. A pan LFO now sweeps a held note; per-hit random pan (such as `rn1`) still works, since each hit starts wherever the LFO is. Fast pan LFOs step at the control rate (about 690 Hz), which can add a faint buzz at audio rates.
+
+## LFO routing
+
+An LFO reaches a sound through the mod matrix: set a slot's source to `lf1`–`lf6`, its destination, and its amount (0–100, both ways around the knob's value). One LFO can feed several slots. The LFO page sets the shape, rate, retrigger, sync and offset; its own target and amount settings don't route anything in this firmware.
 
 ## LFO shapes (0.5.5)
 

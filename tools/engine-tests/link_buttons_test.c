@@ -15,6 +15,7 @@
 #define S(t,n,...) t (*n)(__VA_ARGS__)
 void *h;
 S(void,lxr_init,void);S(void,lxr_render,int16_t[4][64]);S(void,lxr_fw_load_kit,const uint8_t*,int,const uint8_t*);S(void,lxr_fw_edit,const uint8_t*);
+#include "listen.h"
 S(int,lxr_fw_read_kit,uint8_t*,int);S(void,lxr_fw_sample_root,const char*);S(void,lxr_fw_lcd,char*,uint8_t*);S(void,lxr_fw_button,int,int);S(void,lxr_fw_encoder,int);S(void,lxr_fw_pot,int,int);S(uint32_t,lxr_fw_leds,void);
 #define F(n) n = dlsym(h,#n); if(!n){printf("missing %s\n",#n);return 1;}
 static int fails;
@@ -37,7 +38,7 @@ static int led(int d){return (lxr_fw_leds()>>(5+d))&1;}
 static int moved(void){rd();memcpy(b,r,PARAMS);pot(0,8);rd();int m=0;for(int d=0;d<3;d++)if(r[COARSE(d)]!=b[COARSE(d)])m|=1<<d;pot(0,-8);return m;}
 int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return 1;}
  h=dlopen(v[1],RTLD_NOW);if(!h){puts(dlerror());return 1;}
- F(lxr_init);F(lxr_render);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_read_kit);F(lxr_fw_sample_root);F(lxr_fw_lcd);F(lxr_fw_button);F(lxr_fw_encoder);F(lxr_fw_pot);F(lxr_fw_leds);
+ F(lxr_init);F(lxr_render);LISTEN_WRAP();F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_read_kit);F(lxr_fw_sample_root);F(lxr_fw_lcd);F(lxr_fw_button);F(lxr_fw_encoder);F(lxr_fw_pot);F(lxr_fw_leds);
  static uint8_t a[400];FILE*fp=fopen(v[2],"rb");if(!fp){perror(v[2]);return 1;}int na=fread(a,1,400,fp);fclose(fp);memcpy(k,a+8,na-8);
  lxr_init();lxr_fw_sample_root(v[3]);pthread_t t;pthread_create(&t,0,aud,0);w(300);lxr_fw_load_kit(a,na,k);w(4000);
  lxr_fw_read_kit(k,0);for(int d=0;d<3;d++)k[COARSE(d)]=40+10*d;memset(k+LV,0,6);lxr_fw_edit(k);w(400);

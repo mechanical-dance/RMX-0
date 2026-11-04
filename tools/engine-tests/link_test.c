@@ -16,6 +16,7 @@
 void *h;
 typedef struct { uint8_t on; uint8_t dst[18], amt[18], src[18]; float cv[5]; uint8_t acc[6]; } LxrMod;
 S(void,lxr_init,void);S(void,lxr_render,int16_t[4][64]);S(void,lxr_note,int,uint8_t,uint8_t);S(void,lxr_fw_load_kit,const uint8_t*,int,const uint8_t*);S(void,lxr_fw_edit,const uint8_t*);
+#include "listen.h"
 S(void,lxr_fw_sample_root,const char*);S(void,lxr_fw_cv,int,float);S(void,lxr_set_mod,const LxrMod*);S(int,lxr_fw_read_kit,uint8_t*,int);
 #define F(n) n = dlsym(h,#n); if(!n){printf("missing %s\n",#n);return 1;}
 static int16_t cap[4][MAXN]; static long capN; static int capOn; static int16_t prevB[4][64]; static int fails;
@@ -40,7 +41,7 @@ static void silence(void){k[50]=k[52]=k[54]=1;edit();rb(150);k[50]=k[52]=k[54]=1
 static void setlink(int mask,int mode,int det,int wid,int alloc){k[LV]=mask;k[LV+1]=mode;k[LV+2]=det;k[LV+3]=wid;k[LV+4]=0;k[LV+5]=alloc;edit();}
 int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return 1;}
  h=dlopen(v[1],RTLD_NOW);if(!h){puts(dlerror());return 1;}
- F(lxr_init);F(lxr_render);F(lxr_note);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_sample_root);F(lxr_fw_cv);F(lxr_set_mod);F(lxr_fw_read_kit);
+ F(lxr_init);F(lxr_render);LISTEN_WRAP();F(lxr_note);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_sample_root);F(lxr_fw_cv);F(lxr_set_mod);F(lxr_fw_read_kit);
  static uint8_t a[400];FILE*fp=fopen(v[2],"rb");if(!fp){perror(v[2]);return 1;}int na=fread(a,1,400,fp);fclose(fp);memcpy(k,a+8,na-8);
  lxr_init();lxr_fw_sample_root(v[3]);rb(50);lxr_fw_load_kit(a,na,k);rb(2500);
  // a clean kit: no LFOs, filters open, drive off, sines, attack 0, long decay, centred
@@ -63,18 +64,18 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<4){puts("args");return
  setlink(1,1,0,0,0);silence();start();t=note(0,60);rb(260);meas(t,f,p);show("mask 001, unison",f,p);check("only drum 1 sounds, full level",p[0]>p0[0]*0.95&&p[1]<50&&p[2]<50);capOn=0;
  puts("== unison");
  setlink(7,1,0,0,0);silence();start();t=note(0,60);rb(260);meas(t,f,p);show("3 drums, detune 0",f,p);
- check("all three sound at 1/sqrt(3)",near(p[0],p0[0]/sqrtf(3),0.04)&&near(p[1],p0[1]/sqrtf(3),0.04)&&near(p[2],p0[2]/sqrtf(3),0.04));
+ check("all three sound at full level (0.5.8)",near(p[0],p0[0],0.04)&&near(p[1],p0[1],0.04)&&near(p[2],p0[2],0.04));
  check("same pitch",near(f[0],f0[0],0.002)&&near(f[1],f0[0],0.002)&&near(f[2],f0[0],0.002));capOn=0;
  setlink(7,1,127,0,0);silence();start();t=note(0,60);rb(260);meas(t,f,p);show("3 drums, detune 127",f,p);
  check("-50, 0, +50 cents",near(f[0],f0[0]*pow(2,-50/1200.),0.002)&&near(f[1],f0[0],0.002)&&near(f[2],f0[0]*pow(2,50/1200.),0.002));capOn=0;
  setlink(5,1,127,0,0);silence();start();t=note(0,60);rb(260);meas(t,f,p);show("drums 1+3, detune 127",f,p);
- check("1/sqrt(2), -50 and +50 cents, drum 2 silent",near(p[0],p0[0]/sqrtf(2),0.04)&&p[1]<50&&near(f[0],f0[0]*pow(2,-50/1200.),0.002)&&near(f[2],f0[0]*pow(2,50/1200.),0.002));capOn=0;
+ check("full level, -50 and +50 cents, drum 2 silent",near(p[0],p0[0],0.04)&&p[1]<50&&near(f[0],f0[0]*pow(2,-50/1200.),0.002)&&near(f[2],f0[0]*pow(2,50/1200.),0.002));capOn=0;
  setlink(7,1,0,0,0);silence();start();t=note(1,60);rb(260);meas(t,f,p);show("note on drum 2 (not the lead)",f,p);check("ignored",p[0]<50&&p[1]<50&&p[2]<50);capOn=0;
  setlink(3,1,0,0,0);silence();start();t=note(2,60);rb(260);meas(t,f,p);show("mask 011, note on drum 3",f,p);check("drum 3 plays on its own",p[0]<50&&p[1]<50&&near(p[2],p0[2],0.04));capOn=0;
  setlink(7,1,0,0,0);silence();start();t=note(0,72);rb(260);meas(t,f,p);show("note 72",f,p);check("all an octave up",near(f[0],2*f0[0],0.003)&&near(f[1],2*f0[0],0.003)&&near(f[2],2*f0[0],0.003));capOn=0;
  puts("== chord: each drum keeps its own tuning");
  k[COARSE[1]]=44;k[COARSE[2]]=47;setlink(7,2,127,0,0);silence();start();t=note(0,60);rb(260);meas(t,f,p);show("coarse 40/44/47, detune 127",f,p);
- check("three pitches, no detune, 1/sqrt(3)",near(f[0],f0[0],0.002)&&near(f[1],f0[0]*pow(2,4/12.),0.003)&&near(f[2],f0[0]*pow(2,7/12.),0.003)&&near(p[1],p0[1]/sqrtf(3),0.04));capOn=0;
+ check("three pitches, no detune, full level",near(f[0],f0[0],0.002)&&near(f[1],f0[0]*pow(2,4/12.),0.003)&&near(f[2],f0[0]*pow(2,7/12.),0.003)&&near(p[1],p0[1],0.04));capOn=0;
  silence();start();t=note(0,65);rb(260);meas(t,f,p);show("note 65",f,p);check("the chord moves up 5 semitones",near(f[0],f0[0]*pow(2,5/12.),0.003)&&near(f[2],f0[0]*pow(2,12/12.),0.003));capOn=0;
  k[COARSE[1]]=k[COARSE[2]]=40;
  puts("== width: stereo out, pans spread left to right");

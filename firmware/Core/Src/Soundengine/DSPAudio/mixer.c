@@ -29,6 +29,7 @@
 #include "Soundengine/DSPAudio/FX/lxr0_reverbBus.h" // lxr-0
 #include "Soundengine/DSPAudio/lxr0_declick.h" // lxr-0
 #include "Soundengine/lxr0_voiceLink.h" // lxr-0
+#include "Soundengine/DSPAudio/lxr0_pan.h"
 
 	uint8_t r2_Available;
 	uint8_t l1_Available;
@@ -595,6 +596,9 @@ IN_ITCM_RAM void mixer_calcNextSampleBlock(int16_t* output,int16_t* output2)
 	CV_process();
 #if LXR0_LINK
 	lxr0Link_glide(); // lxr-0: after this block's triggers and CV, before the drums' pitch
+#endif
+#if LXR0_PAN
+	lxr0Pan_update(); // lxr-0 0.5.8: pan follows its value while a note sounds
 #endif
 
 	//--- Calc async -----

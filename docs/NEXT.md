@@ -1,6 +1,6 @@
 # Next work on lxr-0 (written 2026-11-01)
 
-State: `main` is at 0.5.7, flashed by the user only. Work serially on `main` with no branches. Local commits only; no pushes.
+State: `main` is at 0.5.8, flashed by the user only. Work serially on `main` with no branches. Local commits only; no pushes.
 The user flashes every image. Get a yes before changing behaviour beyond what's written here.
 
 Order:

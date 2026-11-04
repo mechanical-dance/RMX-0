@@ -19,6 +19,7 @@
 #define S(t,n,...) t (*n)(__VA_ARGS__)
 void *h;
 S(void,lxr_init,void);S(void,lxr_render,int16_t[4][64]);S(void,lxr_note,int,uint8_t,uint8_t);S(void,lxr_fw_load_kit,const uint8_t*,int,const uint8_t*);S(void,lxr_fw_edit,const uint8_t*);S(void,lxr_fw_sample_root,const char*);
+#include "listen.h"
 #define F(n) n = dlsym(h,#n); if(!n){printf("missing %s\n",#n);return 1;}
 static int fails;static uint8_t k[PARAMS];static volatile uint8_t *lfo;
 static void check(const char *what,int ok){printf("  %s %s\n",ok?"ok  ":"FAIL",what);if(!ok)fails++;}
@@ -37,6 +38,7 @@ int main(int ac,char**v){setvbuf(stdout,0,_IONBF,0);if(ac<6){puts("args");return
  h=dlopen(v[1],RTLD_NOW);if(!h){puts(dlerror());return 1;}
  F(lxr_init);F(lxr_render);F(lxr_note);F(lxr_fw_load_kit);F(lxr_fw_edit);F(lxr_fw_sample_root);
  lfo=(volatile uint8_t*)((char*)lxr_render-strtol(v[5],0,16)+strtol(v[4],0,16)+OFF_LFO);
+ LISTEN_WRAP();
  static uint8_t a[400];FILE*fp=fopen(v[2],"rb");if(!fp){perror(v[2]);return 1;}int na=fread(a,1,400,fp);fclose(fp);memcpy(k,a+8,na-8);
  lxr_init();lxr_fw_sample_root(v[3]);rb(50);lxr_fw_load_kit(a,na,k);rb(2500);
  k[AMT]=0;k[FREQ]=27;k[RETRIG]=1;k[OFFS]=0;k[WAVE]=2;edit();rb(20);

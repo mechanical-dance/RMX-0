@@ -3,7 +3,7 @@
  *
  * Unison and chord: the lowest linked drum's trigger and pitch CV play every linked drum. Unison
  * spreads them by det (pitch) and wid (pan), chord takes its intervals from each drum's tuning and
- * spreads them by wid. Both scale each drum by 1/sqrt(drums), so linking doesn't jump in level.
+ * spreads them by wid. Each drum keeps its own volume (0.5.8; before, 1/sqrt(drums)), so a group is louder.
  * Poly: each trigger goes to one drum, which keeps the pitch it was given. A free drum (its amp
  * envelope has ended) is used first, the least recently used one; if none is free the oldest or the
  * highest note is replaced, through the retrigger declick. The other linked drums' triggers and
@@ -119,10 +119,8 @@ static void apply(void)
 			if(mode == MODE_UNISON)
 				detune = powf(2.f, pos*settings[PAR_LXR0_LINK_DETUNE - PAR_LXR0_LINK_VOICES]/127.f*DETUNE_MAX_CENTS/1200.f);
 			if(mode == MODE_UNISON || mode == MODE_CHORD)
-			{
 				pan = (int8_t)lrintf(pos*settings[PAR_LXR0_LINK_WIDTH - PAR_LXR0_LINK_VOICES]/127.f*63.f);
-				gain = 1.f/sqrtf((float)n);
-			}
+			// 0.5.8: no level scaling: each linked drum plays at its own volume (0.5.0-0.5.7 scaled by 1/sqrt(drums))
 		}
 		detuneOf[v] = detune;
 		d->linkDetune = detune;
