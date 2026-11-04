@@ -44,4 +44,4 @@ From 0.3.0 the base is Erica Synths' open-sourced module firmware (`lxr-eurorack
 | 0.5.5 | `LXRE_LXR0_V0.5.5.img` | 3095106 | 0.5.4 + LFO shapes: smooth random (nse), exponential triangle (xtr), one-shots (si1 tr1 su1 sd1 sq1 xu1 xd1 xt1) and random per hit (rn1). Kits unchanged |
 | 0.5.6 | `LXRE_LXR0_V0.5.6.img` | 5986a5e | 0.5.5 + glide types (lcr, lct, exp), glide always on, new glide scale (25 ms to 8 s); 341-byte kits |
 | 0.5.7 | `LXRE_LXR0_V0.5.7.img` | 90f1a26 | 0.5.6 + glide per drum (drums 2–3 glide unlinked), MIDI legato (`lgt`, per drum), note-off releases keys for legato and poly allocation; 348-byte kits |
-| 0.5.8 | `LXRE_LXR0_V0.5.8.img` | (this commit) | 0.5.7 + pan follows its value while a note sounds (knob, mod matrix, link width; all six voices); linked drums keep their own volume (no 1/√n scaling). Kits unchanged |
+| 0.5.8 | `LXRE_LXR0_V0.5.8.img` | a054faf | 0.5.7 + pan follows its value while a note sounds (knob, mod matrix, link width; all six voices); linked drums keep their own volume (no 1/√n scaling). Kits unchanged |
