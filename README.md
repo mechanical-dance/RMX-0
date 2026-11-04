@@ -6,7 +6,7 @@ RMX-0 is unofficial. It is not made, approved or supported by Erica Synths.
 
 *PRS are welcome!* Feel free to fork this and do whatever you want, if it works and is well tested i have no issues merging it back if that's what you'd like.
 
-### Things i didn't get around to
+#### *things i didn't get around to*
 - Multiple projects: The desktop LXR-02 allows you to group kits into projects. Because kits are stored on the SD card, there's really no reason to not have this feature on the module. Super easy fix, just not priority to me
 - Sample Streaming: Samples could potentially stream from the SD card, bringing full-res sample time way past the ~17 seconds available in flash memory. The samples would need a few cycles preloaded, so that playback could start from flash while the stream starts from the card. This is a more involved implementation, but there's plenty of headroom
 
