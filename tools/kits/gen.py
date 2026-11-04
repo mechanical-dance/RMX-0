@@ -1,4 +1,4 @@
-# lxr-0 0.5.7 showcase kits, slots 107-116. Run: python3 gen.py OUTDIR
+# lxr-0 0.5.7 showcase kits, slots 111-120. Run: python3 gen.py OUTDIR
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from kitlib import *
@@ -82,7 +82,7 @@ def kit(slot, name, notes):
 		KITS.append((slot, name, f, notes)); return f
 	return wrap
 
-@kit(107, 'Lush Am', '''Chord mode, lush. An open A minor (A2, E3, C4): three saws, each doubled an octave up in mix mode, slow
+@kit(111, 'Lush Am', '''Chord mode, lush. An open A minor (A2, E3, C4): three saws, each doubled an octave up in mix mode, slow
 attack, about 7 s of decay, wide spread. Each drum's cutoff drifts on its own smooth-random LFO (`nse`), so the chord
 never sits still, and the snare, cymbal and hat LFOs add a slow, slightly different vibrato to each voice. Ping-pong
 delay and a long plate.
@@ -102,7 +102,7 @@ def lush(p):
 	verb(p, amount=115, predelay=28, decay=112, tone=52, refl=62)
 	perc(p, level=0.7, out=0)
 
-@kit(108, 'Swap Am', '''Your swap chord. A minor (A3, C4, E4) in chord mode, soft triangles through a gentle low-pass. Drum 1, the root,
+@kit(112, 'Swap Am', '''Your swap chord. A minor (A3, C4, E4) in chord mode, soft triangles through a gentle low-pass. Drum 1, the root,
 sits in the middle; drums 2 and 3 start hard left and hard right on every chord, from sine LFOs on their pans half a
 cycle apart (offsets 0 and 50 %, retriggered by drum 1), and swap sides over about 6 s, back over the next 6. The snare, cymbal and hat LFOs give each voice its own
 subtle vibrato.
@@ -122,7 +122,7 @@ def swap(p):
 	verb(p, amount=105, predelay=20, decay=108, tone=58, refl=55)
 	perc(p, level=0.7)
 
-@kit(109, 'Glass', '''Poly MIDI, ethereal. FM glass bells: a sine carrier with a 3.5:1 sine modulator, velocity on level. Each note lands at a new random place in the stereo field (`rn1` on pan, restarted by each
+@kit(113, 'Glass', '''Poly MIDI, ethereal. FM glass bells: a sine carrier with a 3.5:1 sine modulator, velocity on level. Each note lands at a new random place in the stereo field (`rn1` on pan, restarted by each
 drum's own notes), and a slow smooth-random drift on each drum's fine tune keeps it organic. Long plate, ping-pong.
 - Set drum 1's MIDI note to `any`. Coarse is 60, so MIDI notes play at their own pitch. `syn` is on, so knob edits keep
   all three drums the same.
@@ -139,7 +139,7 @@ def glass(p):
 	verb(p, amount=120, predelay=40, decay=118, tone=76, refl=70)
 	perc(p, level=0.6, out=0, verbsend=40)
 
-@kit(110, 'Halo', '''Poly MIDI pad, pretty. A triangle with a saw an octave up mixed in, slow attack, long tail. Each note's filter
+@kit(114, 'Halo', '''Poly MIDI pad, pretty. A triangle with a saw an octave up mixed in, slow attack, long tail. Each note's filter
 breathes: an exponential triangle (`xtr`) on cutoff, restarted by each note, opens over about a second and closes again,
 so every note blooms on its own. Gentle vibrato from the snare, cymbal and hat LFOs; big reverb.
 - Drum 1's MIDI note `any`; coarse 60 plays MIDI pitch. `syn` on.
@@ -155,7 +155,7 @@ def halo(p):
 	verb(p, amount=118, predelay=35, decay=116, tone=60, refl=66)
 	perc(p, level=0.6, out=0)
 
-@kit(111, 'OneShots', '''The one-shot LFO shapes as extra envelopes.
+@kit(115, 'OneShots', '''The one-shot LFO shapes as extra envelopes.
 - Drum 1: saw bass with a resonant low-pass. `xd1` on cutoff is a second, snappier filter envelope on every hit.
 - Drum 2: sine tom whose pitch rises after the hit (`su1` on coarse): a reverse tom.
 - Drum 3: FM perc with `sq1` on its volume, a gate that chops the tail at half the LFO cycle; the LFO rate sets the gate
@@ -173,7 +173,7 @@ def oneshots(p):
 	lfo(p, 4, 3, 'coarse', 'rn1', hz=12.0, amount=7, retrig=3)
 	verb(p, amount=90, predelay=8, decay=85, tone=64, refl=40)
 
-@kit(112, 'SuprSaw', '''Unison lead. Three saws in unison mode, detune 70, wide, with an exponential glide and legato on drum 1.
+@kit(116, 'SuprSaw', '''Unison lead. Three saws in unison mode, detune 70, wide, with an exponential glide and legato on drum 1.
 Over MIDI, overlapping notes slide without retriggering; detached notes re-attack. Each drum's cutoff wanders on a
 smooth-random LFO at a slightly different rate, so the stack moves like separate oscillators. Ping-pong delay.
 - Drum 1's MIDI note `any`; coarse 60 plays MIDI pitch.
@@ -189,7 +189,7 @@ def suprsaw(p):
 	verb(p, amount=95, predelay=15, decay=96, tone=60, refl=45)
 	perc(p, level=0.8, out=0)
 
-@kit(113, '808Slide', '''Pitched 808 programming with per-drum glide and legato.
+@kit(117, '808Slide', '''Pitched 808 programming with per-drum glide and legato.
 - Drum 1: 808 bass (sine, short pitch punch, light drive, about 3 s), exponential glide, legato on. Over MIDI,
   overlapping notes slide without a new hit: hold a note, play the next one, release the first.
 - Drum 2: tom with its own linear glide (`lcr`), so tom fills slide too; no legato, every hit re-attacks.
@@ -208,7 +208,7 @@ def slide808(p):
 		vol=95, pan=80, out=0, verb=20)
 	verb(p, amount=80, predelay=6, decay=80, tone=64, refl=35)
 
-@kit(114, 'LiveKit', '''A drum kit that never plays the same hit twice, from the new LFO shapes running free.
+@kit(118, 'LiveKit', '''A drum kit that never plays the same hit twice, from the new LFO shapes running free.
 - Drum 1: kick with smooth random (`nse`) on its decay, so each kick is a little longer or shorter.
 - Drum 2: FM tom with an exponential triangle (`xtr`) slowly sweeping its FM amount, from soft to metallic and back
   over about 8 s.
@@ -227,7 +227,7 @@ def livekit(p):
 	lfo(p, 3, 3, 'coarse', 'rn1', hz=25.0, amount=12, retrig=3)
 	verb(p, amount=85, predelay=8, decay=82, tone=64, refl=40)
 
-@kit(115, 'DubStab', '''Chord mode, dub techno. C minor 7 shell (C3, Eb3, Bb3), pulse waves into a resonant low-pass with drive,
+@kit(119, 'DubStab', '''Chord mode, dub techno. C minor 7 shell (C3, Eb3, Bb3), pulse waves into a resonant low-pass with drive,
 about a second long. Each drum's cutoff drifts on its own smooth-random LFO, so every stab is voiced a little
 differently and the delay tails keep moving. Dark ping-pong delay with high feedback, plus plate.
 - Play drum 1; MIDI notes transpose the chord.
@@ -243,7 +243,7 @@ def dubstab(p):
 	verb(p, amount=95, predelay=12, decay=104, tone=45, refl=50)
 	perc(p, level=0.8, out=0)
 
-@kit(116, 'PolyPluk', '''Poly MIDI plucks for arpeggios, pretty. A triangle with an octave FM shimmer; a one-shot exponential fall
+@kit(120, 'PolyPluk', '''Poly MIDI plucks for arpeggios, pretty. A triangle with an octave FM shimmer; a one-shot exponential fall
 (`xd1`) on each drum's cutoff is a filter envelope per note; velocity sets the level. The snare, cymbal
 and hat LFOs throw each note to a new random spot in the stereo field (`rn1` on pan). Ping-pong delay and plate.
 - Drum 1's MIDI note `any`; coarse 60 plays MIDI pitch. `syn` on. Fast arps keep up to three notes ringing.
@@ -273,10 +273,10 @@ def routes(p):
 		out.append(f'{i}: `lf{n}` ({shape}) to drum {dst//40 + 1} {TLONG.get(t, t)}, {amt}')
 	return out
 
-HEADER = '''# lxr-0 kits 107-116
+HEADER = '''# lxr-0 kits 111-120
 
 Ten kits for lxr-0 0.5.8 that show chord and poly links, per-drum glide and legato, the new LFO shapes and pan that
-follows its LFO while a note sounds. They are in `PROJ00` as `107-` to `116-`; load them from the kit menu.
+follows its LFO while a note sounds. They are in `PROJ00` as `111-` to `120-`; load them from the kit menu.
 
 - **Firmware:** made for 0.5.8. On 0.5.7 they load and play, but pan moves only on new hits (`Swap Am` needs 0.5.8),
   and linked groups play about 5 dB quieter.

@@ -74,7 +74,8 @@ prebuilt (`-DLXR_BOOTLOADER_HEX=path/to/LXR_V2_Eurorack_Bootloader.hex`). The bu
 | Region | Address | Size | Contents |
 |---|---|---|---|
 | FLASH | 0x08000000 | 32 KB | Bootloader |
-| FLASH | 0x08008000 | 992 KB | This firmware |
+| FLASH | 0x08008000 | 480 KB | This firmware |
+| FLASH | 0x08080000 | 1.5 MB | Samples (sectors 6–11), installed from the SD card; erased by a firmware update |
 | ITCM | 0x00000000 | 16 KB | `IN_ITCM_RAM` DSP code |
 | DTCM | 0x20000000 | 128 KB | `INDTCM`/`INDTCMZ` data, DMA buffers, stack |
 | RAM | 0x20020000 | 384 KB | `.data`, `.bss`, heap |
