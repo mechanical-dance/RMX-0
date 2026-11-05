@@ -30,7 +30,7 @@ The user guide is in [`docs/`](docs/) and is published as the project's GitHub P
 
 ## Installing
 
-Download `LXRE_RMX0_V<version>.img` from Releases and install it with the module's updater: copy it to the SD card, then hold the encoder while powering on. Full steps are in [docs/install.md](docs/install.md). Updating erases installed samples; reinstall them afterwards.
+Download the latest `LXRE_RMX0_V<version>.img` from [Releases](https://github.com/mechanical-dance/RMX-0/releases/) and install it with the module's updater: copy it to the SD card, then hold the encoder while powering on. Full steps are in [docs/install.md](docs/install.md). Updating erases installed samples; reinstall them afterwards.
 
 ## Repository
 
