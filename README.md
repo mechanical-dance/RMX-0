@@ -1,5 +1,7 @@
 # RMX-0
 
+![RMX-0 startup screen](docs/assets/splash.png)
+
 Custom firmware for the Erica Synths LXR Eurorack drum module. It is built on Erica Synths' open-source module firmware (v1.51) and keeps everything the stock firmware does.
 
 RMX-0 is unofficial. It is not made, approved or supported by Erica Synths.
