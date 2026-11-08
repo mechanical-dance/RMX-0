@@ -22,6 +22,7 @@ Open the global settings menu with **SHIFT + LOAD/SAVE**. Each further **SHIFT +
 
 - **Voice channels:** a note on a voice's channel plays that voice, with velocity.
 - **Global channel:** plays the drum selected on the panel. If that drum is [linked](voice-links.md), it plays the group. Set it to `off` when you don't want it.
+- **CCs** (parameter control) are received only on the global channel. `off` ignores them.
 - **Linked drums** play from the lead drum's channel. For poly over MIDI, set the lead drum's note to `any`.
 - **Note-off** releases the key for [legato](glide-legato.md#legato) and poly voice allocation. It doesn't stop the sound: each note plays its envelope through.
 - **During a kit load,** incoming notes are held and play late rather than being lost.

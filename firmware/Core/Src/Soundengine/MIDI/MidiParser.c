@@ -1941,14 +1941,26 @@ void midiParser_parseMidiMessage(MidiMsg msg)
 #endif
 			if(msgonly==PROG_CHANGE) {
 			// respond to prog change and change patterns. This responds only when global channel matches the PC message's channel.
+#if LXR0_MIDI
+			// lxr-0 1.0.1: global channel off also ignores these. Off never reaches the channel table, so they
+			// used to keep answering on the last-set or power-on channel.
+			if((midiParser_txRxFilter & MIDI_FILTER_PROG_C) && activeParameters[PAR_MIDI_CHAN_GLOBAL] != 0 && (chanonly == midi_MidiChannels[7]))
+#else
 			if((midiParser_txRxFilter & MIDI_FILTER_PROG_C) && (chanonly == midi_MidiChannels[7]))
+#endif
 			{
 				//seq_setNextPattern(msg.data1);
 			}
 
 		} else if(msgonly==MIDI_CC){
 			// respond to CC message. This responds only when global channel matches the cc message's channel
+#if LXR0_MIDI
+			// lxr-0 1.0.1: global channel off also ignores these. Off never reaches the channel table, so they
+			// used to keep answering on the last-set or power-on channel.
+			if((midiParser_txRxFilter & MIDI_FILTER_CC) && activeParameters[PAR_MIDI_CHAN_GLOBAL] != 0 && (chanonly == midi_MidiChannels[7])) {
+#else
 			if((midiParser_txRxFilter & MIDI_FILTER_CC) && (chanonly == midi_MidiChannels[7])) {
+#endif
 				//record automation if record is turned on
 #if !EURORACK_MODULE
 				seq_recordAutomation(frontParser_activeTrack, msg.data1, msg.data2);

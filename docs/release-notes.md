@@ -5,6 +5,12 @@ nav_order: 11
 
 # Release notes
 
+## 1.0.1
+
+Update file: `LXRE_RMX0_V1.0.1.img`.
+
+- With the global MIDI channel set to `off`, CCs are now ignored too. Before, they kept answering on the last channel set, or on channel 1 after power-up.
+
 ## 1.0
 
 First public release. Update file: `LXRE_RMX0_V1.0.img`. Based on Erica Synths' LXR Eurorack firmware v1.51.
